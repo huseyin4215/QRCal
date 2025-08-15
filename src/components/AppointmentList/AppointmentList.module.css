@@ -1,0 +1,283 @@
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.emptyIcon {
+  margin: 0 auto;
+  width: 3rem;
+  height: 3rem;
+  color: #9ca3af;
+  opacity: 0.6;
+}
+
+.emptyTitle {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.emptyDescription {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.container {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.appointmentItem {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.appointmentItem:last-child {
+  border-bottom: none;
+}
+
+.appointmentItem:hover {
+  background: rgba(59, 130, 246, 0.05);
+  transform: translateX(4px);
+}
+
+.appointmentContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.appointmentInfo {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.statusIcon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  background: rgba(59, 130, 246, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.appointmentItem:hover .statusIcon {
+  background: rgba(59, 130, 246, 0.2);
+  transform: scale(1.1);
+}
+
+.appointmentDetails {
+  margin-left: 1rem;
+  flex: 1;
+}
+
+.facultyName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.statusBadge {
+  margin-left: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statusPending {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  color: white;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.statusConfirmed {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.statusCancelled {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.statusCompleted {
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
+  color: white;
+  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
+.infoRow {
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.infoIcon {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.25rem;
+  color: #9ca3af;
+}
+
+.topic {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.topicLabel {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.appointmentActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cancelButton {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.cancelButton:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.approveButton {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.approveButton:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.rejectButton {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.rejectButton:hover {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.detailsButton {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.detailsButton:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .emptyState,
+  .container {
+    background: rgba(31, 41, 55, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .emptyTitle {
+    color: #f9fafb;
+  }
+  
+  .emptyDescription {
+    color: #9ca3af;
+  }
+  
+  .appointmentItem {
+    border-bottom-color: rgba(75, 85, 99, 0.3);
+  }
+  
+  .appointmentItem:hover {
+    background: rgba(59, 130, 246, 0.1);
+  }
+  
+  .facultyName {
+    color: #f9fafb;
+  }
+  
+  .infoRow,
+  .topic {
+    color: #9ca3af;
+  }
+  
+  .topicLabel {
+    color: #d1d5db;
+  }
+  
+  .statusIcon {
+    background: rgba(59, 130, 246, 0.2);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .appointmentContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .appointmentActions {
+    align-self: flex-end;
+  }
+  
+  .appointmentItem {
+    padding: 1rem;
+  }
+  
+  .statusIcon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+} 

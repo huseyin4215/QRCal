@@ -1,0 +1,226 @@
+.header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  transition: all 0.3s ease;
+}
+
+.headerContainer {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.headerSubtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+  font-weight: 500;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.button:hover::before {
+  left: 100%;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 2px 8px 0 rgba(102, 126, 234, 0.3);
+}
+
+.primaryButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px 0 rgba(102, 126, 234, 0.4);
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.9);
+  color: #374151;
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.secondaryButton:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.outlineButton {
+  background: transparent;
+  color: #667eea;
+  border: 1px solid #667eea;
+}
+
+.outlineButton:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.buttonIcon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .headerContainer {
+    padding: 0.75rem 1rem;
+  }
+  
+  .headerTitle {
+    font-size: 1.25rem;
+  }
+  
+  .button {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.7rem;
+  }
+  
+  .buttonIcon {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .headerContainer {
+    padding: 0.75rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .headerLeft {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .headerRight {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.375rem;
+  }
+  
+  .button {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.65rem;
+  }
+  
+  .buttonIcon {
+    width: 0.7rem;
+    height: 0.7rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .header {
+    background: rgba(17, 24, 39, 0.95);
+    border-bottom: 1px solid rgba(75, 85, 99, 0.5);
+  }
+  
+  .headerTitle {
+    color: #f9fafb;
+  }
+  
+  .headerSubtitle {
+    color: #9ca3af;
+  }
+  
+  .secondaryButton {
+    background: rgba(31, 41, 55, 0.9);
+    color: #d1d5db;
+    border: 1px solid rgba(75, 85, 99, 0.8);
+  }
+  
+  .secondaryButton:hover {
+    background: rgba(31, 41, 55, 1);
+  }
+}
+
+/* Animation for header on scroll */
+.headerScrolled {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(25px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading state */
+.buttonLoading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.buttonLoading::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: auto;
+  border: 1px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+} 

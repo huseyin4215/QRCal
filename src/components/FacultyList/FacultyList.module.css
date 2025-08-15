@@ -1,0 +1,235 @@
+.container {
+  overflow-x: auto;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.table {
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHead {
+  background: rgba(249, 250, 251, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.tableHeader {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.tableBody {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.tableRow {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.3);
+}
+
+.tableRow:hover {
+  background: rgba(59, 130, 246, 0.05);
+  transform: scale(1.001);
+}
+
+.tableCell {
+  padding: 1rem 1.5rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.avatarIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: white;
+}
+
+.userDetails {
+  margin-left: 1rem;
+}
+
+.userName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.userEmail {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badgeRole {
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+  color: white;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.badgeStatus {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.badgeInactive {
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
+  color: white;
+  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
+.badgeGoogle {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.badgeGoogleNot {
+  background: linear-gradient(135deg, #6b7280, #9ca3af);
+  color: white;
+  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actionButton {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionButton:hover {
+  transform: scale(1.1);
+}
+
+.editButton {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.editButton:hover {
+  background: rgba(59, 130, 246, 0.2);
+  color: #1d4ed8;
+}
+
+.deleteButton {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.deleteButton:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+}
+
+.actionIcon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: rgba(31, 41, 55, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .tableHead {
+    background: rgba(55, 65, 81, 0.8);
+  }
+  
+  .tableBody {
+    background: rgba(31, 41, 55, 0.5);
+  }
+  
+  .tableRow:hover {
+    background: rgba(59, 130, 246, 0.1);
+  }
+  
+  .tableHeader {
+    color: #9ca3af;
+    border-bottom-color: rgba(75, 85, 99, 0.5);
+  }
+  
+  .tableRow {
+    border-bottom-color: rgba(75, 85, 99, 0.3);
+  }
+  
+  .userName {
+    color: #f9fafb;
+  }
+  
+  .userEmail {
+    color: #9ca3af;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .container {
+    font-size: 0.875rem;
+  }
+  
+  .tableHeader,
+  .tableCell {
+    padding: 0.75rem 1rem;
+  }
+  
+  .avatar {
+    width: 2rem;
+    height: 2rem;
+  }
+  
+  .avatarIcon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  
+  .userDetails {
+    margin-left: 0.75rem;
+  }
+} 

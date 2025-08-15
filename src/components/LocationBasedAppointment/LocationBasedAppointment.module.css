@@ -1,0 +1,434 @@
+.location-based-appointment {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.header h2 {
+  color: #1f2937;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.faculty-name {
+  color: #6b7280;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+/* Location Section */
+.location-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.location-section h3 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.location-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.location-status.loading {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.location-status.success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #22c55e;
+}
+
+.location-status.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.accuracy {
+  font-size: 0.875rem;
+  opacity: 0.8;
+}
+
+.refresh-btn, .retry-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.refresh-btn:hover, .retry-btn:hover {
+  background: #2563eb;
+}
+
+.location-details {
+  background: white;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.location-details p {
+  margin: 8px 0;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.location-details strong {
+  color: #1f2937;
+}
+
+/* Map Section */
+.map-section {
+  margin-bottom: 30px;
+}
+
+.map-section h3 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.map-container {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Geofence Section */
+.geofence-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #10b981;
+}
+
+.geofence-section h3 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.geofence-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.geofence-status.checking {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.geofence-status.allowed {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #22c55e;
+}
+
+.geofence-status.denied {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+}
+
+.geofence-status.pending {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #3b82f6;
+}
+
+.check-location-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.check-location-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.check-location-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Appointment Form Section */
+.appointment-form-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #8b5cf6;
+}
+
+.appointment-form-section h3 {
+  color: #1f2937;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.appointment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  color: #374151;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.submit-btn {
+  background: #8b5cf6;
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 200px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #7c3aed;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.submit-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Error Message */
+.error-message {
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #ef4444;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Info Section */
+.info-section {
+  background: #eff6ff;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.info-section h4 {
+  color: #1e40af;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.info-section ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #1e40af;
+}
+
+.info-section li {
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .location-based-appointment {
+    padding: 15px;
+    margin: 10px;
+  }
+  
+  .header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .submit-btn {
+    min-width: 100%;
+    padding: 14px 24px;
+    font-size: 1rem;
+  }
+  
+  .map-container {
+    height: 300px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .location-based-appointment {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .header h2 {
+    color: #f9fafb;
+  }
+  
+  .faculty-name {
+    color: #d1d5db;
+  }
+  
+  .location-section,
+  .geofence-section,
+  .appointment-form-section,
+  .info-section {
+    background: #374151;
+  }
+  
+  .location-section h3,
+  .geofence-section h3,
+  .appointment-form-section h3 {
+    color: #f9fafb;
+  }
+  
+  .form-group label {
+    color: #d1d5db;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    background: #4b5563;
+    border-color: #6b7280;
+    color: #f9fafb;
+  }
+  
+  .location-details {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+  
+  .location-details p {
+    color: #d1d5db;
+  }
+  
+  .location-details strong {
+    color: #f9fafb;
+  }
+}
