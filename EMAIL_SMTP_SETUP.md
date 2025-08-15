@@ -1,17 +1,35 @@
 # 📧 Gmail SMTP Email Entegrasyonu Kurulum Rehberi
 
-## 🎯 Genel Bakış
-
 Bu rehber, QRCal sistemine Gmail SMTP email servisini entegre etmek için gerekli adımları açıklar.
 
 ## ⚙️ SMTP Konfigürasyonu
 
 ### Gmail SMTP Ayarları
 - **Host:** `smtp.gmail.com`
-- **Port:** `465` (SSL) veya `587` (TLS)
-- **Güvenlik:** SSL/TLS
-- **Kullanıcı:** `infoqrcal@gmail.com`
-- **Şifre:** `wzsb tybn ohyp zoep`
+- **Port:** `587`
+- **Security:** `TLS`
+- **Authentication:** `Required`
+
+### Gmail App Password Oluşturma
+
+1. **Google Hesabınıza Giriş Yapın**
+   - [Google Account Settings](https://myaccount.google.com/) sayfasına gidin
+   - "Security" sekmesine tıklayın
+
+2. **2-Step Verification'ı Etkinleştirin**
+   - "2-Step Verification" seçeneğini bulun
+   - Telefon numaranızı doğrulayın
+
+3. **App Passwords Oluşturun**
+   - "App passwords" seçeneğine tıklayın
+   - "Select app" dropdown'undan "Mail" seçin
+   - "Select device" dropdown'undan "Other" seçin
+   - "QRCal Email Service" gibi bir isim verin
+   - "Generate" butonuna tıklayın
+
+4. **App Password'ü Kopyalayın**
+   - 16 karakterlik şifreyi kopyalayın (örn: `abcd efgh ijkl mnop`)
+   - Bu şifreyi güvenli bir yere kaydedin
 
 ## 📁 Dosya Yapısı
 
@@ -24,45 +42,71 @@ backend/
 └── test-email.js               # Email test scripti
 ```
 
-## 🚀 Kurulum Adımları
+## 🔧 Backend Konfigürasyonu
 
-### 1. Environment Dosyası Oluşturma
+### 1. Environment Variables
 
-Backend klasöründe `.env` dosyası oluşturun:
-
-```bash
-cd backend
-cp env.example .env
-```
-
-`.env` dosyasını düzenleyin:
+`.env` dosyasına aşağıdaki değişkenleri ekleyin:
 
 ```env
 # Email Configuration (Gmail SMTP)
 EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=465
-EMAIL_SECURE=true
-EMAIL_USER=infoqrcal@gmail.com
-EMAIL_PASSWORD=wzsb tybn ohyp zoep
-
-# Diğer gerekli ayarlar...
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
 ```
 
-### 2. Email Servisini Test Etme
+### 2. Email Service Test
+
+Email servisini test etmek için:
 
 ```bash
 cd backend
 node test-email.js
 ```
 
-Başarılı çıktı:
+## 📧 Email Gönderme Testi
+
+```javascript
+// Test email gönderme
+const testEmail = {
+  to: 'test@example.com',
+  subject: '🧪 QRCal Email Test',
+  html: `
+    <h2>Email Test Başarılı!</h2>
+    <p>Gmail SMTP konfigürasyonu başarıyla çalışıyor.</p>
+  `
+};
+
+// Email gönder
+await sendEmail(testEmail);
+```
+
+## ✅ Test Sonuçları
+
 ```
 🔧 Testing Gmail SMTP Configuration...
 ✅ SMTP connection verified successfully!
-✅ Test email sent successfully!
-📧 Message ID: <message-id>
-📤 Email sent to: infoqrcal@gmail.com
+📧 Test email sent successfully!
 ```
+
+## 🚨 Güvenlik Önlemleri
+
+### 1. Environment Variables
+- `.env` dosyasını asla Git'e commit etmeyin
+- `.gitignore` dosyasına `.env` ekleyin
+- Production'da environment variables kullanın
+
+### 2. App Password Güvenliği
+- App password'ü güvenli bir yerde saklayın
+- Düzenli olarak yenileyin
+- Sadece gerekli uygulamalarda kullanın
+
+### 3. Rate Limiting
+- Email gönderim sayısını sınırlayın
+- Spam koruması ekleyin
+- Monitoring ve logging yapın
 
 ## 🔧 Email Servis Fonksiyonları
 
@@ -95,102 +139,43 @@ await sendAppointmentRequestEmail(
 );
 ```
 
-## 🛠️ Sorun Giderme
+## 🔍 Troubleshooting
 
-### Yaygın Hatalar ve Çözümleri
+### Yaygın Hatalar
 
-#### 1. Authentication Failed (EAUTH)
-```
-❌ Email test failed: Invalid login
-🔐 Authentication failed. Check your email and password.
-```
+1. **Authentication Failed**
+   - App password'ün doğru olduğundan emin olun
+   - 2-Step Verification'ın etkin olduğunu kontrol edin
 
-**Çözüm:**
-- Gmail şifresini kontrol edin
-- 2FA aktifse uygulama şifresi kullanın
-- Gmail'de "Less secure app access" ayarını kontrol edin
+2. **Connection Timeout**
+   - Firewall ayarlarını kontrol edin
+   - Port 587'nin açık olduğundan emin olun
 
-#### 2. Connection Failed (ECONNECTION)
-```
-❌ Email test failed: Connection failed
-🌐 Connection failed. Check your internet connection and firewall settings.
-```
-
-**Çözüm:**
-- İnternet bağlantısını kontrol edin
-- Firewall ayarlarını kontrol edin
-- Port 465/587'nin açık olduğundan emin olun
-
-#### 3. Connection Timeout (ETIMEDOUT)
-```
-❌ Email test failed: Connection timeout
-⏰ Connection timeout. Check your network settings.
-```
-
-**Çözüm:**
-- Ağ ayarlarını kontrol edin
-- Proxy ayarlarını kontrol edin
-- Gmail SMTP sunucusuna erişimi test edin
-
-## 🔒 Güvenlik Notları
-
-### Environment Variables
-- Email bilgilerini `.env` dosyasında saklayın
-- `.env` dosyasını `.gitignore`'a ekleyin
-- Production'da güvenli şifre yönetimi kullanın
-
-### Gmail Güvenlik
-- Uygulama şifresi kullanın (2FA aktifse)
-- Gmail güvenlik ayarlarını kontrol edin
-- Düzenli olarak şifreleri güncelleyin
-
-## 📧 Email Template'leri
-
-### HTML Email Template'leri
-Tüm email'ler HTML formatında gönderilir ve responsive tasarıma sahiptir:
-- Modern ve profesyonel görünüm
-- Türkçe dil desteği
-- QRCal branding
-- Responsive tasarım
-
-### Özelleştirme
-Email template'lerini `emailService.js` dosyasında düzenleyebilirsiniz:
-- Renk şemaları
-- Logo ve branding
-- İçerik ve metin
-- CSS stilleri
-
-## 🚀 Production Deployment
-
-### Production Environment
-```env
-NODE_ENV=production
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=465
-EMAIL_SECURE=true
-EMAIL_USER=infoqrcal@gmail.com
-EMAIL_PASSWORD=your_production_password
-```
-
-### Monitoring
-- Email gönderim loglarını takip edin
-- Başarısız email'leri izleyin
-- SMTP performansını ölçün
+3. **Rate Limit Exceeded**
+   - Gmail'in günlük email limitini kontrol edin
+   - Email gönderim aralığını artırın
 
 ## 📚 Ek Kaynaklar
 
-- [Nodemailer Documentation](https://nodemailer.com/)
 - [Gmail SMTP Settings](https://support.google.com/mail/answer/7126229)
-- [Email Best Practices](https://www.emailjs.com/docs/best-practices/)
+- [Node.js Nodemailer Documentation](https://nodemailer.com/)
+- [Gmail Security Best Practices](https://support.google.com/accounts/answer/185839)
 
-## 🆘 Destek
+## 🎯 Sonraki Adımlar
 
-Herhangi bir sorun yaşarsanız:
-1. `test-email.js` scriptini çalıştırın
-2. Hata mesajlarını kontrol edin
-3. Gmail ayarlarını doğrulayın
-4. Network ve firewall ayarlarını kontrol edin
+1. **Production Deployment**
+   - Environment variables'ları production sunucusuna ekleyin
+   - SSL sertifikalarını yapılandırın
+   - Monitoring sistemini kurun
 
----
+2. **Email Templates**
+   - HTML email şablonları oluşturun
+   - Responsive tasarım ekleyin
+   - Branding ve logo ekleyin
+
+3. **Advanced Features**
+   - Email queue sistemi kurun
+   - Retry mechanism ekleyin
+   - Analytics ve tracking ekleyin
 
 **Not:** Bu rehber QRCal sistemi için özel olarak hazırlanmıştır. Gmail SMTP ayarları değişirse güncelleyin.
