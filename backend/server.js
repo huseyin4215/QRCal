@@ -26,22 +26,23 @@ import qrRoutes from './routes/qr.js';
 import userRoutes from './routes/users.js';
 import studentRoutes from './routes/students.js';
 import googleRoutes from './routes/googleAuth.js';
+import geofenceRoutes from './routes/geofence.js';
+import notificationRoutes from './routes/notifications.js';
+
+// Import appointment scheduler
+import appointmentScheduler from './services/appointmentScheduler.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 import { authMiddleware } from './middleware/auth.js';
-
-
-import geofenceRoutes from './routes/geofence.js';
-
-
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-
-app.use('/api/geofence', geofenceRoutes);
-// Security middleware
-app.use(helmet());
+// Security middleware (configure for cross-origin API usage in dev)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  contentSecurityPolicy: false
+}));
 
 // Rate limiting - temporarily disabled for development
 // const limiter = rateLimit({
@@ -55,11 +56,16 @@ app.use(helmet());
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
-      'http://localhost:8081', 
-      'http://localhost:8082', 
+      'http://localhost:8081', // Ana frontend port
       'http://localhost:5173', 
+      'http://localhost:8082', 
       'http://localhost:3000', 
       'http://127.0.0.1:8081',
+      'http://127.0.0.1:5173',
+      'http://192.168.0.103:8081',
+      'http://192.168.0.103:5173',
+      'http://192.168.0.103:8082',
+      'http://192.168.0.103:3000',
       'https://accounts.google.com',
       'https://www.googleapis.com'
     ];
@@ -100,11 +106,16 @@ app.use(cors({
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   const allowedOrigins = [
-    'http://localhost:8081', 
-    'http://localhost:8082', 
+    'http://localhost:8081', // Ana frontend port
     'http://localhost:5173', 
+    'http://localhost:8082', 
     'http://localhost:3000', 
-    'http://127.0.0.1:8081'
+    'http://127.0.0.1:8081',
+    'http://127.0.0.1:5173',
+    'http://192.168.0.103:8081',
+    'http://192.168.0.103:5173',
+    'http://192.168.0.103:8082',
+    'http://192.168.0.103:3000'
   ];
   
   if (allowedOrigins.includes(origin)) {
@@ -152,6 +163,8 @@ app.use('/api/admin', authMiddleware, adminRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/google', googleRoutes);
+app.use('/api/geofence', geofenceRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
@@ -169,6 +182,14 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:8081'}`);
   console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+  
+  // Start appointment scheduler
+  try {
+    appointmentScheduler.start();
+    console.log('📅 Otomatik randevu kontrol servisi başlatıldı');
+  } catch (error) {
+    console.error('❌ Otomatik randevu kontrol servisi başlatılamadı:', error);
+  }
 });
 
 export default app; 

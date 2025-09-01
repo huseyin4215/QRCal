@@ -1,6 +1,6 @@
 {
-  "name": "QRCal - Akademik Randevu Sistemi",
-  "short_name": "QRCal",
+  "name": "Qnnect - Akademik Randevu Sistemi",
+  "short_name": "Qnnect",
   "description": "Konum tabanlı akademik randevu sistemi",
   "start_url": "/",
   "display": "standalone",

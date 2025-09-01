@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { QrCodeIcon, DocumentArrowDownIcon, ArrowUpTrayIcon, SparklesIcon, HomeIcon, UserIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 import Header from '../components/Header/Header';
+import headerStyles from '../components/Header/Header.module.css';
 import QRCodeEditor from '../components/QRCodeEditor';
 import styles from '../styles/QrCodePage.module.css';
 
@@ -16,6 +17,7 @@ const QrCodePage = () => {
   const [success, setSuccess] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const navigate = useNavigate();
+  const qrImageRef = useRef(null);
 
   // Profile dropdown handlers
   const handleProfile = () => {
@@ -65,9 +67,14 @@ const QrCodePage = () => {
       console.log('QR code response:', response);
       
       if (response.success) {
-        setQrCodeUrl(response.data.qrCodeUrl);
-        const qrData = response.data.qrCodeUrl || `${window.location.origin}/appointment/${user?.slug || 'admin'}`;
-        setQrCodeData(qrData);
+        const url = response.data?.qrCodeUrl;
+        if (url) {
+          setQrCodeUrl(url);
+          setQrCodeData(url);
+        } else {
+          // If no URL exists for this user yet, generate one now
+          await generateQrCode();
+        }
       } else {
         setError(response.message || 'QR kod yüklenemedi');
       }
@@ -125,11 +132,25 @@ const QrCodePage = () => {
     }
   };
 
-  const downloadQrCode = () => {
-    if (qrCodeUrl) {
+  const downloadQrCode = async () => {
+    const img = qrImageRef.current;
+    if (!img || !img.src) return;
+    try {
+      const response = await fetch(img.src, { mode: 'cors' });
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = qrCodeUrl;
+      link.href = url;
       link.download = `qr-code-${user?.name || 'admin'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      // Fallback: open image in new tab
+      const link = document.createElement('a');
+      link.href = img.src;
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -137,12 +158,18 @@ const QrCodePage = () => {
   };
 
   const shareQrCode = async () => {
-    if (navigator.share && qrCodeUrl) {
+    // Ensure we share the personalized appointment URL, not the image URL
+    const appointmentUrl = qrCodeUrl;
+    if (!appointmentUrl) {
+      await generateQrCode();
+      return;
+    }
+    if (navigator.share && appointmentUrl) {
       try {
         await navigator.share({
-          title: `${user?.name || 'Faculty'} - QR Kod`,
-          text: 'QR kodu tarayarak randevu alabilirsiniz',
-          url: qrCodeUrl
+          title: `${user?.name || 'Faculty'} - Randevu`,
+          text: 'Kişisel randevu sayfama gitmek için bağlantıya tıklayın.',
+          url: appointmentUrl
         });
       } catch (error) {
         console.log('Share cancelled or failed');
@@ -150,10 +177,10 @@ const QrCodePage = () => {
     } else {
       // Fallback to clipboard
       try {
-        await navigator.clipboard.writeText(qrCodeUrl);
-        setSuccess('QR kod URL\'si panoya kopyalandı!');
+        await navigator.clipboard.writeText(appointmentUrl);
+        setSuccess('Randevu bağlantısı panoya kopyalandı!');
       } catch (error) {
-        setError('QR kod URL\'si kopyalanamadı');
+        setError('Randevu bağlantısı kopyalanamadı');
       }
     }
   };
@@ -193,39 +220,21 @@ const QrCodePage = () => {
         onProfile={handleProfile}
         onPassword={handlePassword}
         onLogout={handleLogout}
-      />
+        theme={user?.role || 'admin'}
+      >
+        <div className={headerStyles.navigationButtons}>
+          <button
+            onClick={() => navigate('/')}
+            className={headerStyles.navLink}
+            title="Anasayfaya Dön"
+          >
+            <HomeIcon className={headerStyles.navIcon} />
+            Anasayfa
+          </button>
+        </div>
+      </Header>
       <div className={styles.contentContainer}>
         <div className={styles.mainCard}>
-          {/* User Info and Navigation Header */}
-          <div className={styles.userHeader}>
-            <div className={styles.userInfo}>
-              <div className={styles.userAvatar}>
-                <UserIcon className="w-6 h-6" />
-              </div>
-              <div className={styles.userDetails}>
-                <h2 className={styles.userName}>{user?.name || 'Kullanıcı'}</h2>
-                <p className={styles.userRole}>
-                  {user?.role === 'admin' ? 'Yönetici' : 
-                   user?.role === 'faculty' ? 'Öğretim Elemanı' : 
-                   user?.role === 'student' ? 'Öğrenci' : 'Kullanıcı'}
-                </p>
-                {user?.department && (
-                  <p className={styles.userDepartment}>{user.department}</p>
-                )}
-              </div>
-            </div>
-            
-            <div className={styles.navigationButtons}>
-              <button
-                onClick={() => navigate('/')}
-                className={styles.navButton}
-                title="Anasayfaya Dön"
-              >
-                <HomeIcon className="w-5 h-5" />
-                <span>Anasayfa</span>
-              </button>
-            </div>
-          </div>
 
           <div className={styles.headerSection}>
             <div className={styles.headerIcon}>
@@ -276,6 +285,7 @@ const QrCodePage = () => {
             <div className={styles.qrCodeSection}>
               <div className={styles.qrCodeContainer}>
                 <img
+                  ref={qrImageRef}
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCodeUrl)}`}
                   alt="QR Code"
                   className={styles.qrCodeImage}

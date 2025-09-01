@@ -1,0 +1,215 @@
+.themeUsers {
+  --theme-primary: #2563eb; /* blue-600 */
+  --theme-primary-700: #1d4ed8; /* blue-700 */
+  --theme-ring: rgba(37, 99, 235, 0.35);
+}
+
+.themeAppointments {
+  --theme-primary: #059669; /* emerald-600 */
+  --theme-primary-700: #047857; /* emerald-700 */
+  --theme-ring: rgba(5, 150, 105, 0.35);
+}
+
+.themeAvailability {
+  --theme-primary: #0ea5e9; /* sky-500 */
+  --theme-primary-700: #0284c7; /* sky-600 */
+  --theme-ring: rgba(14, 165, 233, 0.35);
+}
+
+.themeGeofence {
+  --theme-primary: #f97316; /* orange-500 */
+  --theme-primary-700: #ea580c; /* orange-600 */
+  --theme-ring: rgba(249, 115, 22, 0.35);
+}
+
+.themeStats {
+  --theme-primary: #f59e0b; /* amber-500 */
+  --theme-primary-700: #d97706; /* amber-600 */
+  --theme-ring: rgba(245, 158, 11, 0.35);
+}
+
+/* Themed primary button (override global utility) */
+.themeUsers :global(.btn-primary),
+.themeAppointments :global(.btn-primary),
+.themeAvailability :global(.btn-primary),
+.themeGeofence :global(.btn-primary),
+.themeStats :global(.btn-primary) {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  box-shadow: 0 6px 18px var(--theme-ring);
+}
+
+.themeUsers :global(.btn-primary:hover),
+.themeAppointments :global(.btn-primary:hover),
+.themeAvailability :global(.btn-primary:hover),
+.themeGeofence :global(.btn-primary:hover),
+.themeStats :global(.btn-primary:hover) {
+  background: var(--theme-primary-700);
+  border-color: var(--theme-primary-700);
+}
+
+/* Themed outline button helper */
+.buttonOutline {
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  background: linear-gradient(#fff, #f8fafc);
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.buttonOutline:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+
+.buttonToggle {
+  padding: 1rem 1.25rem;
+  border-radius: 0.9rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(#f9fafb, #f3f4f6);
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.buttonToggle:hover {
+  background: linear-gradient(#f9fafb, #f3f4f6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  color: #374151;
+}
+
+.buttonToggleActive {
+  background: linear-gradient(90deg, var(--theme-primary), var(--theme-primary-700));
+  color: #ffffff;
+  border: 0;
+  box-shadow: 0 14px 34px var(--theme-ring), inset 0 0 0 1px rgba(255,255,255,0.15);
+  transform: translateY(-1px);
+}
+
+.buttonToggleActive:hover {
+  background: linear-gradient(90deg, var(--theme-primary-700), var(--theme-primary));
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px var(--theme-ring), inset 0 0 0 1px rgba(255,255,255,0.2);
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.badgeOn {
+  background: #ffffff;
+  color: var(--theme-primary);
+}
+
+.badgeOff {
+  background: rgba(255,255,255,0.85);
+  color: var(--theme-primary-700);
+}
+
+/* Badge hover states */
+.buttonToggle:hover .badgeOff {
+  background: rgba(255,255,255,0.95);
+  color: var(--theme-primary);
+}
+
+.buttonToggleActive:hover .badgeOn {
+  background: rgba(255,255,255,0.95);
+  color: var(--theme-primary-700);
+}
+
+/* Toggle Button Container */
+.toggleButtonContainer {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .toggleButtonContainer {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .buttonToggle {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    font-size: 0.8rem;
+    justify-content: space-between;
+    border-radius: 0;
+  }
+  
+  .buttonToggle:first-child {
+    border-radius: 0.75rem 0.75rem 0 0;
+    border-bottom: 0.5px solid rgba(229, 231, 235, 0.5);
+  }
+  
+  .buttonToggle:last-child {
+    border-radius: 0 0 0.75rem 0.75rem;
+    border-top: 0.5px solid rgba(229, 231, 235, 0.5);
+  }
+  
+  .buttonToggle > div {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .badge {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .buttonToggle {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.75rem;
+  }
+  
+  .buttonToggle > div {
+    gap: 0.5rem;
+  }
+  
+  .badge {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .toggleButtonContainer {
+    gap: 0.5rem;
+  }
+  
+  .buttonToggle {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.7rem;
+    border-radius: 0.75rem;
+  }
+  
+  .buttonToggle svg {
+    width: 1rem;
+    height: 1rem;
+  }
+  
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.35rem;
+  }
+}
+
+

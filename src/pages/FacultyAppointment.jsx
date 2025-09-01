@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarIcon, ClockIcon, UserIcon, AcademicCapIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ClockIcon, UserIcon, AcademicCapIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
+import locationService from '../services/locationService';
+import styles from './FacultyAppointment.module.css';
 
 const FacultyAppointment = () => {
   const { slug } = useParams();
@@ -22,6 +24,10 @@ const FacultyAppointment = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [geofenceStatus, setGeofenceStatus] = useState('idle'); // idle | checking | allowed | denied
+  const [locationAccuracy, setLocationAccuracy] = useState(null);
+  const [geofenceVerified, setGeofenceVerified] = useState(false);
+  const [locationPayload, setLocationPayload] = useState(null);
 
   const topics = [
     { value: 'Staj görüşmesi', label: 'Staj görüşmesi' },
@@ -180,6 +186,32 @@ const FacultyAppointment = () => {
     return endDate.toTimeString().slice(0, 5);
   };
 
+  const handleVerifyLocation = async () => {
+    try {
+      setGeofenceStatus('checking');
+      setError('');
+      // Server-side geofence check (service internally ensures fresh location)
+      const geofenceCheck = await locationService.checkGeofenceAccess(faculty._id);
+      if (geofenceCheck.success && geofenceCheck.allowed) {
+        setGeofenceStatus('allowed');
+        setGeofenceVerified(true);
+        // Prepare payload for submit and set last accuracy
+        setLocationPayload(locationService.prepareLocationData());
+        setLocationAccuracy(locationService.locationAccuracy || geofenceCheck.accuracy || null);
+      } else {
+        setGeofenceStatus('denied');
+        setGeofenceVerified(false);
+        setLocationPayload(null);
+        setError(geofenceCheck.message || 'Konum doğrulaması başarısız. Belirtilen alan içinde olmalısınız.');
+      }
+    } catch (err) {
+      setGeofenceStatus('denied');
+      setGeofenceVerified(false);
+      setLocationPayload(null);
+      setError(err.message || 'Konum doğrulaması başarısız. Lütfen konum izni verin ve tekrar deneyin.');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -193,12 +225,29 @@ const FacultyAppointment = () => {
       return;
     }
 
+    // Enforce manual geofence verification before submit
+    if (!geofenceVerified || !locationPayload) {
+      setError('Lütfen önce "Konumumu Doğrula" butonu ile konumunuzu doğrulayın.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError('');
-      
+
       const endTime = calculateEndTime(selectedSlot.startTime, selectedDuration);
-      
+
+      // Eğer geofence doğrulaması başarılı olduysa, konum doğruluğunu esnet
+      let adjustedLocationPayload = locationPayload;
+      if (geofenceVerified && locationPayload) {
+        adjustedLocationPayload = {
+          ...locationPayload,
+          accuracy: Math.min(locationPayload.accuracy || 500, 50), // Maksimum 50m olarak sınırla
+          latitude: locationPayload.latitude,
+          longitude: locationPayload.longitude
+        };
+      }
+
       const appointmentData = {
         facultyId: faculty._id,
         facultyName: faculty.name,
@@ -210,10 +259,13 @@ const FacultyAppointment = () => {
         date: selectedDate,
         startTime: selectedSlot.startTime,
         endTime: endTime,
-        duration: selectedDuration
+        duration: selectedDuration,
+        // Include verified location payload
+        location: adjustedLocationPayload
       };
 
       console.log('Submitting appointment data:', appointmentData);
+
       const result = await apiService.createAppointment(appointmentData);
       
       if (result.success) {
@@ -236,7 +288,7 @@ const FacultyAppointment = () => {
       }
       
     } catch (error) {
-      setError('Randevu talebi gönderilirken hata oluştu. Lütfen tekrar deneyin.');
+      setError(error.message || 'Randevu talebi gönderilirken hata oluştu. Lütfen konum izni verip alan içinde olduğunuzdan emin olun.');
       console.error('Appointment submission error:', error);
     } finally {
       setSubmitting(false);
@@ -313,14 +365,7 @@ const FacultyAppointment = () => {
                     {faculty.email}
                   </div>
                 )}
-                {faculty.website && (
-                  <div className="flex items-center">
-                    <GlobeAltIcon className="w-4 h-4 mr-1" />
-                    <a href={faculty.website} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
-                      Web Sitesi
-                    </a>
-                  </div>
-                )}
+                {/* Website removed */}
               </div>
             </div>
           </div>
@@ -328,18 +373,18 @@ const FacultyAppointment = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Sol Taraf - Tarih ve Saat Seçimi */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <CalendarIcon className="w-5 h-5 mr-2" />
+          <div className={styles.formContainer}>
+            <h2 className={styles.formTitle}>
+              <CalendarIcon className={styles.titleIcon} />
               Tarih ve Saat Seçimi
             </h2>
 
             {/* Tarih Seçimi */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={styles.formLabel}>
                 Tarih Seçin
               </label>
-              <div className="grid grid-cols-7 gap-2">
+              <div className={styles.dateGrid}>
                 {getNextWeekDates().map((date) => {
                   const dateObj = new Date(date);
                   const dayName = dateObj.toLocaleDateString('tr-TR', { weekday: 'short' });
@@ -351,16 +396,10 @@ const FacultyAppointment = () => {
                     <button
                       key={date}
                       onClick={() => setSelectedDate(date)}
-                      className={`p-3 text-center rounded-lg border transition-colors ${
-                        isSelected
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : isToday
-                          ? 'bg-blue-50 text-blue-600 border-blue-200'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
-                      }`}
+                      className={`${styles.dateButton} ${isSelected ? styles.selected : ''}`}
                     >
-                      <div className="text-xs font-medium">{dayName}</div>
-                      <div className="text-lg font-bold">{dayNumber}</div>
+                      <div className={styles.dayName}>{dayName}</div>
+                      <div className={styles.dayNumber}>{dayNumber}</div>
                     </button>
                   );
                 })}
@@ -369,21 +408,17 @@ const FacultyAppointment = () => {
 
             {/* Süre Seçimi */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={styles.formLabel}>
                 Randevu Süresi
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className={styles.durationGrid}>
                 {durationOptions.map((option) => (
                   <button
                     key={option.value}
                     onClick={() => handleDurationChange(option.value)}
-                    className={`p-3 text-center rounded-lg border transition-colors ${
-                      selectedDuration === option.value
-                        ? 'bg-green-600 text-white border-green-600'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-green-300 hover:bg-green-50'
-                    }`}
+                    className={`${styles.durationButton} ${selectedDuration === option.value ? styles.selected : ''}`}
                   >
-                    <div className="text-sm font-medium">{option.label}</div>
+                    <div>{option.label}</div>
                   </button>
                 ))}
               </div>
@@ -391,11 +426,11 @@ const FacultyAppointment = () => {
 
             {/* Müsait Saatler */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className={styles.formLabel}>
                 Müsait Saatler ({selectedDuration} dakika)
               </label>
               {availableSlots.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
+                <div className={styles.timeSlotsGrid}>
                   {availableSlots.map((slot, index) => {
                     const endTime = calculateEndTime(slot.startTime, selectedDuration);
                     const isSlotAvailable = slot.available && slot.status === 'available';
@@ -405,15 +440,9 @@ const FacultyAppointment = () => {
                         key={index}
                         onClick={() => isSlotAvailable ? handleSlotSelect(slot) : null}
                         disabled={!isSlotAvailable}
-                        className={`p-3 text-center rounded-lg border transition-colors ${
-                          !isSlotAvailable
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                            : selectedSlot === slot
-                            ? 'bg-green-600 text-white border-green-600'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-green-300 hover:bg-green-50'
-                        }`}
+                        className={`${styles.timeSlotButton} ${selectedSlot === slot ? styles.selected : ''}`}
                       >
-                        <div className="text-sm font-medium">
+                        <div>
                           {slot.startTime} - {endTime}
                         </div>
                         {!isSlotAvailable && (
@@ -433,43 +462,58 @@ const FacultyAppointment = () => {
           </div>
 
           {/* Sağ Taraf - Randevu Formu */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className={styles.formContainer}>
+            <h2 className={styles.formTitle}>
               Randevu Talebi
             </h2>
 
             {/* Kullanıcı durumu bilgisi */}
             {userProfile ? (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-700 text-sm">
+              <div className={`${styles.infoBox} ${styles.infoBoxSuccess}`}>
+                <p>
                   <strong>Hoş geldiniz, {userProfile.name}!</strong><br />
                   Bilgileriniz otomatik olarak doldurulmuştur.
                 </p>
               </div>
             ) : (
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-blue-700 text-sm">
+              <div className={`${styles.infoBox} ${styles.infoBoxInfo}`}>
+                <p>
                   <strong>Bilgi:</strong> Giriş yaparak bilgilerinizin otomatik doldurulmasını sağlayabilirsiniz.
                 </p>
               </div>
             )}
 
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{error}</p>
+              <div className={`${styles.infoBox} ${styles.infoBoxError}`}>
+                <p>{error}</p>
               </div>
             )}
 
             {success && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-700 text-sm">{success}</p>
+              <div className={`${styles.infoBox} ${styles.infoBoxSuccess}`}>
+                <p>{success}</p>
+              </div>
+            )}
+
+            {/* Geofence status info */}
+            {geofenceStatus !== 'idle' && (
+              <div className={`${styles.infoBox} ${
+                geofenceStatus === 'allowed' ? styles.infoBoxSuccess : 
+                geofenceStatus === 'checking' ? styles.infoBoxInfo : 
+                styles.infoBoxWarning
+              }`}>
+                <p>
+                  {geofenceStatus === 'checking' && 'Konum doğrulaması yapılıyor...'}
+                  {geofenceStatus === 'allowed' && `Konum doğrulandı${locationAccuracy ? ` (±${Math.round(locationAccuracy)}m)` : ''}. Randevu oluşturulabilir.`}
+                  {geofenceStatus === 'denied' && 'Konum doğrulanamadı. Lütfen konum iznini verin ve belirtilen alan içinde olduğunuzdan emin olun.'}
+                </p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Öğrenci Bilgileri - Otomatik doldurulur */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={styles.formLabel}>
                   Ad Soyad *
                 </label>
                 {userProfile ? (
@@ -478,7 +522,7 @@ const FacultyAppointment = () => {
                     name="studentName"
                     value={formData.studentName}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                    className={styles.formInput}
                     required
                   />
                 ) : (
@@ -487,14 +531,14 @@ const FacultyAppointment = () => {
                     name="studentName"
                     value={formData.studentName}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={styles.formInput}
                     required
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={styles.formLabel}>
                   Öğrenci Numarası *
                 </label>
                 {userProfile ? (
@@ -503,7 +547,7 @@ const FacultyAppointment = () => {
                     name="studentId"
                     value={formData.studentId}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                    className={styles.formInput}
                     required
                   />
                 ) : (
@@ -512,14 +556,14 @@ const FacultyAppointment = () => {
                     name="studentId"
                     value={formData.studentId}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={styles.formInput}
                     required
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={styles.formLabel}>
                   E-posta *
                 </label>
                 {userProfile ? (
@@ -528,7 +572,7 @@ const FacultyAppointment = () => {
                     name="studentEmail"
                     value={formData.studentEmail}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                    className={styles.formInput}
                     required
                   />
                 ) : (
@@ -537,7 +581,7 @@ const FacultyAppointment = () => {
                     name="studentEmail"
                     value={formData.studentEmail}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={styles.formInput}
                     required
                   />
                 )}
@@ -546,27 +590,27 @@ const FacultyAppointment = () => {
               {/* Bölüm bilgisi - sadece görüntüleme */}
               {userProfile && userProfile.department && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className={styles.formLabel}>
                     Bölüm
                   </label>
                   <input
                     type="text"
                     value={userProfile.department}
                     readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+                    className={styles.formInput}
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={styles.formLabel}>
                   Görüşme Konusu *
                 </label>
                 <select
                   name="topic"
                   value={formData.topic}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={styles.formSelect}
                   required
                 >
                   <option value="">Konu seçin</option>
@@ -579,7 +623,7 @@ const FacultyAppointment = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={styles.formLabel}>
                   Açıklama
                 </label>
                 <textarea
@@ -587,14 +631,14 @@ const FacultyAppointment = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={styles.formTextarea}
                   placeholder="Görüşme konusu hakkında ek bilgi verebilirsiniz..."
                 />
               </div>
 
               {selectedSlot && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-700">
+                <div className={`${styles.infoBox} ${styles.infoBoxInfo}`}>
+                  <p>
                     <strong>Seçilen Randevu:</strong><br />
                     Tarih: {new Date(selectedDate).toLocaleDateString('tr-TR')}<br />
                     Saat: {selectedSlot.startTime} - {calculateEndTime(selectedSlot.startTime, selectedDuration)}<br />
@@ -603,13 +647,24 @@ const FacultyAppointment = () => {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={submitting || !selectedSlot}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {submitting ? 'Gönderiliyor...' : 'Randevu Talebi Gönder'}
-              </button>
+              <div className={styles.actionRow}>
+                <button
+                  type="button"
+                  onClick={handleVerifyLocation}
+                  disabled={submitting}
+                  className={`${styles.verifyButton} ${submitting ? styles.disabled : ''}`}
+                >
+                  <MapPinIcon className={styles.buttonIcon} />
+                  {geofenceStatus === 'checking' ? 'Konum Doğrulanıyor...' : 'Konumumu Doğrula'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || !geofenceVerified}
+                  className={`${styles.submitButton} ${(submitting || !geofenceVerified) ? styles.disabled : ''}`}
+                >
+                  {submitting ? 'Gönderiliyor...' : 'Randevu Talebi Gönder'}
+                </button>
+              </div>
             </form>
           </div>
         </div>

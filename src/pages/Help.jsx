@@ -12,8 +12,8 @@ const Help = () => {
 
   const faqs = [
     {
-      question: "QR Calendar nedir ve nasıl çalışır?",
-      answer: "QR Calendar, öğretim elemanları ve öğrenciler için tasarlanmış modern bir randevu yönetim sistemidir. QR kod teknolojisi kullanarak hızlı ve kolay randevu alma deneyimi sunar. Öğretim elemanları müsaitlik takvimlerini oluşturur, öğrenciler ise bu takvimlerden uygun zamanları seçerek randevu alabilir."
+      question: "Qnnect nedir ve nasıl çalışır?",
+      answer: "Qnnect, öğretim elemanları ve öğrenciler için tasarlanmış modern bir randevu yönetim sistemidir. QR kod teknolojisi kullanarak hızlı ve kolay randevu alma deneyimi sunar. Öğretim elemanları müsaitlik takvimlerini oluşturur, öğrenciler ise bu takvimlerden uygun zamanları seçerek randevu alabilir."
     },
     {
       question: "Hesap oluşturmak için ne yapmam gerekiyor?",
@@ -33,7 +33,7 @@ const Help = () => {
     },
     {
       question: "Google Calendar entegrasyonu nasıl çalışır?",
-      answer: "Google Calendar entegrasyonu için önce Google hesabınızla giriş yapmanız gerekiyor. 'Takvim Entegrasyonu' sayfasından Google Calendar'a bağlanın. Bu sayede QR Calendar'daki randevularınız otomatik olarak Google Calendar'ınıza da eklenir."
+      answer: "Google Calendar entegrasyonu için önce Google hesabınızla giriş yapmanız gerekiyor. 'Takvim Entegrasyonu' sayfasından Google Calendar'a bağlanın. Bu sayede Qnnect'teki randevularınız otomatik olarak Google Calendar'ınıza da eklenir."
     },
     {
       question: "Randevu iptal edilebilir mi?",
@@ -128,7 +128,7 @@ const Help = () => {
             <QuestionMarkCircleIcon />
           </div>
           <h1 className="policy-title">Yardım Merkezi</h1>
-          <p className="policy-subtitle">QR Calendar kullanımı hakkında tüm bilgilere buradan ulaşabilirsiniz</p>
+          <p className="policy-subtitle">Qnnect kullanımı hakkında tüm bilgilere buradan ulaşabilirsiniz</p>
         </div>
 
         {/* Tab Navigation */}

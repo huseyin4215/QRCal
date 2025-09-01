@@ -1,16 +1,14 @@
-import { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { QrCodeIcon, DocumentArrowDownIcon, ArrowUpTrayIcon, SparklesIcon, HomeIcon, UserIcon, PlusIcon, MinusIcon, ArrowPathIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { 
-  ArrowDownTrayIcon, 
   PaintBrushIcon, 
-  PhotoIcon, 
-  DocumentArrowDownIcon,
-  UserIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  SwatchIcon,
-  Cog6ToothIcon,
-  PencilIcon
+  EyeIcon, 
+  EyeSlashIcon, 
+  SwatchIcon, 
+  Cog6ToothIcon, 
+  PhotoIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -100,7 +98,9 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     customTextPosition: 'above', // 'above', 'below', 'left', 'right'
     customTextStyle: 'pill', // 'pill', 'box', 'underline', 'none'
     customTextSize: 'medium', // 'small', 'medium', 'large'
-    customTextColor: '#667eea' // New field for custom text color
+    customTextColor: '#667eea', // New field for custom text color
+    showAppName: true, // New field to control app name visibility
+    appName: 'Qnnect' // New field for app name
   });
 
   const [exportConfig, setExportConfig] = useState({
@@ -109,9 +109,19 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     orientation: 'portrait' // 'portrait', 'landscape'
   });
 
+  // Ensure landscape mode only allows custom text at top/bottom and put it inside contact block
+  useEffect(() => {
+    if (exportConfig.orientation === 'landscape') {
+      if (contactConfig.customTextPosition !== 'above' && contactConfig.customTextPosition !== 'below') {
+        setContactConfig(prev => ({ ...prev, customTextPosition: 'above' }));
+      }
+    }
+  }, [exportConfig.orientation, contactConfig.customTextPosition]);
+
   const [previewMode, setPreviewMode] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const qrRef = useRef(null);
+  const previewCardRef = useRef(null);
 
   // Predefined color schemes
   const colorSchemes = [
@@ -125,7 +135,65 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     { name: 'Gradient Yeşil', bg: '#F0FDF4', fg: '#16A34A' },
   ];
 
+  const handleDownloadFromPreview = (format) => {
+    const element = previewCardRef.current;
+    if (!element) return;
+    if (format === 'pdf') {
+      setIsGeneratingPDF(true);
+    }
+    html2canvas(element, {
+      scale: 3,
+      backgroundColor: null,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      imageTimeout: 15000
+    }).then(canvas => {
+      if (format === 'pdf') {
+        let pdfSize = 'a4';
+        let pdfOrientation = 'p';
+        if (exportConfig.size === 'A5') pdfSize = 'a5';
+        if (exportConfig.orientation === 'landscape') pdfOrientation = 'l';
+        const pdf = new jsPDF(pdfOrientation, 'mm', pdfSize);
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15;
+        const imgWidth = pageWidth - (margin * 2);
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let finalImgHeight = imgHeight;
+        let finalImgWidth = imgWidth;
+        if (imgHeight > (pageHeight - (margin * 2))) {
+          finalImgHeight = pageHeight - (margin * 2);
+          finalImgWidth = (canvas.width * finalImgHeight) / canvas.height;
+        }
+        const x = (pageWidth - finalImgWidth) / 2;
+        const y = (pageHeight - finalImgHeight) / 2;
+        pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', x, y, finalImgWidth, finalImgHeight);
+        const timestamp = new Date().toLocaleString('tr-TR');
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(`Oluşturulma Tarihi: ${timestamp}`, margin, pageHeight - margin);
+        pdf.text('Qnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
+        pdf.save(`qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.pdf`);
+        setIsGeneratingPDF(false);
+      } else {
+        const link = document.createElement('a');
+        link.download = `qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+      }
+    }).catch(err => {
+      console.error('Export error:', err);
+      if (format === 'pdf') setIsGeneratingPDF(false);
+      alert(`${format.toUpperCase()} oluşturulurken hata oluştu. Lütfen tekrar deneyin.`);
+    });
+  };
+
   const handleDownloadQR = () => {
+    if (previewCardRef.current) {
+      handleDownloadFromPreview(exportConfig.format);
+      return;
+    }
     if (qrRef.current) {
       if (exportConfig.format === 'pdf') {
         handleDownloadPDF();
@@ -133,6 +201,216 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
         handleDownloadPNG();
       }
     }
+  };
+
+  // Build a hidden DOM container that mirrors the on-screen card for export (PNG/PDF)
+  const createExportContainer = () => {
+    const isPortrait = exportConfig.orientation === 'portrait';
+    const isA4 = exportConfig.size === 'A4';
+
+    // Use half-resolution logical size and export with scale=2 for high DPI
+    let baseWidth, baseHeight;
+    if (isA4) {
+      baseWidth = isPortrait ? 1240 : 1754;
+      baseHeight = isPortrait ? 1754 : 1240;
+    } else {
+      baseWidth = isPortrait ? 874 : 1240;
+      baseHeight = isPortrait ? 1240 : 874;
+    }
+
+    const hasContact = user && (
+      contactConfig.showName ||
+      contactConfig.showTitle ||
+      contactConfig.showEmail ||
+      contactConfig.showPhone ||
+      contactConfig.showDepartment ||
+      contactConfig.showOffice ||
+      (contactConfig.showAppName && contactConfig.appName)
+    );
+
+    const buildCustomTextDiv = () => {
+      const customTextDiv = document.createElement('div');
+      const sizeMap = { small: '20px', medium: '28px', large: '36px' };
+      customTextDiv.style.fontSize = sizeMap[contactConfig.customTextSize] || sizeMap.medium;
+      customTextDiv.style.fontWeight = 'bold';
+      customTextDiv.style.lineHeight = '1.2';
+      customTextDiv.style.color = contactConfig.customTextColor;
+      customTextDiv.style.textAlign = 'center';
+      customTextDiv.style.width = 'auto';
+      customTextDiv.style.display = 'inline-block';
+
+      switch (contactConfig.customTextStyle) {
+        case 'pill':
+          customTextDiv.style.padding = '8px 16px';
+          customTextDiv.style.backgroundColor = 'rgba(255,255,255,0.9)';
+          customTextDiv.style.borderRadius = '25px';
+          customTextDiv.style.border = `2px solid ${contactConfig.customTextColor}`;
+          break;
+        case 'box':
+          customTextDiv.style.padding = '8px 16px';
+          customTextDiv.style.backgroundColor = 'rgba(255,255,255,0.9)';
+          customTextDiv.style.borderRadius = '8px';
+          customTextDiv.style.border = `2px solid ${contactConfig.customTextColor}`;
+          break;
+        case 'underline':
+          customTextDiv.style.padding = '4px 0';
+          customTextDiv.style.borderBottom = `3px solid ${contactConfig.customTextColor}`;
+          break;
+        case 'none':
+        default:
+          customTextDiv.style.padding = '4px 0';
+          break;
+      }
+
+      customTextDiv.textContent = contactConfig.customText;
+      return customTextDiv;
+    };
+
+    const buildContactDiv = () => {
+      const contactDiv = document.createElement('div');
+      contactDiv.style.display = 'flex';
+      contactDiv.style.flexDirection = 'column';
+      contactDiv.style.gap = '12px';
+      contactDiv.style.textAlign = exportConfig.orientation === 'landscape'
+        ? (contactConfig.position === 'top' ? 'left' : 'right')
+        : 'center';
+      contactDiv.style.color = contactConfig.textColor;
+      contactDiv.style.background = 'transparent';
+      contactDiv.style.margin = '0';
+      contactDiv.style.padding = '0';
+      contactDiv.style.lineHeight = '1.3';
+
+      const appendText = (text, sizePx, weight = 'normal', color) => {
+        const el = document.createElement('div');
+        el.style.fontSize = `${sizePx}px`;
+        el.style.fontWeight = weight;
+        el.style.margin = '0';
+        el.style.lineHeight = '1.3';
+        if (color) el.style.color = color;
+        el.textContent = text;
+        contactDiv.appendChild(el);
+      };
+      // Landscape: include custom text within the contact block at top/bottom only
+      if (exportConfig.orientation === 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'above') {
+        contactDiv.appendChild(buildCustomTextDiv());
+      }
+
+      if (contactConfig.showName && user.name) appendText(user.name, contactConfig.fontSize + 4, 'bold');
+      if (contactConfig.showTitle && user.title) appendText(user.title, contactConfig.fontSize);
+      if (contactConfig.showDepartment && user.department) appendText(user.department, contactConfig.fontSize);
+      if (contactConfig.showEmail && user.email) appendText(user.email, contactConfig.fontSize);
+      if (contactConfig.showPhone && user.phone) appendText(user.phone, contactConfig.fontSize);
+      if (contactConfig.showOffice && user.office) appendText(`Ofis: ${user.office}`, contactConfig.fontSize);
+      if (contactConfig.showAppName && contactConfig.appName) appendText(contactConfig.appName, contactConfig.fontSize + 8, 'bold', qrConfig.fgColor);
+
+      if (exportConfig.orientation === 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'below') {
+        contactDiv.appendChild(buildCustomTextDiv());
+      }
+
+      return contactDiv;
+    };
+
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = `${baseWidth}px`;
+    container.style.minHeight = `${baseHeight}px`;
+    container.style.backgroundColor = cardConfig.cardColor;
+    container.style.padding = `${cardConfig.cardPadding * 2}px`;
+    container.style.borderRadius = '20px';
+    container.style.border = cardConfig.cardBorder ? `2px solid ${cardConfig.cardBorder}` : 'none';
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    container.style.gap = '20px';
+    container.style.overflow = 'hidden';
+    container.style.boxShadow = cardConfig.cardShadow ? '0 10px 30px rgba(0, 0, 0, 0.1)' : 'none';
+    container.style.fontFamily = 'Arial, sans-serif';
+    container.style.lineHeight = '1.3';
+
+    // Above custom text (only for portrait; landscape will render inside contact block)
+    if (exportConfig.orientation !== 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'above') {
+      container.appendChild(buildCustomTextDiv());
+    }
+
+    // Main row/column layout
+    const layout = document.createElement('div');
+    layout.style.display = 'flex';
+    layout.style.flexDirection = exportConfig.orientation === 'landscape' ? 'row' : 'column';
+    layout.style.alignItems = 'center';
+    layout.style.gap = '20px';
+    layout.style.width = '100%';
+
+    // Left custom text removed
+
+    // Contact info (left side when position === 'top' in landscape)
+    if (hasContact && contactConfig.position === 'top') {
+      layout.appendChild(buildContactDiv());
+    }
+
+    // QR clone
+    const qrClone = qrRef.current ? qrRef.current.cloneNode(true) : null;
+    if (qrClone) {
+      qrClone.style.width = '300px';
+      qrClone.style.height = '300px';
+      qrClone.style.display = 'block';
+      qrClone.style.margin = '0';
+      qrClone.style.padding = '0';
+      const svgElement = qrClone.querySelector('svg');
+      if (svgElement) {
+        svgElement.style.width = '100%';
+        svgElement.style.height = '100%';
+        svgElement.setAttribute('width', '300');
+        svgElement.setAttribute('height', '300');
+      }
+      layout.appendChild(qrClone);
+    }
+
+    // Right custom text removed
+
+    // Contact info (right side when position === 'bottom' in landscape)
+    if (hasContact && contactConfig.position === 'bottom') {
+      layout.appendChild(buildContactDiv());
+    }
+
+    container.appendChild(layout);
+
+    // Below custom text (only for portrait; landscape will render inside contact block)
+    if (exportConfig.orientation !== 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'below') {
+      container.appendChild(buildCustomTextDiv());
+    }
+
+    // Optional QR center logo overlay for export (match preview)
+    if (logoConfig.showLogo && logoConfig.logoUrl && qrClone) {
+      const logoDiv = document.createElement('div');
+      logoDiv.style.position = 'absolute';
+      logoDiv.style.zIndex = '10';
+      logoDiv.style.opacity = logoConfig.logoOpacity;
+      logoDiv.style.top = '50%';
+      logoDiv.style.left = '50%';
+      logoDiv.style.transform = 'translate(-50%, -50%)';
+      logoDiv.style.backgroundColor = qrConfig.bgColor;
+      logoDiv.style.borderRadius = logoConfig.logoShape === 'round' ? '50%' : '12px';
+      logoDiv.style.padding = '8px';
+      logoDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+      const logoImg = document.createElement('img');
+      logoImg.src = logoConfig.logoUrl;
+      logoImg.style.width = `${logoConfig.logoSize}px`;
+      logoImg.style.height = `${logoConfig.logoSize}px`;
+      logoImg.style.objectFit = 'contain';
+      logoImg.style.display = 'block';
+      logoImg.style.borderRadius = logoConfig.logoShape === 'round' ? '50%' : '8px';
+      logoImg.crossOrigin = 'anonymous';
+      logoDiv.appendChild(logoImg);
+      container.appendChild(logoDiv);
+    }
+
+    document.body.appendChild(container);
+    // After layout, get actual height for html2canvas bounds
+    const actualHeight = Math.max(baseHeight, container.offsetHeight);
+    return { container, width: baseWidth, height: actualHeight };
   };
 
   const handleDownloadPNG = () => {
@@ -184,30 +462,39 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
         // Draw QR code
         ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
         
-        // Add contact information if enabled (without gray background)
-        if (user && (contactConfig.showName || contactConfig.showTitle || contactConfig.showEmail || contactConfig.showPhone || contactConfig.showDepartment || contactConfig.showOffice || contactConfig.showCustomText)) {
-          const lineHeight = (contactConfig.fontSize + 8) * 3; // Scale up for high DPI
-          let textX, textY;
-          
-          if (isPortrait) {
-            // Vertical layout
-            if (contactConfig.position === 'top') {
-              textX = canvas.width / 2;
-              textY = padding + 90;
+                  // Add contact information if enabled (without gray background)
+          if (user && (contactConfig.showName || contactConfig.showTitle || contactConfig.showEmail || contactConfig.showPhone || contactConfig.showDepartment || contactConfig.showOffice || contactConfig.showCustomText)) {
+            const lineHeight = (contactConfig.fontSize + 16) * 3; // Increased line height for better spacing
+            let textX, textY;
+            
+            if (isPortrait) {
+              // Vertical layout
+              if (contactConfig.position === 'top') {
+                textX = canvas.width / 2;
+                textY = padding + 120; // Increased spacing
+              } else {
+                textX = canvas.width / 2;
+                textY = qrY + qrSize + 80; // Increased spacing
+              }
             } else {
-              textX = canvas.width / 2;
-              textY = qrY + qrSize + 60;
+              // Horizontal layout
+              if (contactConfig.position === 'top') {
+                textX = padding + 120;
+                textY = canvas.height / 2;
+              } else {
+                textX = qrX + qrSize + 80;
+                textY = canvas.height / 2;
+              }
+              
+              // For horizontal layout, adjust text alignment and positioning
+              if (contactConfig.position === 'top') {
+                ctx.textAlign = 'left';
+                textX = padding + 150; // More space from left edge
+              } else {
+                ctx.textAlign = 'right';
+                textX = qrX + qrSize + 120; // More space from QR code
+              }
             }
-          } else {
-            // Horizontal layout
-            if (contactConfig.position === 'top') {
-              textX = padding + 90;
-              textY = canvas.height / 2;
-            } else {
-              textX = qrX + qrSize + 60;
-              textY = canvas.height / 2;
-            }
-          }
           
           ctx.fillStyle = contactConfig.textColor;
           ctx.textAlign = 'center';
@@ -227,23 +514,67 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
              const textWidth = textMetrics.width;
              const textHeight = customTextSize * 3;
              
+             // For portrait center, position custom text between contact block and QR
+             if (exportConfig.orientation !== 'landscape' && contactConfig.customTextPosition === 'center') {
+               // If contact is on top, draw after contact and before QR; else draw after QR and before contact
+               if (contactConfig.position === 'top') {
+                 // already at top area; draw custom text near middle-top of QR area
+                 textX = canvas.width / 2;
+                 textY = qrY - 40; // above QR
+               } else {
+                 textX = canvas.width / 2;
+                 textY = qrY + qrSize + 40; // below QR
+               }
+             }
+
              if (contactConfig.customTextStyle === 'pill' || contactConfig.customTextStyle === 'box') {
                // Draw background
                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
                const borderRadius = contactConfig.customTextStyle === 'pill' ? 25 : 8;
-               ctx.fillRect(textX - textWidth/2 - 20, textY - textHeight - 10, textWidth + 40, textHeight + 20);
+               
+               // Adjust background positioning for horizontal layout
+               let bgX, bgY;
+               if (exportConfig.orientation === 'landscape') {
+                 if (contactConfig.position === 'top') {
+                   bgX = textX - 20;
+                   bgY = textY - textHeight/2 - 10;
+                 } else {
+                   bgX = textX - textWidth - 20;
+                   bgY = textY - textHeight/2 - 10;
+                 }
+               } else {
+                 bgX = textX - textWidth/2 - 20;
+                 bgY = textY - textHeight - 10;
+               }
+               
+               ctx.fillRect(bgX, bgY, textWidth + 40, textHeight + 20);
                
                // Draw border
                ctx.strokeStyle = contactConfig.customTextColor;
                ctx.lineWidth = 6;
-               ctx.strokeRect(textX - textWidth/2 - 20, textY - textHeight - 10, textWidth + 40, textHeight + 20);
+               ctx.strokeRect(bgX, bgY, textWidth + 40, textHeight + 20);
              } else if (contactConfig.customTextStyle === 'underline') {
                // Draw underline
                ctx.strokeStyle = contactConfig.customTextColor;
                ctx.lineWidth = 9;
                ctx.beginPath();
-               ctx.moveTo(textX - textWidth/2, textY + 15);
-               ctx.lineTo(textX + textWidth/2, textY + 15);
+               
+               let lineStartX, lineEndX;
+               if (exportConfig.orientation === 'landscape') {
+                 if (contactConfig.position === 'top') {
+                   lineStartX = textX;
+                   lineEndX = textX + textWidth;
+                 } else {
+                   lineStartX = textX - textWidth;
+                   lineEndX = textX;
+                 }
+               } else {
+                 lineStartX = textX - textWidth/2;
+                 lineEndX = textX + textWidth/2;
+               }
+               
+               ctx.moveTo(lineStartX, textY + 15);
+               ctx.lineTo(lineEndX, textY + 15);
                ctx.stroke();
              }
              
@@ -251,50 +582,65 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
              ctx.fillStyle = contactConfig.customTextColor;
              ctx.font = `bold ${customTextSize * 3}px Arial`;
              ctx.fillText(contactConfig.customText, textX, textY);
-             textY += lineHeight + 40;
+             if (!(exportConfig.orientation !== 'landscape' && contactConfig.customTextPosition === 'center')) {
+               textY += lineHeight + 40;
+             }
              ctx.fillStyle = contactConfig.textColor;
            }
           
-          ctx.font = `bold ${(contactConfig.fontSize + 4) * 3}px Arial`;
+          // Set initial font for name
+          ctx.font = `bold ${(contactConfig.fontSize + 6) * 3}px Arial`;
           
           // Name
           if (contactConfig.showName && user.name) {
             ctx.fillText(user.name, textX, textY);
-            textY += lineHeight;
+            textY += lineHeight + 20; // Extra spacing after name
           }
           
           // Title
           if (contactConfig.showTitle && user.title) {
-            ctx.font = `${contactConfig.fontSize * 3}px Arial`;
+            ctx.font = `${(contactConfig.fontSize + 2) * 3}px Arial`;
             ctx.fillText(user.title, textX, textY);
-            textY += lineHeight;
+            textY += lineHeight + 15; // Extra spacing after title
           }
           
           // Department
           if (contactConfig.showDepartment && user.department) {
+            ctx.font = `${contactConfig.fontSize * 3}px Arial`;
             ctx.fillText(user.department, textX, textY);
-            textY += lineHeight;
+            textY += lineHeight + 15; // Extra spacing after department
           }
           
           // Email
           if (contactConfig.showEmail && user.email) {
+            ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`;
             ctx.fillText(user.email, textX, textY);
-            textY += lineHeight;
+            textY += lineHeight + 15; // Extra spacing after email
           }
           
           // Phone
           if (contactConfig.showPhone && user.phone) {
+            ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`;
             ctx.fillText(user.phone, textX, textY);
-            textY += lineHeight;
+            textY += lineHeight + 15; // Extra spacing after phone
           }
           
           // Office
           if (contactConfig.showOffice && user.office) {
+            ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`;
             ctx.fillText(`Ofis: ${user.office}`, textX, textY);
+            textY += lineHeight + 15; // Extra spacing after office
           }
-        }
-        
-        // Add logo if enabled
+          
+          // App Name
+          if (contactConfig.showAppName && contactConfig.appName) {
+            ctx.font = `bold ${(contactConfig.fontSize + 10) * 3}px Arial`;
+            ctx.fillStyle = qrConfig.fgColor;
+            ctx.fillText(contactConfig.appName, textX, textY);
+          }
+         }
+         
+         // Add logo if enabled
         if (logoConfig.showLogo && logoConfig.logoUrl) {
           const logoImg = new Image();
           logoImg.onload = () => {
@@ -350,8 +696,8 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
-      tempContainer.style.width = '800px';
-      tempContainer.style.height = '600px';
+      tempContainer.style.width = exportConfig.orientation === 'landscape' ? '1000px' : '800px';
+      tempContainer.style.height = exportConfig.orientation === 'landscape' ? '600px' : '800px';
       tempContainer.style.backgroundColor = cardConfig.cardColor;
       tempContainer.style.padding = '40px';
       tempContainer.style.borderRadius = '20px';
@@ -359,12 +705,12 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
       tempContainer.style.display = 'flex';
       tempContainer.style.flexDirection = exportConfig.orientation === 'landscape' ? 'row' : 'column';
       tempContainer.style.alignItems = 'center';
-      tempContainer.style.justifyContent = 'center';
-      tempContainer.style.gap = '40px';
+      tempContainer.style.justifyContent = exportConfig.orientation === 'landscape' ? 'space-between' : 'center';
+      tempContainer.style.gap = exportConfig.orientation === 'landscape' ? '60px' : '40px';
       tempContainer.style.overflow = 'hidden';
       tempContainer.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.1)';
       tempContainer.style.fontFamily = 'Arial, sans-serif';
-      tempContainer.style.lineHeight = '1.2';
+      tempContainer.style.lineHeight = '1.3';
       
               // Add logo if enabled
         if (logoConfig.showLogo && logoConfig.logoUrl) {
@@ -406,6 +752,15 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
       qrClone.style.margin = '0';
       qrClone.style.padding = '0';
       
+      // Position QR code based on orientation
+      if (exportConfig.orientation === 'landscape') {
+        if (contactConfig.position === 'top') {
+          qrClone.style.order = '2'; // QR code on the right
+        } else {
+          qrClone.style.order = '1'; // QR code on the left
+        }
+      }
+      
       // Ensure SVG is properly sized
       const svgElement = qrClone.querySelector('svg');
       if (svgElement) {
@@ -419,15 +774,27 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
         if (user && (contactConfig.showName || contactConfig.showTitle || contactConfig.showEmail || contactConfig.showPhone || contactConfig.showDepartment || contactConfig.showOffice || contactConfig.showCustomText)) {
           const contactDiv = document.createElement('div');
           contactDiv.style.display = 'flex';
-          contactDiv.style.flexDirection = 'column';
-          contactDiv.style.gap = '8px';
-          contactDiv.style.textAlign = 'center';
+          contactDiv.style.flexDirection = exportConfig.orientation === 'landscape' ? 'row' : 'column';
+          contactDiv.style.gap = '16px';
+          contactDiv.style.textAlign = exportConfig.orientation === 'landscape' ? 
+            (contactConfig.position === 'top' ? 'left' : 'right') : 'center';
           contactDiv.style.color = contactConfig.textColor;
           contactDiv.style.fontFamily = 'Arial, sans-serif';
           contactDiv.style.background = 'transparent';
           contactDiv.style.margin = '0';
-          contactDiv.style.padding = '0';
-          contactDiv.style.lineHeight = '1.2';
+          contactDiv.style.padding = exportConfig.orientation === 'landscape' ? '20px' : '0';
+          contactDiv.style.lineHeight = '1.3';
+          
+          // Position contact div based on orientation
+          if (exportConfig.orientation === 'landscape') {
+            if (contactConfig.position === 'top') {
+              contactDiv.style.order = '1'; // Contact info on the left
+              contactDiv.style.justifyContent = 'flex-start';
+            } else {
+              contactDiv.style.order = '2'; // Contact info on the right
+              contactDiv.style.justifyContent = 'flex-end';
+            }
+          }
           
                      // Add custom text if enabled
            if (contactConfig.showCustomText && contactConfig.customText) {
@@ -457,85 +824,117 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                  customTextDiv.style.backgroundColor = 'rgba(255,255,255,0.9)';
                  customTextDiv.style.borderRadius = '25px';
                  customTextDiv.style.border = `2px solid ${contactConfig.customTextColor}`;
+                 customTextDiv.style.display = 'inline-block';
+                 customTextDiv.style.width = 'auto';
+                 customTextDiv.style.minWidth = 'fit-content';
                  break;
                case 'box':
                  customTextDiv.style.padding = '8px 16px';
                  customTextDiv.style.backgroundColor = 'rgba(255,255,255,0.9)';
                  customTextDiv.style.borderRadius = '8px';
                  customTextDiv.style.border = `2px solid ${contactConfig.customTextColor}`;
+                 customTextDiv.style.display = 'inline-block';
+                 customTextDiv.style.width = 'auto';
+                 customTextDiv.style.minWidth = 'fit-content';
                  break;
                case 'underline':
                  customTextDiv.style.padding = '4px 0';
                  customTextDiv.style.borderBottom = `3px solid ${contactConfig.customTextColor}`;
+                 customTextDiv.style.display = 'inline-block';
+                 customTextDiv.style.width = 'auto';
                  break;
                case 'none':
                default:
                  customTextDiv.style.padding = '4px 0';
+                 customTextDiv.style.display = 'inline-block';
+                 customTextDiv.style.width = 'auto';
                  break;
              }
              
              customTextDiv.textContent = contactConfig.customText;
-             contactDiv.appendChild(customTextDiv);
+             // In portrait center mode, do not append into contact block here
+             if (!(exportConfig.orientation !== 'landscape' && contactConfig.customTextPosition === 'center')) {
+               contactDiv.appendChild(customTextDiv);
+             }
            }
           
           if (contactConfig.showName && user.name) {
             const nameDiv = document.createElement('div');
-            nameDiv.style.fontSize = '24px';
+            nameDiv.style.fontSize = '28px';
             nameDiv.style.fontWeight = 'bold';
-            nameDiv.style.marginBottom = '8px';
+            nameDiv.style.marginBottom = '16px';
             nameDiv.style.marginTop = '0';
-            nameDiv.style.lineHeight = '1.2';
+            nameDiv.style.lineHeight = '1.3';
             nameDiv.textContent = user.name;
             contactDiv.appendChild(nameDiv);
           }
           
           if (contactConfig.showTitle && user.title) {
             const titleDiv = document.createElement('div');
-            titleDiv.style.fontSize = '18px';
-            titleDiv.style.marginBottom = '8px';
+            titleDiv.style.fontSize = '22px';
+            titleDiv.style.marginBottom = '16px';
             titleDiv.style.marginTop = '0';
-            titleDiv.style.lineHeight = '1.2';
+            titleDiv.style.lineHeight = '1.3';
+            titleDiv.style.fontWeight = '500';
             titleDiv.textContent = user.title;
             contactDiv.appendChild(titleDiv);
           }
           
           if (contactConfig.showDepartment && user.department) {
             const deptDiv = document.createElement('div');
-            deptDiv.style.fontSize = '16px';
-            deptDiv.style.marginBottom = '8px';
+            deptDiv.style.fontSize = '20px';
+            deptDiv.style.marginBottom = '16px';
             deptDiv.style.marginTop = '0';
-            deptDiv.style.lineHeight = '1.2';
+            deptDiv.style.lineHeight = '1.3';
+            deptDiv.style.fontWeight = '500';
             deptDiv.textContent = user.department;
             contactDiv.appendChild(deptDiv);
           }
           
           if (contactConfig.showEmail && user.email) {
             const emailDiv = document.createElement('div');
-            emailDiv.style.fontSize = '14px';
-            emailDiv.style.marginBottom = '4px';
+            emailDiv.style.fontSize = '18px';
+            emailDiv.style.marginBottom = '12px';
             emailDiv.style.marginTop = '0';
-            emailDiv.style.lineHeight = '1.2';
+            emailDiv.style.lineHeight = '1.3';
+            emailDiv.style.fontWeight = '400';
             emailDiv.textContent = user.email;
             contactDiv.appendChild(emailDiv);
           }
           
           if (contactConfig.showPhone && user.phone) {
             const phoneDiv = document.createElement('div');
-            phoneDiv.style.fontSize = '14px';
-            phoneDiv.style.marginBottom = '4px';
+            phoneDiv.style.fontSize = '18px';
+            phoneDiv.style.marginBottom = '12px';
             phoneDiv.style.marginTop = '0';
-            phoneDiv.style.lineHeight = '1.2';
+            phoneDiv.style.lineHeight = '1.3';
+            phoneDiv.style.fontWeight = '400';
             phoneDiv.textContent = user.phone;
             contactDiv.appendChild(phoneDiv);
           }
           
           if (contactConfig.showOffice && user.office) {
             const officeDiv = document.createElement('div');
-            officeDiv.style.fontSize = '14px';
+            officeDiv.style.fontSize = '18px';
+            officeDiv.style.marginBottom = '12px';
             officeDiv.style.marginTop = '0';
-            officeDiv.style.lineHeight = '1.2';
+            officeDiv.style.lineHeight = '1.3';
+            officeDiv.style.fontWeight = '400';
             officeDiv.textContent = `Ofis: ${user.office}`;
             contactDiv.appendChild(officeDiv);
+          }
+          
+          // Add App Name
+          if (contactConfig.showAppName && contactConfig.appName) {
+            const appNameDiv = document.createElement('div');
+            appNameDiv.style.fontSize = '24px';
+            appNameDiv.style.fontWeight = 'bold';
+            appNameDiv.style.marginTop = '16px';
+            appNameDiv.style.marginBottom = '0';
+            appNameDiv.style.lineHeight = '1.3';
+            appNameDiv.style.color = qrConfig.fgColor;
+            appNameDiv.textContent = contactConfig.appName;
+            contactDiv.appendChild(appNameDiv);
           }
           
                      // Add custom text based on customTextPosition
@@ -593,28 +992,20 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                case 'below':
                  tempContainer.appendChild(customTextDiv);
                  break;
-               case 'left':
-                 // For left positioning, we need to restructure the layout
-                 const leftContainer = document.createElement('div');
-                 leftContainer.style.display = 'flex';
-                 leftContainer.style.flexDirection = 'row';
-                 leftContainer.style.alignItems = 'center';
-                 leftContainer.style.gap = '20px';
-                 leftContainer.appendChild(customTextDiv);
-                 leftContainer.appendChild(qrClone);
-                 tempContainer.appendChild(leftContainer);
+               case 'center':
+                 if (exportConfig.orientation !== 'landscape') {
+                   if (contactConfig.position === 'top') {
+                     tempContainer.appendChild(contactDiv);
+                     tempContainer.appendChild(customTextDiv);
+                     tempContainer.appendChild(qrClone);
+                   } else {
+                     tempContainer.appendChild(qrClone);
+                     tempContainer.appendChild(customTextDiv);
+                     tempContainer.appendChild(contactDiv);
+                   }
+                 }
                  break;
-               case 'right':
-                 // For right positioning, we need to restructure the layout
-                 const rightContainer = document.createElement('div');
-                 rightContainer.style.display = 'flex';
-                 rightContainer.style.flexDirection = 'row';
-                 rightContainer.style.alignItems = 'center';
-                 rightContainer.style.gap = '20px';
-                 rightContainer.appendChild(qrClone);
-                 rightContainer.appendChild(customTextDiv);
-                 tempContainer.appendChild(rightContainer);
-                 break;
+               // left/right removed
              }
            } else {
              // Add contact info and QR code based on position
@@ -690,7 +1081,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
         pdf.setFontSize(8);
         pdf.setTextColor(100, 100, 100);
         pdf.text(`Oluşturulma Tarihi: ${timestamp}`, margin, pageHeight - margin);
-        pdf.text('QR Calendar - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
+        pdf.text('Qnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
         
         pdf.save(`qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.pdf`);
         setIsGeneratingPDF(false);
@@ -749,31 +1140,31 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
 
     // Style variations
     switch (contactConfig.customTextStyle) {
-      case 'pill':
-        return {
-          ...baseStyle,
-          padding: '8px 16px',
-          backgroundColor: 'rgba(255,255,255,0.9)',
-          borderRadius: '25px',
-          border: `2px solid ${qrConfig.fgColor}`,
-          display: 'inline-block'
-        };
-      case 'box':
-        return {
-          ...baseStyle,
-          padding: '8px 16px',
-          backgroundColor: 'rgba(255,255,255,0.9)',
-          borderRadius: '8px',
-          border: `2px solid ${qrConfig.fgColor}`,
-          display: 'inline-block'
-        };
-      case 'underline':
-        return {
-          ...baseStyle,
-          padding: '4px 0',
-          borderBottom: `3px solid ${qrConfig.fgColor}`,
-          display: 'inline-block'
-        };
+             case 'pill':
+         return {
+           ...baseStyle,
+           padding: '8px 16px',
+           backgroundColor: 'rgba(255,255,255,0.9)',
+           borderRadius: '25px',
+           border: `2px solid ${contactConfig.customTextColor}`,
+           display: 'inline-block'
+         };
+       case 'box':
+         return {
+           ...baseStyle,
+           padding: '8px 16px',
+           backgroundColor: 'rgba(255,255,255,0.9)',
+           borderRadius: '8px',
+           border: `2px solid ${contactConfig.customTextColor}`,
+           display: 'inline-block'
+         };
+       case 'underline':
+         return {
+           ...baseStyle,
+           padding: '4px 0',
+           borderBottom: `3px solid ${contactConfig.customTextColor}`,
+           display: 'inline-block'
+         };
       case 'none':
       default:
         return {
@@ -807,10 +1198,10 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
         </button>
       </div>
 
-      <div className={styles.grid}>
+      <div className={styles.grid} style={{ gridTemplateColumns: qrConfig.size > 352 ? '1fr' : undefined }}>
         {/* QR Code Preview */}
         <div className={styles.previewSection}>
-          <div className={styles.qrPreview} style={{
+          <div ref={previewCardRef} className={styles.qrPreview} style={{
             backgroundColor: cardConfig.cardColor,
             padding: cardConfig.cardPadding,
             borderRadius: '20px',
@@ -831,8 +1222,8 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                 marginBottom: '20px',
                 width: '100%'
               }}>
-                {/* Custom Text positioning based on customTextPosition */}
-                {contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'above' && (
+                {/* Custom Text positioning (portrait: wrapper-level; landscape handled inside contact block) */}
+                {exportConfig.orientation !== 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'above' && (
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -846,21 +1237,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                   </div>
                 )}
 
-                {contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'left' && (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    textAlign: 'center',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '120px'
-                  }}>
-                    <div style={getCustomTextStyle()}>
-                      {contactConfig.customText}
-                    </div>
-                  </div>
-                )}
+                {/* Left custom text removed */}
                 
                 {contactConfig.position === 'top' && (
                   <div style={{
@@ -871,6 +1248,12 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                     color: contactConfig.textColor,
                     background: 'transparent'
                   }}>
+                    {/* Landscape: render custom text inside this block at top */}
+                    {exportConfig.orientation === 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'above' && (
+                      <div style={getCustomTextStyle()}>
+                        {contactConfig.customText}
+                      </div>
+                    )}
                     {contactConfig.showName && user.name && (
                       <div style={{ fontSize: `${contactConfig.fontSize + 4}px`, fontWeight: 'bold' }}>
                         {user.name}
@@ -906,6 +1289,39 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                         Ofis: {user.office}
                       </div>
                     )}
+                    
+                    {/* App Name */}
+                    {contactConfig.showAppName && contactConfig.appName && (
+                      <div style={{ 
+                        fontSize: `${contactConfig.fontSize + 8}px`, 
+                        fontWeight: 'bold',
+                        marginTop: '8px',
+                        color: qrConfig.fgColor
+                      }}>
+                        {contactConfig.appName}
+                      </div>
+                    )}
+                    {/* Landscape: render custom text inside this block at bottom */}
+                    {exportConfig.orientation === 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'below' && (
+                      <div style={getCustomTextStyle()}>
+                        {contactConfig.customText}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Portrait center: render between contact block (top) and QR */}
+                {exportConfig.orientation !== 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'center' && contactConfig.position === 'top' && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    textAlign: 'center',
+                    width: '100%'
+                  }}>
+                    <div style={getCustomTextStyle()}>
+                      {contactConfig.customText}
+                    </div>
                   </div>
                 )}
                 
@@ -954,21 +1370,22 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                   )}
                 </div>
 
-                {contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'right' && (
+                {/* Portrait center: render between QR and contact block (bottom) */}
+                {exportConfig.orientation !== 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'center' && contactConfig.position === 'bottom' && (
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
                     textAlign: 'center',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '120px'
+                    width: '100%'
                   }}>
                     <div style={getCustomTextStyle()}>
                       {contactConfig.customText}
                     </div>
                   </div>
                 )}
+
+                {/* Right custom text removed */}
                 
                 {contactConfig.position === 'bottom' && (
                   <div style={{
@@ -979,6 +1396,12 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                     color: contactConfig.textColor,
                     background: 'transparent'
                   }}>
+                    {/* Landscape: render custom text inside this block at top */}
+                    {exportConfig.orientation === 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'above' && (
+                      <div style={getCustomTextStyle()}>
+                        {contactConfig.customText}
+                      </div>
+                    )}
                     {contactConfig.showName && user.name && (
                       <div style={{ fontSize: `${contactConfig.fontSize + 4}px`, fontWeight: 'bold' }}>
                         {user.name}
@@ -1014,11 +1437,29 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                         Ofis: {user.office}
                       </div>
                     )}
+                    
+                    {/* App Name */}
+                    {contactConfig.showAppName && contactConfig.appName && (
+                      <div style={{ 
+                        fontSize: `${contactConfig.fontSize + 8}px`, 
+                        fontWeight: 'bold',
+                        marginTop: '8px',
+                        color: qrConfig.fgColor
+                      }}>
+                        {contactConfig.appName}
+                      </div>
+                    )}
+                    {/* Landscape: render custom text inside this block at bottom */}
+                    {exportConfig.orientation === 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'below' && (
+                      <div style={getCustomTextStyle()}>
+                        {contactConfig.customText}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Custom Text positioning based on customTextPosition */}
-                {contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'below' && (
+                {/* Custom Text positioning (portrait: wrapper-level; landscape handled inside contact block) */}
+                {exportConfig.orientation !== 'landscape' && contactConfig.showCustomText && contactConfig.customText && contactConfig.customTextPosition === 'below' && (
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -1228,9 +1669,9 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                         className={styles.selectInput}
                       >
                         <option value="above">Üstte</option>
+                        {exportConfig.orientation !== 'landscape' && <option value="center">Ortada</option>}
                         <option value="below">Altta</option>
-                        <option value="left">Solda</option>
-                        <option value="right">Sağda</option>
+                        {/* Left/Right options removed */}
                       </select>
                     </div>
 
@@ -1271,6 +1712,39 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                       />
                     </div>
                   </>
+                )}
+                
+                {/* App Name Configuration */}
+                <div className={styles.divider} style={{ marginTop: '20px', marginBottom: '15px' }}>
+                  <h5 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', margin: '0 0 10px 0' }}>
+                    Uygulama Adı
+                  </h5>
+                </div>
+                
+                <div className={styles.checkboxGroup}>
+                  <input
+                    type="checkbox"
+                    id="showAppName"
+                    checked={contactConfig.showAppName}
+                    onChange={(e) => setContactConfig(prev => ({ ...prev, showAppName: e.target.checked }))}
+                    className={styles.checkbox}
+                  />
+                  <label htmlFor="showAppName" className={styles.checkboxLabel}>
+                    Uygulama Adını Göster
+                  </label>
+                </div>
+                
+                {contactConfig.showAppName && (
+                  <div className={styles.inputGroup}>
+                    <label className={styles.label}>Uygulama Adı</label>
+                    <input
+                      type="text"
+                      value={contactConfig.appName}
+                      onChange={(e) => setContactConfig(prev => ({ ...prev, appName: e.target.value }))}
+                      placeholder="Örn: Qnnect"
+                      className={styles.textInput}
+                    />
+                  </div>
                 )}
               </div>
             </div>

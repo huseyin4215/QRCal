@@ -5,7 +5,7 @@
  * This script tests if the Google OAuth client ID is properly configured
  */
 
-const CLIENT_ID = '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com';
+const CLIENT_ID = 'your-google-client-id';
 
 console.log('🔍 Testing Google OAuth Client ID Configuration\n');
 

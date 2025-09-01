@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarIcon, PlusIcon, RefreshIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import styles from './GoogleCalendarWidget.module.css';
@@ -134,7 +134,7 @@ const GoogleCalendarWidget = () => {
           disabled={isLoading}
           className={styles.refreshButton}
         >
-          <RefreshIcon className={`${styles.refreshIcon} ${isLoading ? styles.spinning : ''}`} />
+          <ArrowPathIcon className={`${styles.refreshIcon} ${isLoading ? styles.spinning : ''}`} />
         </button>
       </div>
 

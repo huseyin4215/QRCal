@@ -1,0 +1,397 @@
+.actionRow {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+}
+
+@media (min-width: 768px) {
+	.actionRow {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+.buttonBase {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	padding: 12px 16px;
+	border: none;
+	border-radius: 12px;
+	font-weight: 600;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+	cursor: pointer;
+}
+
+.buttonBase:active {
+	transform: translateY(0);
+}
+
+.verifyButton {
+	comp: composes buttonBase;
+	background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+	color: #ffffff;
+	box-shadow: 0 6px 16px rgba(16, 185, 129, 0.25);
+}
+
+.verifyButton:hover {
+	background: linear-gradient(135deg, #0ea371 0%, #047857 100%);
+	box-shadow: 0 10px 22px rgba(16, 185, 129, 0.35);
+}
+
+.submitButton {
+	comp: composes buttonBase;
+	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	color: #ffffff;
+	box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+}
+
+.submitButton:hover {
+	background: linear-gradient(135deg, #2f6fe5 0%, #1e4fd3 100%);
+	box-shadow: 0 10px 22px rgba(37, 99, 235, 0.35);
+}
+
+.disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	filter: grayscale(10%);
+}
+
+.buttonIcon {
+	width: 20px;
+	height: 20px;
+	margin-right: 8px;
+}
+
+/* Form Container Styles */
+.formContainer {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+.formTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.titleIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #3b82f6;
+}
+
+/* Date Selection Grid */
+.dateGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.dateButton {
+  padding: 0.75rem;
+  text-align: center;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.dateButton:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.dateButton.selected {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.dayName {
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.dayNumber {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* Duration Selection */
+.durationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.durationButton {
+  padding: 0.75rem;
+  text-align: center;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.durationButton:hover {
+  border-color: #10b981;
+  background: #f0fdf4;
+  transform: translateY(-1px);
+}
+
+.durationButton.selected {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+/* Time Slots Grid */
+.timeSlotsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.timeSlotButton {
+  padding: 0.75rem;
+  text-align: center;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.timeSlotButton:hover {
+  border-color: #10b981;
+  background: #f0fdf4;
+  transform: translateY(-1px);
+}
+
+.timeSlotButton.selected {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.timeSlotButton:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.timeSlotButton:disabled:hover {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  transform: none;
+}
+
+/* Form Input Styles */
+.formInput {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formInput:read-only {
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.formSelect {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  background: white;
+  cursor: pointer;
+}
+
+.formSelect:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formTextarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  background: white;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Info Boxes */
+.infoBox {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.infoBoxSuccess {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.infoBoxInfo {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.infoBoxWarning {
+  background: #fefce8;
+  border-color: #fde047;
+  color: #a16207;
+}
+
+.infoBoxError {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .formContainer {
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+  
+  .dateGrid {
+    gap: 0.375rem;
+  }
+  
+  .dateButton {
+    padding: 0.625rem;
+    font-size: 0.8rem;
+  }
+  
+  .dayNumber {
+    font-size: 1rem;
+  }
+  
+  .durationGrid {
+    grid-template-columns: 1fr;
+    gap: 0.375rem;
+  }
+  
+  .timeSlotsGrid {
+    grid-template-columns: 1fr;
+    gap: 0.375rem;
+  }
+  
+  .timeSlotButton {
+    padding: 0.875rem;
+  }
+  
+  .actionRow {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .formContainer {
+    padding: 0.875rem;
+  }
+  
+  .dateButton {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .dayName {
+    font-size: 0.7rem;
+  }
+  
+  .dayNumber {
+    font-size: 0.875rem;
+  }
+  
+  .durationButton,
+  .timeSlotButton {
+    padding: 0.625rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dateGrid {
+    gap: 0.25rem;
+  }
+  
+  .dateButton {
+    padding: 0.375rem;
+    border-radius: 0.5rem;
+  }
+  
+  .dayName {
+    font-size: 0.65rem;
+  }
+  
+  .dayNumber {
+    font-size: 0.8rem;
+  }
+}
+

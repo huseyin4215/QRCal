@@ -22,7 +22,7 @@ const TermsOfUse = () => {
           <section>
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Giriş</h2>
             <p className="text-gray-700 leading-relaxed">
-              Bu Kullanım Şartları ("Şartlar"), QR Calendar hizmetini ("Hizmet") kullanırken geçerlidir. 
+              Bu Kullanım Şartları ("Şartlar"), Qnnect hizmetini ("Hizmet") kullanırken geçerlidir. 
               Hizmeti kullanarak, bu şartları kabul etmiş olursunuz. Eğer bu şartları kabul etmiyorsanız, 
               lütfen hizmeti kullanmayın.
             </p>
@@ -33,7 +33,7 @@ const TermsOfUse = () => {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Hizmet Açıklaması</h2>
             <div className="bg-indigo-50 p-6 rounded-lg border-l-4 border-indigo-500">
               <p className="text-indigo-800 leading-relaxed">
-                QR Calendar, öğretim elemanları ve öğrenciler için tasarlanmış modern bir randevu yönetim sistemidir. 
+                Qnnect, öğretim elemanları ve öğrenciler için tasarlanmış modern bir randevu yönetim sistemidir. 
                 Hizmetimiz şunları içerir:
               </p>
               <ul className="list-disc list-inside text-indigo-700 space-y-1 mt-3">
@@ -127,7 +127,7 @@ const TermsOfUse = () => {
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Fikri Mülkiyet</h2>
             <div className="space-y-4">
               <p className="text-gray-700 leading-relaxed">
-                QR Calendar hizmeti ve tüm içeriği, QR Calendar'a aittir ve telif hakkı, ticari marka ve 
+                Qnnect hizmeti ve tüm içeriği, Qnnect'e aittir ve telif hakkı, ticari marka ve 
                 diğer fikri mülkiyet yasaları ile korunmaktadır.
               </p>
               
@@ -181,7 +181,7 @@ const TermsOfUse = () => {
                 Önemli Uyarı
               </h3>
               <p className="text-red-800 leading-relaxed mb-4">
-                QR Calendar, hizmetin kesintisiz veya hatasız olacağını garanti etmez. Hizmet "olduğu gibi" 
+                Qnnect, hizmetin kesintisiz veya hatasız olacağını garanti etmez. Hizmet "olduğu gibi" 
                 sunulur ve herhangi bir zarar veya kayıp için sorumluluk kabul etmeyiz.
               </p>
               <div className="bg-white p-4 rounded border">
@@ -259,13 +259,13 @@ const TermsOfUse = () => {
             </p>
             <div className="space-y-2">
               <p className="text-gray-700">
-                <strong>E-posta:</strong> terms@qrcalendar.com
+                <strong>E-posta:</strong> infoqrcal@gmail.com
               </p>
               <p className="text-gray-700">
                 <strong>Telefon:</strong> +90 (212) 555 0123
               </p>
               <p className="text-gray-700">
-                <strong>Adres:</strong> İstanbul, Türkiye
+                <strong>Adres:</strong> Ankara, Türkiye
               </p>
             </div>
           </section>

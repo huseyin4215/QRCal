@@ -121,7 +121,7 @@ const Navigation = () => {
           <div className={styles.navLeft}>
             {/* Logo */}
             <div className={styles.logo}>
-              <h1 className={styles.logoText}>QR Calendar</h1>
+              <h1 className={styles.logoText}>Qnnect</h1>
             </div>
 
             {/* Navigation Links */}

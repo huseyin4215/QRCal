@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 import { 
   AcademicCapIcon, 
@@ -7,15 +8,22 @@ import {
   EnvelopeIcon,
   CalendarIcon,
   MagnifyingGlassIcon,
-  FunnelIcon
+  FunnelIcon,
+  HomeIcon
 } from '@heroicons/react/24/outline';
+import Header from '../components/Header/Header';
+import headerStyles from '../components/Header/Header.module.css';
+import styles from './FacultyList.module.css';
 
 const FacultyList = () => {
+  const { user, logout } = useAuth();
   const [faculty, setFaculty] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [departments, setDepartments] = useState([]);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
     loadFaculty();
@@ -56,6 +64,22 @@ const FacultyList = () => {
     window.location.href = `/appointment/${facultySlug}`;
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const openProfileModal = () => {
+    setShowProfileModal(true);
+  };
+
+  const openPasswordModal = () => {
+    setShowPasswordModal(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -65,20 +89,35 @@ const FacultyList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Öğretim Elemanları</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Randevu almak istediğiniz öğretim elemanını seçin
-            </p>
-          </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Modern Header */}
+      <Header
+        user={user}
+        onProfile={openProfileModal}
+        onPassword={openPasswordModal}
+        onLogout={handleLogout}
+        theme="student"
+      >
+        <div className={headerStyles.navigationButtons}>
+          <button
+            onClick={() => window.location.href = user?.role === 'admin' ? '/admin-dashboard' : user?.role === 'faculty' ? '/faculty-dashboard' : '/student-dashboard'}
+            className={headerStyles.navLink}
+          >
+            <HomeIcon className={headerStyles.navIcon} />
+            Anasayfa
+          </button>
         </div>
-      </div>
+      </Header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="dashboard-main w-full px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page Title */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Öğretim Elemanları</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Randevu almak istediğiniz öğretim elemanını seçin
+          </p>
+        </div>
+
         {/* Search and Filter */}
         <div className="bg-white shadow rounded-lg mb-8">
           <div className="p-6">
@@ -134,10 +173,10 @@ const FacultyList = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
             {filteredFaculty.map((facultyMember) => (
-              <div key={facultyMember._id} className="bg-white shadow rounded-lg overflow-hidden">
-                <div className="p-6">
+              <div key={facultyMember._id} className={`${styles.card} overflow-hidden`}>
+                <div className="p-6 flex flex-col h-full">
                   {/* Faculty Info */}
                   <div className="flex items-center mb-4">
                     <div className="flex-shrink-0">
@@ -148,16 +187,16 @@ const FacultyList = () => {
                           alt={facultyMember.name}
                         />
                       ) : (
-                        <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <div className={styles.avatar}>
                           <AcademicCapIcon className="h-6 w-6 text-blue-600" />
                         </div>
                       )}
                     </div>
                     <div className="ml-4">
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h3 className={styles.title}>
                         {facultyMember.title} {facultyMember.name}
                       </h3>
-                      <p className="text-sm text-gray-500">{facultyMember.department}</p>
+                      <p className={styles.subtle}>{facultyMember.department}</p>
                     </div>
                   </div>
 
@@ -184,26 +223,24 @@ const FacultyList = () => {
                   {/* Availability Status */}
                   <div className="mb-4">
                     <div className="flex items-center">
-                      <div className={`h-2 w-2 rounded-full mr-2 ${facultyMember.isActive ? 'bg-green-400' : 'bg-gray-400'}`}></div>
-                      <span className="text-sm text-gray-500">
+                      <div className={`${styles.statusDot} ${facultyMember.isActive ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                      <span className={styles.subtle}>
                         {facultyMember.isActive ? 'Randevu almaya açık' : 'Şu anda randevu almıyor'}
                       </span>
                     </div>
                   </div>
 
                   {/* Action Button */}
-                  <button
-                    onClick={() => handleAppointmentClick(facultyMember.slug)}
-                    disabled={!facultyMember.isActive}
-                    className={`w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
-                      facultyMember.isActive
-                        ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                        : 'bg-gray-400 cursor-not-allowed'
-                    }`}
-                  >
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    {facultyMember.isActive ? 'Randevu Al' : 'Randevu Almıyor'}
-                  </button>
+                  <div className="mt-auto">
+                    <button
+                      onClick={() => handleAppointmentClick(facultyMember.slug)}
+                      disabled={!facultyMember.isActive}
+                      className={`${styles.primaryButton} ${!facultyMember.isActive ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                      <CalendarIcon className={styles.icon} />
+                      {facultyMember.isActive ? 'Randevu Al' : 'Randevu Almıyor'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

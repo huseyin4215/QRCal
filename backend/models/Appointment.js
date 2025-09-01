@@ -53,7 +53,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'cancelled'],
+    enum: ['pending', 'approved', 'rejected', 'cancelled', 'no_response'],
     default: 'pending'
   },
   facultyId: {
@@ -77,6 +77,35 @@ const appointmentSchema = new mongoose.Schema({
   googleMeetLink: {
     type: String,
     default: null
+  },
+  // Location verification data
+  location: {
+    latitude: {
+      type: Number,
+      min: -90,
+      max: 90
+    },
+    longitude: {
+      type: Number,
+      min: -180,
+      max: 180
+    },
+    accuracy: {
+      type: Number,
+      min: 0,
+      max: 1000
+    },
+    timestamp: {
+      type: Number
+    },
+    verified: {
+      type: Boolean,
+      default: false
+    },
+    geofenceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Geofence'
+    }
   },
   // Notification tracking
   studentNotified: {
@@ -138,7 +167,8 @@ appointmentSchema.virtual('statusTR').get(function() {
     pending: 'Beklemede',
     approved: 'Onaylandı',
     rejected: 'Reddedildi',
-    cancelled: 'İptal Edildi'
+    cancelled: 'İptal Edildi',
+    no_response: 'Öğretim Üyesi Cevaplamadı'
   };
   return statusMap[this.status] || this.status;
 });

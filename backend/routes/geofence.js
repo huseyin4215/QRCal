@@ -17,6 +17,18 @@ const geofenceValidation = [
   body('isActive').optional().isBoolean().withMessage('Geçersiz aktiflik değeri')
 ];
 
+// Update validation (all optional to support partial updates such as status toggle)
+const geofenceUpdateValidation = [
+  body('name').optional().trim().isLength({ min: 2, max: 100 }).withMessage('İsim 2-100 karakter arasında olmalı'),
+  body('description').optional().trim().isLength({ max: 500 }).withMessage('Açıklama 500 karakterden uzun olamaz'),
+  body('center').optional().isObject(),
+  body('center.latitude').optional().isFloat({ min: -90, max: 90 }).withMessage('Geçersiz enlem değeri'),
+  body('center.longitude').optional().isFloat({ min: -180, max: 180 }).withMessage('Geçersiz boylam değeri'),
+  body('radius').optional().isInt({ min: 10, max: 10000 }).withMessage('Yarıçap 10-10000 metre arasında olmalı'),
+  body('locationType').optional().isIn(['university', 'faculty', 'building', 'room', 'custom']).withMessage('Geçersiz konum tipi'),
+  body('isActive').optional().isBoolean().withMessage('Geçersiz aktiflik değeri')
+];
+
 // Tüm geofence'leri listele (Admin)
 router.get('/admin', auth, checkAdmin, async (req, res) => {
   try {
@@ -67,7 +79,7 @@ router.get('/faculty/:facultyId', auth, async (req, res) => {
 });
 
 // Yeni geofence oluştur (Admin/Faculty)
-router.post('/', auth, geofenceValidation, async (req, res) => {
+router.post('/', auth, checkAdmin, geofenceValidation, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -78,42 +90,11 @@ router.post('/', auth, geofenceValidation, async (req, res) => {
       });
     }
 
-    const { facultyId, center, radius, ...otherData } = req.body;
-    
-    // Faculty ID kontrolü
-    if (!facultyId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faculty ID gerekli'
-      });
-    }
+    const { center, radius, ...otherData } = req.body;
+    // Faculty ID sağlanmadıysa, adminin kendi ID'sini kullan
+    const facultyId = req.body.facultyId || req.user.id;
 
-    // Çakışan geofence kontrolü
-    const existingGeofence = await Geofence.findOne({
-      facultyId,
-      isActive: true,
-      center: {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [center.longitude, center.latitude]
-          },
-          $maxDistance: radius * 2 // Çakışma kontrolü için 2x yarıçap
-        }
-      }
-    });
-
-    if (existingGeofence) {
-      return res.status(400).json({
-        success: false,
-        message: 'Bu konumda zaten aktif bir geofence bulunuyor',
-        existingGeofence: {
-          id: existingGeofence._id,
-          name: existingGeofence.name,
-          distance: existingGeofence.calculateDistance(center.latitude, center.longitude)
-        }
-      });
-    }
+    // Birden fazla geofence eklenebilmesi için çakışma kontrolü kaldırıldı
 
     const geofence = new Geofence({
       ...otherData,
@@ -145,7 +126,7 @@ router.post('/', auth, geofenceValidation, async (req, res) => {
 });
 
 // Geofence güncelle (Admin/Faculty)
-router.put('/:id', auth, geofenceValidation, async (req, res) => {
+router.put('/:id', auth, geofenceUpdateValidation, async (req, res) => {
   try {
     const { id } = req.params;
     const errors = validationResult(req);
@@ -175,36 +156,7 @@ router.put('/:id', auth, geofenceValidation, async (req, res) => {
     }
 
     const { center, radius, ...otherData } = req.body;
-    
-    // Çakışma kontrolü (kendisi hariç)
-    if (center && radius) {
-      const existingGeofence = await Geofence.findOne({
-        _id: { $ne: id },
-        facultyId: geofence.facultyId,
-        isActive: true,
-        center: {
-          $near: {
-            $geometry: {
-              type: 'Point',
-              coordinates: [center.longitude, center.latitude]
-            },
-            $maxDistance: radius * 2
-          }
-        }
-      });
-
-      if (existingGeofence) {
-        return res.status(400).json({
-          success: false,
-          message: 'Bu konumda zaten aktif bir geofence bulunuyor',
-          existingGeofence: {
-            id: existingGeofence._id,
-            name: existingGeofence.name,
-            distance: existingGeofence.calculateDistance(center.latitude, center.longitude)
-          }
-        });
-      }
-    }
+    // Birden fazla geofence desteklendiği için çakışma kontrolü yapılmıyor
 
     Object.assign(geofence, otherData);
     if (center) geofence.center = center;
@@ -272,15 +224,17 @@ router.delete('/:id', auth, async (req, res) => {
 
 // Konum doğrulama endpoint'i
 router.post('/verify-location', auth, [
-  body('facultyId').isMongoId().withMessage('Geçersiz faculty ID'),
+  body('facultyId').optional().isMongoId().withMessage('Geçersiz faculty ID'),
   body('location.latitude').isFloat({ min: -90, max: 90 }).withMessage('Geçersiz enlem'),
   body('location.longitude').isFloat({ min: -180, max: 180 }).withMessage('Geçersiz boylam'),
-  body('location.accuracy').isFloat({ min: 0, max: 1000 }).withMessage('Geçersiz doğruluk değeri'),
+  body('location.accuracy').isFloat({ min: 0 }).withMessage('Geçersiz doğruluk değeri'),
   body('location.timestamp').isInt({ min: 0 }).withMessage('Geçersiz timestamp')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.warn('verify-location validation errors:', errors.array());
+      try { console.warn('verify-location request body:', JSON.stringify(req.body)); } catch (_) {}
       return res.status(400).json({
         success: false,
         message: 'Validasyon hatası',
@@ -288,7 +242,8 @@ router.post('/verify-location', auth, [
       });
     }
 
-    const { facultyId, location } = req.body;
+    const { location } = req.body;
+    const facultyId = req.body.facultyId || req.user.id;
     const { latitude, longitude, accuracy, timestamp } = location;
 
     // Faculty için aktif geofence'leri bul
@@ -330,19 +285,6 @@ router.post('/verify-location', auth, [
       });
     }
 
-    // Konum doğruluk kontrolü
-    if (accuracy > closestGeofence.settings.maxAccuracy) {
-      return res.json({
-        success: true,
-        allowed: false,
-        message: `Konum doğruluğu yetersiz. Gerekli: ${closestGeofence.settings.maxAccuracy}m, Mevcut: ${accuracy}m`,
-        geofence: closestGeofence,
-        distance: minDistance,
-        accuracy: accuracy,
-        requiredAccuracy: closestGeofence.settings.maxAccuracy
-      });
-    }
-
     // Konum tazeliği kontrolü
     const locationAge = (Date.now() - timestamp) / 1000; // saniye
     if (locationAge > closestGeofence.settings.locationFreshness) {
@@ -359,40 +301,61 @@ router.post('/verify-location', auth, [
 
     // Geofence içinde mi kontrolü
     const isInside = closestGeofence.isPointInside(latitude, longitude);
-    
-    if (!isInside) {
+
+    if (isInside) {
+      // İçerideyse doğruluk yetersiz olsa bile kabul et
+      const accuracyWarning = accuracy > closestGeofence.settings.maxAccuracy;
       return res.json({
         success: true,
-        allowed: false,
-        message: `Belirtilen alan dışındasınız. Mesafe: ${minDistance}m, Yarıçap: ${closestGeofence.radius}m`,
+        allowed: true,
+        message: accuracyWarning
+          ? `Konum doğrulandı (düşük doğruluk: ${accuracy}m)`
+          : 'Konum doğrulaması başarılı',
         geofence: closestGeofence,
         distance: minDistance,
-        radius: closestGeofence.radius
+        accuracy,
+        accuracyWarning
       });
     }
 
-    // Çalışma saatleri kontrolü
-    if (!closestGeofence.isOpenNow()) {
+    // Dışarıdaysa doğruluk kontrolü: belirsizlik alanı geofence'e değiyor mu?
+    const uncertaintyOverlap = (minDistance - closestGeofence.radius) <= accuracy;
+    if (uncertaintyOverlap) {
+      // Belirsizlik alanı geofence ile çakışıyorsa koşullu kabul et
       return res.json({
         success: true,
-        allowed: false,
-        message: 'Şu anda çalışma saatleri dışındasınız',
+        allowed: true,
+        message: `Konum doğrulandı (belirsizlik payı ile). Mesafe: ${minDistance}m, Yarıçap: ${closestGeofence.radius}m, Doğruluk: ${accuracy}m`,
         geofence: closestGeofence,
         distance: minDistance,
-        workingHours: closestGeofence.workingHours
+        accuracy,
+        usedAccuracyRelaxation: true
       });
     }
 
-    // Başarılı konum doğrulama
-    res.json({
+    // Dışarıda ve belirsizlik alanı da çakışmıyorsa reddet
+    if (accuracy > closestGeofence.settings.maxAccuracy) {
+      return res.json({
+        success: true,
+        allowed: false,
+        message: `Konum doğruluğu yetersiz. Gerekli: ${closestGeofence.settings.maxAccuracy}m, Mevcut: ${accuracy}m`,
+        geofence: closestGeofence,
+        distance: minDistance,
+        accuracy: accuracy,
+        requiredAccuracy: closestGeofence.settings.maxAccuracy
+      });
+    }
+
+    return res.json({
       success: true,
-      allowed: true,
-      message: 'Konum doğrulaması başarılı',
+      allowed: false,
+      message: `Belirtilen alan dışındasınız. Mesafe: ${minDistance}m, Yarıçap: ${closestGeofence.radius}m`,
       geofence: closestGeofence,
       distance: minDistance,
-      accuracy: accuracy,
-      locationAge: Math.round(locationAge)
+      radius: closestGeofence.radius
     });
+
+    // Not reached
 
   } catch (error) {
     console.error('Konum doğrulama hatası:', error);

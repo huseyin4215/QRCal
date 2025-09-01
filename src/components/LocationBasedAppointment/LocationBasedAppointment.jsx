@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Circle, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import locationService from '../../services/locationService';
-import { apiService } from '../../services/apiService';
+import apiService from '../../services/apiService';
 import './LocationBasedAppointment.module.css';
 
 // Leaflet marker icon fix
@@ -20,7 +20,8 @@ function MapUpdater({ center, zoom }) {
   
   useEffect(() => {
     if (center && center.lat && center.lng) {
-      map.setView(center, zoom);
+      const currentZoom = map.getZoom();
+      map.setView(center, typeof zoom === 'number' ? zoom : currentZoom);
     }
   }, [center, zoom, map]);
   

@@ -1,4 +1,5 @@
 import { XMarkIcon, PlusIcon, TrashIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import styles from './AvailabilityModal.module.css';
 
 export default function AvailabilityModal({ 
   isOpen, 
@@ -6,6 +7,7 @@ export default function AvailabilityModal({
   availability, 
   onDayAvailabilityChange,
   onSave,
+  onLoadFromGoogleCalendar,
   loading, 
   error, 
   success 
@@ -30,10 +32,11 @@ export default function AvailabilityModal({
       start: '09:00',
       end: '10:00',
       isAvailable: true,
+      manuallyUnavailable: false,
       hasConflict: false,
       conflictReason: null
     };
-    
+
     onDayAvailabilityChange(dayIndex, 'timeSlots', [
       ...(availability[dayIndex].timeSlots || []),
       newSlot
@@ -49,7 +52,25 @@ export default function AvailabilityModal({
   // Update time slot
   const updateTimeSlot = (dayIndex, slotIndex, field, value) => {
     const updatedSlots = [...(availability[dayIndex].timeSlots || [])];
-    updatedSlots[slotIndex] = { ...updatedSlots[slotIndex], [field]: value };
+    const currentSlot = updatedSlots[slotIndex];
+
+    // Track manual unavailability
+    if (field === 'isAvailable' && value === false) {
+      updatedSlots[slotIndex] = {
+        ...currentSlot,
+        [field]: value,
+        manuallyUnavailable: true
+      };
+    } else if (field === 'isAvailable' && value === true) {
+      updatedSlots[slotIndex] = {
+        ...currentSlot,
+        [field]: value,
+        manuallyUnavailable: false
+      };
+    } else {
+      updatedSlots[slotIndex] = { ...currentSlot, [field]: value };
+    }
+
     onDayAvailabilityChange(dayIndex, 'timeSlots', updatedSlots);
   };
 
@@ -115,7 +136,7 @@ export default function AvailabilityModal({
                   {day.isActive && (
                     <button
                       onClick={() => addTimeSlot(dayIndex)}
-                      className="flex items-center px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                      className={styles.addTimeButton}
                     >
                       <PlusIcon className="w-4 h-4 mr-2" />
                       Zaman Aralığı Ekle
@@ -139,37 +160,37 @@ export default function AvailabilityModal({
                     ) : (
                       <div className="space-y-3">
                         {(day.timeSlots || []).map((slot, slotIndex) => (
-                          <div key={slotIndex} className={`flex items-center space-x-4 p-4 rounded-xl border transition-all duration-200 ${
+                          <div key={slotIndex} className={`${styles.timeSlotRow} ${
                             slot.hasConflict 
                               ? 'bg-red-50 border-red-200' 
-                              : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200'
+                              : ''
                           }`}>
-                            <div className="flex items-center space-x-3">
-                              <label className="text-sm font-medium text-gray-700">Başlangıç:</label>
+                            <div className={styles.timeInputGroup}>
+                              <label className={styles.timeInputLabel}>Başlangıç:</label>
                               <input
                                 type="time"
                                 value={slot.start}
                                 onChange={(e) => updateTimeSlot(dayIndex, slotIndex, 'start', e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                className={styles.timeInput}
                               />
                             </div>
-                            <div className="flex items-center space-x-3">
-                              <label className="text-sm font-medium text-gray-700">Bitiş:</label>
+                            <div className={styles.timeInputGroup}>
+                              <label className={styles.timeInputLabel}>Bitiş:</label>
                               <input
                                 type="time"
                                 value={slot.end}
                                 onChange={(e) => updateTimeSlot(dayIndex, slotIndex, 'end', e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                className={styles.timeInput}
                               />
                             </div>
-                            <div className="flex items-center space-x-2">
+                            <div className={styles.availabilityGroup}>
                               <input
                                 type="checkbox"
                                 checked={slot.isAvailable}
                                 onChange={(e) => updateTimeSlot(dayIndex, slotIndex, 'isAvailable', e.target.checked)}
                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-all duration-200"
                               />
-                              <label className="text-sm font-medium text-gray-700">Müsait</label>
+                              <label className={styles.timeInputLabel}>Müsait</label>
                             </div>
                             
                             {/* Conflict indicator */}
@@ -182,7 +203,7 @@ export default function AvailabilityModal({
                             
                             <button
                               onClick={() => removeTimeSlot(dayIndex, slotIndex)}
-                              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                              className={styles.deleteButton}
                             >
                               <TrashIcon className="w-4 h-4" />
                             </button>
@@ -196,14 +217,32 @@ export default function AvailabilityModal({
             ))}
           </div>
 
-          {/* Save Button */}
-          <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
+          {/* Actions */}
+          <div className="mt-8 flex items-center justify-end gap-3">
+            {typeof onLoadFromGoogleCalendar === 'function' && (
+              <button
+                onClick={onLoadFromGoogleCalendar}
+                className={styles.googleCalendarButton}
+                disabled={loading}
+              >
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Google Calendar'dan Yükle
+              </button>
+            )}
             <button
               onClick={onSave}
+              className={styles.saveButton}
               disabled={loading}
-              className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Kaydediliyor...' : 'Müsaitlik Durumunu Kaydet'}
+              <ClockIcon className="w-4 h-4 mr-2" />
+              {loading ? 'Kaydediliyor...' : 'Kaydet'}
+            </button>
+            <button
+              onClick={onClose}
+              className={styles.closeButton2}
+              disabled={loading}
+            >
+              Kapat
             </button>
           </div>
         </div>

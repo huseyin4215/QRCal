@@ -1,0 +1,339 @@
+/* AdminDashboard CSS Module */
+
+/* Statistics Section */
+.statsSection {
+  margin-bottom: 2rem;
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #000000 !important;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sectionTitleIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #6b7280;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Modern Stats Cards */
+.statsCard {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.statsCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #f3f4f6;
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+.statsCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: between;
+  margin-bottom: 1.5rem;
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cardIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #6b7280;
+}
+
+/* User Distribution Card */
+.userStatsCard {
+  background: #ffffff;
+}
+
+.userStatsCard::before {
+  background: #f9fafb;
+}
+
+.userStatsCard .cardIcon {
+  color: #6b7280;
+}
+
+/* Appointment Stats Card */
+.appointmentStatsCard {
+  background: #ffffff;
+}
+
+.appointmentStatsCard::before {
+  background: #f9fafb;
+}
+
+.appointmentStatsCard .cardIcon {
+  color: #6b7280;
+}
+
+.statsList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  border: 1px solid #f3f4f6;
+  transition: all 0.2s ease;
+}
+
+.statItem:hover {
+  background: #f9fafb;
+  transform: translateX(2px);
+}
+
+.statLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4b5563;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.statValue {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1f2937;
+}
+
+/* User Stats Specific */
+.adminStat .statIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #9ca3af;
+}
+
+.facultyStat .statIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #9ca3af;
+}
+
+.studentStat .statIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #9ca3af;
+}
+
+.adminStat .statValue {
+  color: #4b5563;
+}
+
+.facultyStat .statValue {
+  color: #4b5563;
+}
+
+.studentStat .statValue {
+  color: #4b5563;
+}
+
+/* Appointment Stats Specific */
+.pendingStat .statIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #9ca3af;
+}
+
+.approvedStat .statIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #9ca3af;
+}
+
+.rejectedStat .statIcon {
+  width: 1rem;
+  height: 1rem;
+  color: #9ca3af;
+}
+
+.pendingStat .statValue {
+  color: #4b5563;
+}
+
+.approvedStat .statValue {
+  color: #4b5563;
+}
+
+.rejectedStat .statValue {
+  color: #4b5563;
+}
+
+/* Badge Styles */
+.statBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.adminBadge {
+  background: transparent;
+  color: #4b5563;
+}
+
+.facultyBadge {
+  background: transparent;
+  color: #4b5563;
+}
+
+.studentBadge {
+  background: transparent;
+  color: #4b5563;
+}
+
+.pendingBadge {
+  background: transparent;
+  color: #4b5563;
+}
+
+.approvedBadge {
+  background: transparent;
+  color: #4b5563;
+}
+
+.rejectedBadge {
+  background: transparent;
+  color: #4b5563;
+}
+
+/* Animation for stat values */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.statValue {
+  animation: countUp 0.5s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 767px) {
+  .statsGrid {
+    gap: 1rem;
+  }
+  
+  .statsCard {
+    padding: 1rem;
+  }
+  
+  .cardTitle {
+    font-size: 1rem;
+  }
+  
+  .statItem {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .statLabel {
+    font-size: 0.85rem;
+  }
+  
+  .statValue {
+    font-size: 1rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .statsCard {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    border: 1px solid rgba(75, 85, 99, 0.5);
+  }
+  
+  .sectionTitle {
+    color: #f9fafb;
+  }
+  
+  .cardTitle {
+    color: #f9fafb;
+  }
+  
+  .statItem {
+    background: rgba(31, 41, 55, 0.7);
+    border: 1px solid rgba(75, 85, 99, 0.5);
+  }
+  
+  .statItem:hover {
+    background: rgba(31, 41, 55, 0.9);
+  }
+  
+  .statLabel {
+    color: #d1d5db;
+  }
+  
+  .statValue {
+    color: #f9fafb;
+  }
+  
+  .userStatsCard {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  }
+  
+  .appointmentStatsCard {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  }
+}

@@ -25,7 +25,7 @@ const CookiePolicy = () => {
               Çerezler Hakkında
             </h2>
             <p className="policy-text">
-              QR Calendar web sitesi, kullanıcı deneyimini geliştirmek ve hizmet kalitesini artırmak için 
+              Qnnect web sitesi, kullanıcı deneyimini geliştirmek ve hizmet kalitesini artırmak için 
               çerezler kullanmaktadır. Bu politika, hangi çerezlerin kullanıldığını ve nasıl yönetileceğini açıklar.
             </p>
           </section>
@@ -287,13 +287,13 @@ const CookiePolicy = () => {
             </p>
             <div className="space-y-2">
               <p className="text-gray-700">
-                <strong>E-posta:</strong> cookies@qrcalendar.com
+                <strong>E-posta:</strong> infoqrcal@gmail.com
               </p>
               <p className="text-gray-700">
                 <strong>Telefon:</strong> +90 (212) 555 0123
               </p>
               <p className="text-gray-700">
-                <strong>Adres:</strong> İstanbul, Türkiye
+                <strong>Adres:</strong> Ankara, Türkiye
               </p>
             </div>
           </section>

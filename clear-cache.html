@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cache Temizleyici - QrCal</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            margin: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .result {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        .warning {
+            border-left-color: #ff9800;
+        }
+        h1 { text-align: center; margin-bottom: 30px; }
+        .section { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Cache Temizleyici</h1>
+        
+        <div class="section">
+            <h3>🔧 Brave Tarayıcısı için WebSocket Düzeltme</h3>
+            <p>Brave tarayıcısında "[vite] connecting..." sorunu için cache temizleme araçları:</p>
+        </div>
+
+        <div class="section">
+            <h4>1. Service Workers</h4>
+            <button class="btn" onclick="clearServiceWorkers()">Service Workers Temizle</button>
+            <div id="sw-result"></div>
+        </div>
+
+        <div class="section">
+            <h4>2. Cache Storage</h4>
+            <button class="btn" onclick="clearCacheStorage()">Cache Storage Temizle</button>
+            <div id="cache-result"></div>
+        </div>
+
+        <div class="section">
+            <h4>3. Local Storage</h4>
+            <button class="btn" onclick="clearLocalStorage()">Local Storage Temizle</button>
+            <div id="local-result"></div>
+        </div>
+
+        <div class="section">
+            <h4>4. Session Storage</h4>
+            <button class="btn" onclick="clearSessionStorage()">Session Storage Temizle</button>
+            <div id="session-result"></div>
+        </div>
+
+        <div class="section">
+            <h4>5. IndexedDB</h4>
+            <button class="btn" onclick="clearIndexedDB()">IndexedDB Temizle</button>
+            <div id="indexeddb-result"></div>
+        </div>
+
+        <div class="section">
+            <h4>🔄 Tümünü Temizle</h4>
+            <button class="btn" onclick="clearAll()" style="background: rgba(244, 67, 54, 0.3);">
+                HEPSİNİ TEMİZLE
+            </button>
+            <div id="all-result"></div>
+        </div>
+
+        <div class="section">
+            <h4>🧪 WebSocket Test</h4>
+            <button class="btn" onclick="testWebSocket()">WebSocket Bağlantısını Test Et</button>
+            <div id="websocket-result"></div>
+        </div>
+
+        <div class="section">
+            <h4>📋 Manuel Brave Ayarları</h4>
+            <p>Eğer sorun devam ederse:</p>
+            <ol>
+                <li><strong>F12</strong> → <strong>Application</strong> → <strong>Service Workers</strong> → <strong>Unregister</strong></li>
+                <li><strong>F12</strong> → <strong>Application</strong> → <strong>Clear Storage</strong> → <strong>Clear site data</strong></li>
+                <li><strong>Brave Shields</strong> → <strong>localhost:8081</strong> için <strong>Shields Down</strong></li>
+                <li><strong>Brave Settings</strong> → <strong>Privacy</strong> → <strong>Clear browsing data</strong></li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <button class="btn" onclick="window.location.href='http://localhost:8081'" style="background: rgba(76, 175, 80, 0.3);">
+                🚀 QrCal'a Geri Dön
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, type = 'success') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        async function clearServiceWorkers() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    let count = 0;
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                        count++;
+                    }
+                    showResult('sw-result', `✅ ${count} Service Worker temizlendi`);
+                } else {
+                    showResult('sw-result', '⚠️ Service Worker desteklenmiyor', 'warning');
+                }
+            } catch (error) {
+                showResult('sw-result', `❌ Hata: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearCacheStorage() {
+            try {
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    let count = 0;
+                    for (let cacheName of cacheNames) {
+                        await caches.delete(cacheName);
+                        count++;
+                    }
+                    showResult('cache-result', `✅ ${count} Cache temizlendi`);
+                } else {
+                    showResult('cache-result', '⚠️ Cache API desteklenmiyor', 'warning');
+                }
+            } catch (error) {
+                showResult('cache-result', `❌ Hata: ${error.message}`, 'error');
+            }
+        }
+
+        function clearLocalStorage() {
+            try {
+                const count = localStorage.length;
+                localStorage.clear();
+                showResult('local-result', `✅ ${count} Local Storage item temizlendi`);
+            } catch (error) {
+                showResult('local-result', `❌ Hata: ${error.message}`, 'error');
+            }
+        }
+
+        function clearSessionStorage() {
+            try {
+                const count = sessionStorage.length;
+                sessionStorage.clear();
+                showResult('session-result', `✅ ${count} Session Storage item temizlendi`);
+            } catch (error) {
+                showResult('session-result', `❌ Hata: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearIndexedDB() {
+            try {
+                if ('indexedDB' in window) {
+                    // Bu basit bir temizleme, tüm DB'leri listeleyip silemeyiz
+                    showResult('indexeddb-result', '⚠️ IndexedDB manuel olarak temizlenmeli (F12 → Application)', 'warning');
+                } else {
+                    showResult('indexeddb-result', '⚠️ IndexedDB desteklenmiyor', 'warning');
+                }
+            } catch (error) {
+                showResult('indexeddb-result', `❌ Hata: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearAll() {
+            showResult('all-result', '🔄 Tümü temizleniyor...', 'warning');
+            
+            await clearServiceWorkers();
+            await clearCacheStorage();
+            clearLocalStorage();
+            clearSessionStorage();
+            await clearIndexedDB();
+            
+            showResult('all-result', '✅ Tüm cache temizlendi! Sayfayı yenileyin.');
+            
+            // 2 saniye sonra sayfayı yenile
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+
+        function testWebSocket() {
+            showResult('websocket-result', '🔄 WebSocket test ediliyor...', 'warning');
+            
+            try {
+                const ws = new WebSocket('ws://localhost:8081');
+                
+                ws.onopen = function() {
+                    showResult('websocket-result', '✅ WebSocket bağlantısı başarılı!');
+                    ws.close();
+                };
+                
+                ws.onerror = function(error) {
+                    showResult('websocket-result', `❌ WebSocket hatası: ${error.message || 'Bağlantı kurulamadı'}`, 'error');
+                };
+                
+                ws.onclose = function(event) {
+                    if (event.code !== 1000) {
+                        showResult('websocket-result', `⚠️ WebSocket kapandı: Code ${event.code}`, 'warning');
+                    }
+                };
+                
+                // 5 saniye timeout
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.CONNECTING) {
+                        ws.close();
+                        showResult('websocket-result', '❌ WebSocket timeout - Brave Shields\'i kontrol edin', 'error');
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                showResult('websocket-result', `❌ WebSocket test hatası: ${error.message}`, 'error');
+            }
+        }
+
+        // Sayfa yüklendiğinde otomatik WebSocket test
+        window.onload = function() {
+            setTimeout(testWebSocket, 1000);
+        };
+    </script>
+</body>
+</html>

@@ -11,7 +11,8 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
       'approved': 'Onaylandı',
       'rejected': 'Reddedildi',
       'cancelled': 'İptal Edildi',
-      'completed': 'Tamamlandı'
+      'completed': 'Tamamlandı',
+      'no_response': 'Öğretim Üyesi Cevaplamadı'
     };
     return statusMap[status] || status;
   };
@@ -191,11 +192,7 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
                   Reddet
                 </button>
               )}
-              {onCancel && (
-                <button onClick={handleCancel} className={`${styles.actionButton} ${styles.cancelButton}`}>
-                  İptal Et
-                </button>
-              )}
+              {/* İptal butonu istenmiyor */}
             </>
           )}
           <button onClick={onClose} className={`${styles.actionButton} ${styles.closeActionButton}`}>

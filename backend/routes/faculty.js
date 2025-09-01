@@ -55,50 +55,202 @@ router.put('/profile', asyncHandler(async (req, res) => {
 // @route   GET /api/faculty/availability
 // @access  Private
 router.get('/availability', asyncHandler(async (req, res) => {
+  console.log('=== GET AVAILABILITY DEBUG ===');
+  console.log('User from auth:', req.user);
+  console.log('User ID:', req.user?.id);
+  
   const user = await User.findById(req.user.id).select('availability slotDuration');
+
+  console.log('Faculty availability GET request:', {
+    userId: req.user.id,
+    userFound: !!user,
+    availability: user?.availability,
+    availabilityType: typeof user?.availability,
+    availabilityLength: Array.isArray(user?.availability) ? user?.availability.length : 'Not an array',
+    slotDuration: user?.slotDuration
+  });
 
   res.json({
     success: true,
     data: {
-      availability: user.availability,
-      slotDuration: user.slotDuration
+      availability: user?.availability || [],
+      slotDuration: user?.slotDuration || 15
     }
   });
+}));
+
+// Test endpoint for debugging
+router.post('/test-availability', asyncHandler(async (req, res) => {
+  console.log('=== TEST AVAILABILITY ENDPOINT ===');
+  console.log('Request body:', req.body);
+  console.log('Request headers:', req.headers);
+  console.log('User from auth:', req.user);
+  
+  const testData = {
+    day: 'Monday',
+    isActive: true,
+    timeSlots: [
+      {
+        start: '09:00',
+        end: '10:00',
+        isAvailable: true
+      }
+    ]
+  };
+  
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    console.log('User before update:', {
+      id: user._id,
+      availability: user.availability
+    });
+    
+    user.availability = [testData];
+    
+    console.log('User.availability set to:', user.availability);
+    
+    await user.save();
+    
+    console.log('User saved successfully');
+    
+    // Verify by fetching again
+    const savedUser = await User.findById(req.user.id);
+    console.log('User after save verification:', {
+      id: savedUser._id,
+      availability: savedUser.availability
+    });
+    
+    res.json({
+      success: true,
+      message: 'Test availability saved',
+      data: {
+        availability: savedUser.availability
+      }
+    });
+  } catch (error) {
+    console.error('Test endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 }));
 
 // @desc    Update faculty availability
 // @route   PUT /api/faculty/availability
 // @access  Private
 router.put('/availability', asyncHandler(async (req, res) => {
+  console.log('=== BACKEND AVAILABILITY UPDATE DEBUG ===');
+  console.log('Request body:', req.body);
+  console.log('Request headers:', req.headers);
+  console.log('User from auth middleware:', req.user);
+  
   const { availability, slotDuration } = req.body;
 
+  console.log('Extracted data:', {
+    availability: availability,
+    availabilityType: typeof availability,
+    availabilityLength: Array.isArray(availability) ? availability.length : 'Not an array',
+    slotDuration: slotDuration
+  });
+
+  if (!req.user || !req.user.id) {
+    console.error('No user in request or missing user ID');
+    return res.status(401).json({
+      success: false,
+      error: 'Kullanıcı kimlik doğrulaması gerekli'
+    });
+  }
+
+  console.log('Looking for user with ID:', req.user.id);
   const user = await User.findById(req.user.id);
 
+  if (!user) {
+    console.error('User not found for availability update:', req.user.id);
+    return res.status(404).json({
+      success: false,
+      error: 'Kullanıcı bulunamadı'
+    });
+  }
+
+  console.log('User found:', {
+    id: user._id,
+    name: user.name,
+    role: user.role,
+    currentAvailability: user.availability,
+    currentAvailabilityLength: Array.isArray(user.availability) ? user.availability.length : 'Not an array'
+  });
+
   if (availability) {
+    console.log('Setting new availability:', availability);
+    console.log('New availability type:', typeof availability);
+    console.log('New availability length:', Array.isArray(availability) ? availability.length : 'Not an array');
+    
+    // Validate availability structure
+    if (!Array.isArray(availability)) {
+      console.error('Availability is not an array:', availability);
+      return res.status(400).json({
+        success: false,
+        error: 'Müsaitlik verisi dizi formatında olmalıdır'
+      });
+    }
+    
     user.availability = availability;
+    console.log('User.availability set to:', user.availability);
   }
 
   if (slotDuration) {
     // Validate slot duration before saving
     if (slotDuration < 10 || slotDuration > 20) {
+      console.error('Invalid slot duration:', slotDuration);
       return res.status(400).json({
         success: false,
         error: 'Slot süresi 10-20 dakika arasında olmalıdır'
       });
     }
+    console.log('Setting new slot duration:', slotDuration);
     user.slotDuration = slotDuration;
   }
 
-  await user.save();
-
-  res.json({
-    success: true,
-    data: {
-      availability: user.availability,
-      slotDuration: user.slotDuration
-    },
-    message: 'Müsaitlik saatleri güncellendi'
-  });
+  console.log('About to save user. User.availability before save:', user.availability);
+  
+  try {
+    await user.save();
+    console.log('User saved successfully!');
+    
+    // Verify the save by fetching the user again
+    const savedUser = await User.findById(req.user.id);
+    console.log('User after save verification:', {
+      id: savedUser._id,
+      availability: savedUser.availability,
+      availabilityLength: Array.isArray(savedUser.availability) ? savedUser.availability.length : 'Not an array'
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        availability: savedUser.availability,
+        slotDuration: savedUser.slotDuration
+      },
+      message: 'Müsaitlik saatleri güncellendi'
+    });
+  } catch (saveError) {
+    console.error('Error saving user:', saveError);
+    console.error('Save error details:', {
+      message: saveError.message,
+      code: saveError.code,
+      name: saveError.name
+    });
+    
+    return res.status(500).json({
+      success: false,
+      error: 'Kullanıcı kaydedilirken hata oluştu: ' + saveError.message
+    });
+  }
 }));
 
 // @desc    Get faculty appointments

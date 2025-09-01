@@ -13,7 +13,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const CLIENT_ID = '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com';
+const CLIENT_ID = 'your-google-client-id';
 
 console.log('🔍 QRCal Google Configuration Checker\n');
 console.log('This script will help you verify your Google Cloud Console configuration.\n');

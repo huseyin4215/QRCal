@@ -1,20 +1,29 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   CalendarIcon, 
   ClockIcon, 
-  AcademicCapIcon, 
-  CheckCircleIcon, 
-  XCircleIcon, 
-  EyeIcon,
-  QrCodeIcon,
-  ChartBarIcon,
-  EnvelopeIcon,
-  PhoneIcon,
+  UserIcon, 
+  EnvelopeIcon, 
+  PhoneIcon, 
   GlobeAltIcon,
   PlusIcon,
-  MinusIcon
+  PencilIcon,
+  TrashIcon,
+  EyeIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  QrCodeIcon,
+  SparklesIcon,
+  HomeIcon,
+  ArrowUpTrayIcon,
+  DocumentArrowDownIcon,
+  ArrowPathIcon
+} from '@heroicons/react/24/outline';
+import { 
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 
@@ -27,7 +36,7 @@ import AppointmentDetails from '../components/AppointmentDetails/AppointmentDeta
 import ProfileModal from '../components/ProfileModal/ProfileModal';
 import PasswordModal from '../components/PasswordModal/PasswordModal';
 import AvailabilityModal from '../components/AvailabilityModal/AvailabilityModal';
-import GoogleCalendarUnavailableSlots from '../components/GoogleCalendarUnavailableSlots/GoogleCalendarUnavailableSlots';
+import GoogleCalendarEvents from '../components/GoogleCalendarUnavailableSlots/GoogleCalendarUnavailableSlots';
 import TabNavigation from '../components/TabNavigation';
 
 const FacultyDashboard = () => {
@@ -36,11 +45,42 @@ const FacultyDashboard = () => {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [availability, setAvailability] = useState([]);
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('appointments');
+  const [slotDuration, setSlotDuration] = useState(15);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQRModal, setShowQRModal] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Load notifications from localStorage
+  const loadNotificationsFromStorage = () => {
+    try {
+      const storedNotifications = localStorage.getItem('notifications');
+      const storedUnreadCount = localStorage.getItem('unreadCount');
+      if (storedNotifications) {
+        const parsedNotifications = JSON.parse(storedNotifications);
+        setNotifications(parsedNotifications);
+        setUnreadCount(storedUnreadCount ? parseInt(storedUnreadCount) : 0);
+      }
+    } catch (error) {
+      console.error('Error loading notifications from storage:', error);
+    }
+  };
+
+  // Save notifications to localStorage
+  const saveNotificationsToStorage = (newNotifications, newUnreadCount) => {
+    try {
+      localStorage.setItem('notifications', JSON.stringify(newNotifications));
+      localStorage.setItem('unreadCount', newUnreadCount.toString());
+    } catch (error) {
+      console.error('Error saving notifications to storage:', error);
+    }
+  };
   const [showGoogleSetup, setShowGoogleSetup] = useState(false);
   
   // Profile management states
@@ -75,28 +115,224 @@ const FacultyDashboard = () => {
   const [viewMode, setViewMode] = useState('grid'); // Add this state for view mode
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
       loadDashboardData();
+      loadNotificationsFromStorage(); // Load notifications from localStorage
     }
   }, [user]);
 
-  // Auto-load Google Calendar events when connected
+  // Save notifications to localStorage when they change
   useEffect(() => {
-    if (googleConnected && user) {
+    if (notifications.length > 0 || unreadCount > 0) {
+      saveNotificationsToStorage(notifications, unreadCount);
+    }
+  }, [notifications, unreadCount]);
+
+  // Load notifications on mount and when dropdown opens
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      try {
+        const res = await apiService.getUnreadNotifications();
+        if (res.success) {
+          const list = res.data?.notifications || res.data || [];
+          setNotifications(list);
+          setUnreadCount(res.data?.unreadCount ?? list.filter(n => !n.read).length);
+        }
+      } catch (e) {
+        console.error('Notifications load error:', e);
+      }
+    };
+    load();
+  }, [user]);
+
+  const toggleNotifications = async () => {
+    const next = !showNotifications;
+    setShowNotifications(next);
+    if (next) {
+      try {
+        const res = await apiService.getUnreadNotifications();
+        if (res.success) {
+          const list = res.data?.notifications || res.data || [];
+          setNotifications(list);
+          setUnreadCount(res.data?.unreadCount ?? list.filter(n => !n.read).length);
+        }
+      } catch (e) {
+        console.error('Notifications refresh error:', e);
+      }
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      // Mark all notifications as read (keep them, just mark as read)
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+      saveNotificationsToStorage(notifications.map(n => ({ ...n, read: true })));
+      
+      // Also call API to mark as read on server
+      await apiService.markAllNotificationsAsRead();
+    } catch (e) {
+      console.error('Mark all read failed:', e);
+    }
+  };
+
+  // Helper: check if a day is in the past (before today)
+  const isDayPast = (dayName) => {
+    const now = new Date();
+    const todayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+
+    // If it's today, it's not past
+    if (dayName === todayName) {
+      return false;
+    }
+
+    // Map day names to numbers for comparison
+    const dayMap = {
+      'Monday': 1,
+      'Tuesday': 2,
+      'Wednesday': 3,
+      'Thursday': 4,
+      'Friday': 5,
+      'Saturday': 6,
+      'Sunday': 0
+    };
+
+    const dayNumber = dayMap[dayName];
+    const todayNumber = now.getDay();
+
+    // If day is before today in the week
+    return dayNumber < todayNumber;
+  };
+
+  // Helper: check if slot time is past for today
+  const isSlotTimePast = (slotEndTime) => {
+    const now = new Date();
+    const [endHour, endMinute] = slotEndTime.split(':').map(Number);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    if (currentHour > endHour) return true;
+    if (currentHour === endHour && currentMinute >= endMinute) return true;
+
+    return false;
+  };
+
+  // Helper: check if slot should be available (considering date/time)
+  // NEW AVAILABILITY SYSTEM - Simple and Clear Rules
+  
+  // Count confirmed appointments for a specific time slot
+  const getConfirmedAppointmentCount = (slot, dayName) => {
+    if (!appointments || appointments.length === 0) return 0;
+
+    return appointments.filter(appointment => {
+      const appointmentDate = new Date(appointment.appointmentDate);
+      const appointmentDayName = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
+      
+      return appointmentDayName === dayName &&
+             appointment.startTime === slot.start &&
+             appointment.status === 'confirmed';
+    }).length;
+  };
+
+  // Calculate maximum appointments per slot based on duration
+  const getMaxAppointmentsPerSlot = (slot) => {
+    const slotStartHour = parseInt(slot.start.split(':')[0]);
+    const slotStartMinute = parseInt(slot.start.split(':')[1]);
+    const slotEndHour = parseInt(slot.end.split(':')[0]);
+    const slotEndMinute = parseInt(slot.end.split(':')[1]);
+    
+    const slotDurationMinutes = (slotEndHour * 60 + slotEndMinute) - (slotStartHour * 60 + slotStartMinute);
+    return Math.floor(slotDurationMinutes / slotDuration);
+  };
+
+  // Main availability logic - 4 Simple Rules
+  const getSlotAvailabilityStatus = (slot, dayName) => {
+    const confirmedCount = getConfirmedAppointmentCount(slot, dayName);
+    const maxCount = getMaxAppointmentsPerSlot(slot);
+
+    // RULE 1: Manual Unavailable = PERMANENT (Never changes)
+    if (slot.manuallyUnavailable === true) {
+      return {
+        status: 'manually_unavailable',
+        display: 'Kapalı (Manuel)',
+        isBookable: false,
+        count: confirmedCount,
+        max: maxCount
+      };
+    }
+
+    // RULE 2: Available + Fully Booked by Students = Show as Full
+    if (slot.isAvailable === true && confirmedCount >= maxCount) {
+      return {
+        status: 'fully_booked',
+        display: 'Doldu',
+        isBookable: false,
+        count: confirmedCount,
+        max: maxCount
+      };
+    }
+
+    // RULE 3: Available + Has Space = Show Available with Count
+    if (slot.isAvailable === true) {
+      return {
+        status: 'available',
+        display: 'Müsait',
+        isBookable: true,
+        count: confirmedCount,
+        max: maxCount
+      };
+    }
+
+    // RULE 4: Not Available (Faculty Set) = Show Unavailable
+    return {
+      status: 'unavailable',
+      display: 'Kapalı',
+      isBookable: false,
+      count: confirmedCount,
+      max: maxCount
+    };
+  };
+
+  // Legacy function for backward compatibility
+  const isSlotAvailableConsideringDate = (slot, dayName) => {
+    const status = getSlotAvailabilityStatus(slot, dayName);
+    return status.isBookable;
+  };
+
+  // Auto-load Google Calendar events when connected, after availability is loaded
+  useEffect(() => {
+    if (googleConnected && user && availabilityLoaded) {
       loadGoogleCalendarEvents();
     }
-  }, [googleConnected, user]);
+  }, [googleConnected, user, availabilityLoaded]);
 
   // Auto-load Google Calendar events when availability tab is opened
   useEffect(() => {
-    if (activeTab === 'availability' && googleConnected && user) {
-      loadGoogleCalendarEvents();
+    if (activeTab === 'availability' && user) {
+      (async () => {
+        // Always ensure DB-backed availability is loaded first
+        await loadAvailabilityData();
+        if (googleConnected) {
+          // Then optionally merge Google data onto it
+          await loadGoogleCalendarEvents();
+        }
+      })();
     }
   }, [activeTab, googleConnected, user]);
 
-  // Handle Google OAuth callback
+  // Auto-load availability data when availability tab is opened
+  useEffect(() => {
+    if (activeTab === 'availability' && user) {
+      console.log('Availability tab opened, reloading data...');
+      loadAvailabilityData();
+    }
+  }, [activeTab, user]);
+
+  // Handle Google OAuth callback (ensure fast redirect)
   useEffect(() => {
     const token = searchParams.get('token');
     const googleConnectedParam = searchParams.get('googleConnected');
@@ -115,7 +351,7 @@ const FacultyDashboard = () => {
       // Handle OAuth 2.0 authorization code
       console.log('Google OAuth authorization code received');
       handleOAuthCallback(code);
-    } else if (token && googleConnectedParam === 'true') {
+    } else if (token && (googleConnectedParam === 'true' || !googleConnected)) {
       // Handle direct token (e.g., from old flow or other redirects)
       console.log('Google OAuth callback successful');
       
@@ -137,7 +373,7 @@ const FacultyDashboard = () => {
       // Load Google Calendar events
       loadGoogleCalendarEvents();
       
-      // Clear URL parameters
+      // Clear URL parameters and ensure we land once
       navigate('/faculty-dashboard', { replace: true });
       
       // Show success message
@@ -417,26 +653,129 @@ Hata detayı: ${error.message}
     setAvailabilitySuccess('');
   };
 
+  // Test function to debug availability saving
+  const testSaveAvailability = async () => {
+    const testAvailability = [
+      {
+        day: 'Monday',
+        isActive: true,
+        timeSlots: [
+          {
+            start: '09:00',
+            end: '10:00',
+            isAvailable: true
+          }
+        ]
+      }
+    ];
+
+    console.log('Testing with availability data:', testAvailability);
+
+    try {
+      const response = await apiService.updateFacultyAvailability({
+        availability: testAvailability
+      });
+      
+      console.log('Test save response:', response);
+      
+      if (response.success) {
+        alert('Test availability saved successfully!');
+        // Reload availability data to see if it's now in the database
+        loadAvailabilityData();
+      }
+    } catch (error) {
+      console.error('Test save error:', error);
+      alert('Test save failed: ' + error.message);
+    }
+  };
+
   const handleSaveAvailability = async () => {
     setAvailabilityLoading(true);
     setAvailabilityError('');
     setAvailabilitySuccess('');
 
+    // Check for duplicate time slots before saving
+    const duplicateErrors = [];
+    const conflictErrors = [];
+
+    availability.forEach((day, dayIndex) => {
+      if (!day.timeSlots || day.timeSlots.length === 0) return;
+
+      const slots = day.timeSlots;
+      const dayName = getDayDisplayName(day.day);
+
+      // Check for duplicate slots
+      const slotStrings = slots.map(slot => `${slot.start}-${slot.end}`);
+      const uniqueSlots = new Set(slotStrings);
+
+      if (uniqueSlots.size !== slotStrings.length) {
+        duplicateErrors.push(`${dayName} günü için aynı zaman aralığı birden fazla kez eklenmiş!`);
+      }
+
+      // Check for overlapping slots
+      for (let i = 0; i < slots.length; i++) {
+        for (let j = i + 1; j < slots.length; j++) {
+          const slot1 = slots[i];
+          const slot2 = slots[j];
+
+          const start1 = slot1.start;
+          const end1 = slot1.end;
+          const start2 = slot2.start;
+          const end2 = slot2.end;
+
+          // Check for time overlap
+          if (start1 < end2 && end1 > start2) {
+            conflictErrors.push(`${dayName} günü: ${start1}-${end1} ve ${start2}-${end2} zaman aralıkları çakışıyor!`);
+          }
+        }
+      }
+    });
+
+    // If there are validation errors, show them and don't save
+    if (duplicateErrors.length > 0 || conflictErrors.length > 0) {
+      const allErrors = [...duplicateErrors, ...conflictErrors];
+      setAvailabilityError(allErrors.join('\n'));
+      setAvailabilityLoading(false);
+      return;
+    }
+
+    console.log('=== AVAILABILITY SAVE DEBUG ===');
+    console.log('Current availability state:', availability);
+    console.log('Availability length:', availability.length);
+    console.log('Availability type:', typeof availability);
+    console.log('Availability JSON:', JSON.stringify(availability, null, 2));
+
     try {
-      const response = await apiService.updateFacultyAvailability({
-        availability
-      });
+      const requestData = { availability };
+      console.log('Request data being sent:', requestData);
+      console.log('Request data JSON:', JSON.stringify(requestData, null, 2));
+
+      const response = await apiService.updateFacultyAvailability(requestData);
+      
+      console.log('Availability save response:', response);
+      console.log('Response success:', response.success);
+      console.log('Response data:', response.data);
       
       if (response.success) {
         setAvailabilitySuccess('Müsaitlik durumu başarıyla kaydedildi!');
         
+        // Reload availability data to verify it was saved
         setTimeout(() => {
+          loadAvailabilityData();
           setShowAvailabilityModal(false);
           setAvailabilitySuccess('');
         }, 2000);
+      } else {
+        console.error('Response indicates failure:', response);
+        setAvailabilityError('Sunucu yanıtı başarısız: ' + (response.message || 'Bilinmeyen hata'));
       }
     } catch (error) {
       console.error('Availability save error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response
+      });
       setAvailabilityError(error.message || 'Müsaitlik durumu kaydedilirken hata oluştu');
     } finally {
       setAvailabilityLoading(false);
@@ -455,9 +794,9 @@ Hata detayı: ${error.message}
         setAvailability(response.data.availability);
         setAvailabilitySuccess('Google Calendar\'dan müsaitlik başarıyla yüklendi');
         
-        // Reload dashboard data to reflect changes
+        // Reload availability data to reflect changes
         setTimeout(() => {
-          loadDashboardData();
+          loadAvailabilityData();
         }, 1000);
       }
     } catch (error) {
@@ -468,6 +807,60 @@ Hata detayı: ${error.message}
     }
   };
 
+  const loadAvailabilityData = async () => {
+    try {
+      console.log('=== LOADING AVAILABILITY DATA ===');
+      const availabilityResponse = await apiService.getFacultyAvailability();
+      console.log('API Response:', availabilityResponse);
+      
+      const defaultAvailability = initializeAvailability();
+      console.log('Default availability template:', defaultAvailability);
+      
+      let serverAvailability = [];
+
+      if (
+        availabilityResponse.success &&
+        availabilityResponse.data.availability &&
+        Array.isArray(availabilityResponse.data.availability)
+      ) {
+        serverAvailability = availabilityResponse.data.availability;
+        console.log('Server availability found:', serverAvailability);
+      } else {
+        console.log('No server availability data found, using defaults');
+      }
+
+      // Merge server data into default 7-day template to ensure all days are shown
+      const dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const merged = defaultAvailability.map(defDay => {
+        const match = serverAvailability.find(d => d.day === defDay.day);
+        const result = match ? { ...defDay, ...match } : defDay;
+        console.log(`Day ${defDay.day}: ${match ? 'found match' : 'using default'}`, result);
+        return result;
+      }).sort((a,b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+
+      setAvailability(merged);
+      setSlotDuration(availabilityResponse.data.slotDuration || 30);
+      setAvailabilityLoaded(true);
+      console.log('Final merged availability set to state:', merged);
+
+      // Persist baseline to DB if server had none to avoid disappearing after relogin
+      if (!serverAvailability || serverAvailability.length === 0) {
+        try {
+          await apiService.updateFacultyAvailability({ availability: merged });
+          console.log('Persisted default availability to DB');
+        } catch (persistError) {
+          console.error('Failed to persist default availability to DB:', persistError);
+        }
+      }
+    } catch (error) {
+      console.error('Availability data load error:', error);
+      const fallback = initializeAvailability();
+      setAvailability(fallback);
+      setAvailabilityLoaded(true);
+      console.log('Set fallback availability:', fallback);
+    }
+  };
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
@@ -475,27 +868,55 @@ Hata detayı: ${error.message}
       // Load appointments
       const appointmentsResponse = await apiService.getFacultyAppointments();
       const appointmentsData = appointmentsResponse.data?.appointments || appointmentsResponse.data || [];
-      setAppointments(appointmentsData);
+
+      // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
+      const sortedAppointments = [...appointmentsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setAppointments(sortedAppointments);
       
-      // Load profile and availability
+      // Load profile data
       const profileResponse = await apiService.getCurrentUser();
       const profileData = profileResponse.data;
-      
-      if (profileData.availability) {
-        setAvailability(profileData.availability);
-      }
-      
 
-      
+      // Update profile state with loaded data
+      setProfileData({
+        name: profileData.name || '',
+        email: profileData.email || '',
+        phone: profileData.phone || '',
+        office: profileData.office || '',
+        website: profileData.website || '',
+        title: profileData.title || '',
+        department: profileData.department || '',
+        role: profileData.role || ''
+      });
+
+      // Update user context with complete profile data for ProfileDropdown
+      if (profileData.phone || profileData.office || profileData.title || profileData.department) {
+        const updatedUser = {
+          ...user,
+          phone: profileData.phone,
+          office: profileData.office,
+          title: profileData.title,
+          department: profileData.department
+        };
+        // Update localStorage to persist the data
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+
+      // Load availability data - her zaman çağır
+      await loadAvailabilityData();
+
       if (profileData.googleId) {
         setGoogleConnected(true);
       }
-      
-      console.log('Dashboard data loaded:', { appointmentsData, profileData });
+
+      console.log('Dashboard data loaded:', {
+        appointmentsData,
+        profileData
+      });
     } catch (error) {
       console.error('Dashboard data load error:', error);
       setAppointments([]);
-      setAvailability([]);
+      setAvailability(initializeAvailability());
     } finally {
       setLoading(false);
     }
@@ -519,7 +940,10 @@ Hata detayı: ${error.message}
         // Reload appointments
         const updatedResponse = await apiService.getFacultyAppointments();
         const updatedAppointments = updatedResponse.data?.appointments || updatedResponse.data || [];
-        setAppointments(updatedAppointments);
+
+        // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
+        const sortedUpdatedAppointments = [...updatedAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setAppointments(sortedUpdatedAppointments);
       }
     } catch (error) {
       console.error('Appointment action error:', error);
@@ -532,7 +956,8 @@ Hata detayı: ${error.message}
       pending: { text: 'Beklemede', color: 'bg-yellow-100 text-yellow-800' },
       approved: { text: 'Onaylandı', color: 'bg-green-100 text-green-800' },
       rejected: { text: 'Reddedildi', color: 'bg-red-100 text-red-800' },
-      cancelled: { text: 'İptal Edildi', color: 'bg-gray-100 text-gray-800' }
+      cancelled: { text: 'İptal Edildi', color: 'bg-gray-100 text-gray-800' },
+      no_response: { text: 'Cevaplamadı', color: 'bg-orange-100 text-orange-800' }
     };
     
     const config = statusConfig[status] || { text: status, color: 'bg-gray-100 text-gray-800' };
@@ -565,12 +990,14 @@ Hata detayı: ${error.message}
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
       case 'cancelled':
         return <XCircleIcon className="h-5 w-5 text-gray-500" />;
+      case 'no_response':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-orange-500" />;
       default:
         return <ClockIcon className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const getStatusText = (status) => {
+    const getStatusText = (status) => {
     switch (status) {
       case 'pending':
         return 'Beklemede';
@@ -580,6 +1007,8 @@ Hata detayı: ${error.message}
         return 'Reddedildi';
       case 'cancelled':
         return 'İptal Edildi';
+      case 'no_response':
+        return 'Cevaplamadı';
       default:
         return status;
     }
@@ -595,6 +1024,8 @@ Hata detayı: ${error.message}
         return 'bg-red-100 text-red-800';
       case 'cancelled':
         return 'bg-gray-100 text-gray-800';
+      case 'no_response':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -729,6 +1160,7 @@ Hata detayı: ${error.message}
     }
     
     try {
+      setGoogleLoading(true);
       console.log('Loading Google Calendar events...');
       const startDate = new Date();
       const endDate = new Date();
@@ -774,6 +1206,8 @@ Hata detayı: ${error.message}
         console.log('Google Calendar not connected, setting connected to false');
         setGoogleConnected(false);
       }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -792,8 +1226,11 @@ Hata detayı: ${error.message}
         eventsByDay[dayName].push(event);
       });
 
+      // Ensure a 7-day baseline even if current availability is empty
+      const baseline = (availability && availability.length > 0) ? availability : initializeAvailability();
+
       // Update availability based on Google Calendar events
-      const updatedAvailability = availability.map(day => {
+      const updatedAvailability = baseline.map(day => {
         const dayEvents = eventsByDay[day.day] || [];
         
         if (dayEvents.length > 0) {
@@ -829,11 +1266,15 @@ Hata detayı: ${error.message}
       });
 
       setAvailability(updatedAvailability);
-      
-      // Save updated availability to backend
-      await apiService.updateFacultyAvailability({
-        availability: updatedAvailability
-      });
+
+      // Save updated availability to backend, but never clear DB on failure
+      try {
+        await apiService.updateFacultyAvailability({
+          availability: updatedAvailability
+        });
+      } catch (e) {
+        console.error('Availability save failed, keeping current state:', e);
+      }
       
       console.log('Google Calendar events processed and availability updated');
     } catch (error) {
@@ -870,13 +1311,6 @@ Hata detayı: ${error.message}
       type: 'text',
       required: false,
       placeholder: 'Ofis numarası'
-    },
-    {
-      name: 'website',
-      label: 'Web Sitesi',
-      type: 'url',
-      required: false,
-      placeholder: 'https://example.com'
     }
   ];
 
@@ -891,116 +1325,89 @@ Hata detayı: ${error.message}
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Modern Header */}
-      <Header 
-        user={user} 
-        onProfile={openProfileModal} 
-        onPassword={openPasswordModal} 
+            <Header
+        user={user}
+        onProfile={openProfileModal}
+        onPassword={openPasswordModal}
         onLogout={handleLogout}
+        theme="faculty"
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onToggleNotifications={toggleNotifications}
+        onMarkAllRead={markAllNotificationsRead}
+        onNotificationClick={(notification) => {
+          // Faculty dashboard'da bildirimlere tıklandığında appointments sekmesine git
+          setActiveTab('appointments');
+          // Bildirimi okundu olarak işaretle
+          setNotifications(prev => prev.map(n =>
+            n.id === notification.id ? { ...n, read: true } : n
+          ));
+          setUnreadCount(prev => Math.max(0, prev - 1));
+          // localStorage automatically updated via useEffect
+        }}
+        showNotifications={showNotifications}
       >
-        <div>
-          <h1 className={headerStyles.headerTitle}>Öğretim Üyesi Paneli</h1>
-          <p className={headerStyles.headerSubtitle}>
-            Hoş geldiniz, {user?.name}
-          </p>
-        </div>
-        <div className={headerStyles.headerRight}>
+
+        <div className={headerStyles.navigationButtons}>
           <button
             onClick={openAvailabilityModal}
-            className={`${headerStyles.button} ${headerStyles.primaryButton}`}
+            className={headerStyles.navLink}
           >
-            <ClockIcon className={headerStyles.buttonIcon} />
-            Müsaitlik Ayarları
+            <ClockIcon className={headerStyles.navIcon} />
+            Müsaitlik
           </button>
           <button
             onClick={() => window.location.href = '/qr-code'}
-            className={`${headerStyles.button} ${headerStyles.secondaryButton}`}
+            className={headerStyles.navLink}
           >
-            <QrCodeIcon className={headerStyles.buttonIcon} />
-            QR Kod Oluştur
+            <QrCodeIcon className={headerStyles.navIcon} />
+            QR Kod
           </button>
           <button
-            onClick={googleConnected ? handleGoogleDisconnect : () => setShowGoogleSetup(true)}
-            className={`${headerStyles.button} ${googleConnected ? headerStyles.successButton : headerStyles.secondaryButton}`}
+            onClick={googleConnected ? handleGoogleDisconnect : handleGoogleConnect}
+            className={`${headerStyles.navLink} ${googleConnected ? headerStyles.navLinkActive : ''}`}
           >
-            <CalendarIcon className={headerStyles.buttonIcon} />
-            {googleConnected ? 'Google Calendar Bağlı' : 'Google Calendar'}
+            <CalendarIcon className={headerStyles.navIcon} />
+            Calendar
           </button>
         </div>
       </Header>
 
-      {/* Google Calendar Integration Toggle */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <CalendarIcon className={`h-6 w-6 ${googleConnected ? 'text-green-500' : 'text-gray-400'}`} />
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">
-                Google Calendar Bağlantısı
-              </h3>
-              <p className="text-sm text-gray-600">
-                {googleConnected 
-                  ? 'Haftalık müsaitlik durumunuzu yönetebilir ve QR kod oluşturabilirsiniz.'
-                  : 'Haftalık müsaitlik durumunuzu yönetmek ve QR kod oluşturmak için Google hesabınızı bağlayın.'
-                }
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${googleConnected ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <span className={`text-sm font-medium ${googleConnected ? 'text-green-600' : 'text-gray-500'}`}>
-                {googleConnected ? 'Bağlı' : 'Bağlı Değil'}
-              </span>
-            </div>
-            
-            <button
-              onClick={googleConnected ? handleGoogleDisconnect : () => setShowGoogleSetup(true)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                googleConnected
-                  ? 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'
-              }`}
-            >
-              {googleConnected ? 'Bağlantıyı Kes' : 'Google ile Bağlan'}
-            </button>
-          </div>
-        </div>
-      </div>
+      
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <div className="dashboard-main max-w-7xl mx-auto py-8">
         {/* Stats Cards */}
-        <div className="flex flex-wrap gap-4 mb-8">
-          <div className="flex-1 min-w-[200px]">
+        <div className="stats-container">
+          <div>
             <StatsCard
               title="Toplam Randevu"
               value={appointments.length}
-              icon={<CalendarIcon className="h-6 w-6 text-gray-400" />}
-              color="border-gray-400"
+              icon={<CalendarIcon className="h-6 w-6" />}
+              color="indigo"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div>
             <StatsCard
               title="Bekleyen"
               value={appointments.filter(apt => apt.status === 'pending').length}
-              icon={<ClockIcon className="h-6 w-6 text-yellow-500" />}
-              color="border-yellow-500"
+              icon={<ClockIcon className="h-6 w-6" />}
+              color="yellow"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div>
             <StatsCard
               title="Onaylanan"
               value={appointments.filter(apt => apt.status === 'approved').length}
-              icon={<CheckCircleIcon className="h-6 w-6 text-green-500" />}
-              color="border-green-500"
+              icon={<CheckCircleIcon className="h-6 w-6" />}
+              color="green"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div>
             <StatsCard
               title="Reddedilen"
               value={appointments.filter(apt => apt.status === 'rejected').length}
-              icon={<XCircleIcon className="h-6 w-6 text-red-500" />}
-              color="border-red-500"
+              icon={<XCircleIcon className="h-6 w-6" />}
+              color="red"
             />
           </div>
         </div>
@@ -1086,6 +1493,11 @@ Hata detayı: ${error.message}
                   </div>
                 </div>
 
+                {/* Ensure the section always shows once availability is loaded */}
+                {!availabilityLoaded ? (
+                  <div className="text-sm text-gray-500">Müsaitlik yükleniyor...</div>
+                ) : null}
+
                 {viewMode === 'grid' ? (
                   <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
                     {availability.map((day, index) => (
@@ -1093,14 +1505,26 @@ Hata detayı: ${error.message}
                         <h4 className="font-medium text-gray-900 mb-2">{getDayDisplayName(day.day)}</h4>
                         {day.isActive && day.timeSlots && day.timeSlots.length > 0 ? (
                           <div className="space-y-2">
-                            {day.timeSlots.map((slot, slotIndex) => (
-                              <div key={slotIndex} className={`text-sm ${slot.isAvailable ? 'text-green-600' : 'text-gray-500'}`}>
-                                {slot.start} - {slot.end}
-                                {!slot.isAvailable && <span className="ml-1">(Kapalı)</span>}
-                              </div>
-                            ))}
+                            {day.timeSlots.map((slot, slotIndex) => {
+                              const status = getSlotAvailabilityStatus(slot, day.day);
+                              const statusStyles = {
+                                available: { color: 'text-green-600', icon: '✅' },
+                                fully_booked: { color: 'text-orange-600', icon: '👥' },
+                                unavailable: { color: 'text-gray-500', icon: '🚫' },
+                                manually_unavailable: { color: 'text-red-600', icon: '🔒' }
+                              };
+                              const style = statusStyles[status.status] || statusStyles.unavailable;
+
+                              return (
+                                <div key={slotIndex} className={`text-sm ${style.color} flex items-center gap-1`}>
+                                  <span>{style.icon}</span>
+                                  <span>{slot.start} - {slot.end}</span>
+                                  <span className="text-xs">({status.display})</span>
+                                </div>
+                              );
+                            })}
                             <p className="text-xs text-green-600">
-                              {day.timeSlots.filter(slot => slot.isAvailable).length} zaman aralığı müsait
+                              {day.timeSlots.filter(slot => getSlotAvailabilityStatus(slot, day.day).isBookable).length} zaman aralığı müsait
                             </p>
                           </div>
                         ) : day.isActive ? (
@@ -1148,12 +1572,24 @@ Hata detayı: ${error.message}
                             <td className="px-6 py-4 text-sm text-gray-900">
                               {day.isActive && day.timeSlots && day.timeSlots.length > 0 ? (
                                 <div className="space-y-1">
-                                  {day.timeSlots.map((slot, slotIndex) => (
-                                    <div key={slotIndex} className={`text-sm ${slot.isAvailable ? 'text-green-600' : 'text-gray-500'}`}>
-                                      {slot.start} - {slot.end}
-                                      {!slot.isAvailable && <span className="ml-1">(Kapalı)</span>}
-                                    </div>
-                                  ))}
+                                  {day.timeSlots.map((slot, slotIndex) => {
+                                    const status = getSlotAvailabilityStatus(slot, day.day);
+                                    const statusStyles = {
+                                      available: { color: 'text-green-600', icon: '✅' },
+                                      fully_booked: { color: 'text-orange-600', icon: '👥' },
+                                      unavailable: { color: 'text-gray-500', icon: '🚫' },
+                                      manually_unavailable: { color: 'text-red-600', icon: '🔒' }
+                                    };
+                                    const style = statusStyles[status.status] || statusStyles.unavailable;
+
+                                    return (
+                                      <div key={slotIndex} className={`text-sm ${style.color} flex items-center gap-1`}>
+                                        <span>{style.icon}</span>
+                                        <span>{slot.start} - {slot.end}</span>
+                                        <span className="text-xs">({status.display})</span>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               ) : day.isActive ? (
                                 <span className="text-gray-500">Henüz zaman aralığı eklenmemiş</span>
@@ -1164,7 +1600,7 @@ Hata detayı: ${error.message}
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {day.isActive && day.timeSlots ? (
                                 <span className="text-green-600 font-medium">
-                                  {day.timeSlots.filter(slot => slot.isAvailable).length} / {day.timeSlots.length}
+                                  {day.timeSlots.filter(slot => getSlotAvailabilityStatus(slot, day.day).isBookable).length} / {day.timeSlots.length}
                                 </span>
                               ) : (
                                 <span className="text-gray-500">-</span>
@@ -1179,8 +1615,8 @@ Hata detayı: ${error.message}
               </div>
             )}
 
-            {/* Google Calendar Unavailable Slots Section */}
-            {googleConnected && (
+            {/* Google Calendar Unavailable Slots Section - show under availability */}
+            {activeTab === 'availability' && googleConnected && (
               <div className="mt-8">
                 {googleLoading && (
                   <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -1190,7 +1626,7 @@ Hata detayı: ${error.message}
                     </div>
                   </div>
                 )}
-                <GoogleCalendarUnavailableSlots />
+                <GoogleCalendarEvents />
               </div>
             )}
           </div>
@@ -1237,9 +1673,10 @@ Hata detayı: ${error.message}
           setAvailabilitySuccess('');
         }}
         availability={availability}
+        slotDuration={30}
+        onSlotDurationChange={() => {}}
         onDayAvailabilityChange={updateDayAvailability}
         onSave={handleSaveAvailability}
-        onLoadFromGoogleCalendar={loadAvailabilityFromGoogleCalendar}
         loading={availabilityLoading}
         error={availabilityError}
         success={availabilitySuccess}

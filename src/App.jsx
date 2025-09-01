@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ChangePassword from './pages/ChangePassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import FacultyDashboard from './pages/FacultyDashboard';
@@ -14,6 +15,12 @@ import AdminDashboard from './pages/AdminDashboard';
 import QrCodePage from './pages/QrCodePage';
 import Debug from './pages/Debug';
 import GoogleAuthCallback from './pages/GoogleAuthCallback';
+import GoogleConnect from './pages/GoogleConnect';
+import GoogleRegister from './pages/GoogleRegister';
+import Help from './pages/Help';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfUse from './pages/TermsOfUse';
+import CookiePolicy from './pages/CookiePolicy';
 import Footer from './components/Footer/Footer';
 import './styles/globals.css';
 
@@ -152,6 +159,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPassword />
+              </PublicRoute>
+            }
+          />
+          <Route
             path="/change-password"
             element={
               <ChangePasswordRoute>
@@ -226,6 +241,38 @@ function AppContent() {
           <Route
             path="/google-auth-callback"
             element={<GoogleAuthCallback />}
+          />
+          <Route
+            path="/google-connect"
+            element={
+              <ProtectedRoute>
+                <GoogleConnect />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/google-register"
+            element={
+              <PublicRoute>
+                <GoogleRegister />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/help"
+            element={<Help />}
+          />
+          <Route
+            path="/privacy"
+            element={<PrivacyPolicy />}
+          />
+          <Route
+            path="/terms"
+            element={<TermsOfUse />}
+          />
+          <Route
+            path="/cookies"
+            element={<CookiePolicy />}
           />
           <Route
             path="/"

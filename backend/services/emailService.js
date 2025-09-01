@@ -158,8 +158,80 @@ export const sendAppointmentRejectionEmail = async (studentEmail, studentName, a
   }
 };
 
+// Send password reset email
+export const sendPasswordResetEmail = async (toEmail, toName, resetLink) => {
+  try {
+    const transporter = createTransporter();
+    const appName = process.env.APP_NAME || 'QRCal';
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: toEmail,
+      subject: `${appName} | Şifre Sıfırlama`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Şifre Sıfırlama</h2>
+          <p>Sayın ${toName || 'Kullanıcı'},</p>
+          <p>Şifrenizi sıfırlamak için aşağıdaki bağlantıya tıklayın. Bağlantı 1 saat içerisinde geçerlidir.</p>
+          <a href="${resetLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">Şifremi Sıfırla</a>
+          <p>Bağlantı çalışmazsa, aşağıdaki adresi tarayıcınıza yapıştırın:</p>
+          <p style="word-break: break-all; color: #374151;">${resetLink}</p>
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px;">Bu e-posta otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.</p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Password reset email sent to ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    throw error;
+  }
+};
+
+// Send temporary password to newly created faculty
+export const sendTemporaryPasswordEmail = async (toEmail, toName, tempPassword, loginUrl) => {
+  try {
+    const transporter = createTransporter();
+    const appName = process.env.APP_NAME || 'QRCal';
+    const url = loginUrl || `${process.env.FRONTEND_URL || 'http://localhost:8081'}/login`;
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: toEmail,
+      subject: `${appName} | Geçici Şifreniz`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">${appName} | Öğretim Üyesi Hesabı</h2>
+          <p>Sayın ${toName || 'Kullanıcı'},</p>
+          <p>Yönetici tarafından sizin adınıza bir öğretim üyesi hesabı oluşturulmuştur.</p>
+          <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 0 0 8px 0;"><strong>Giriş E-posta:</strong> ${toEmail}</p>
+            <p style="margin: 0 0 8px 0;"><strong>Geçici Şifre:</strong> <span style="font-family: monospace; background: #fff; padding: 2px 6px; border-radius: 4px;">${tempPassword}</span></p>
+          </div>
+          <p>Lütfen aşağıdaki bağlantıyı kullanarak giriş yapın ve ilk girişte şifrenizi değiştirin.</p>
+          <a href="${url}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">Giriş Yap</a>
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px;">Bu e-posta otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.</p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Temporary password email sent to ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send temporary password email:', error);
+    throw error;
+  }
+};
+
 export default {
   sendAppointmentRequestEmail,
   sendAppointmentApprovalEmail,
-  sendAppointmentRejectionEmail
+  sendAppointmentRejectionEmail,
+  sendPasswordResetEmail,
+  sendTemporaryPasswordEmail
 };

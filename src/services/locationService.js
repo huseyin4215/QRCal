@@ -1,4 +1,4 @@
-import { apiService } from './apiService';
+import apiService from './apiService';
 
 class LocationService {
   constructor() {
@@ -93,7 +93,7 @@ class LocationService {
       (position) => {
         const newPosition = {
           latitude: position.coords.latitude,
-          longitude: position.coords.latitude,
+          longitude: position.coords.longitude,
           accuracy: position.coords.accuracy,
           timestamp: position.timestamp
         };
@@ -141,19 +141,15 @@ class LocationService {
       throw new Error('Konum bilgisi mevcut değil');
     }
 
-    if (!this.isLocationFresh()) {
-      throw new Error('Konum bilgisi çok eski, yeniden alınmalı');
-    }
-
-    if (!this.isLocationAccurate()) {
-      throw new Error('Konum bilgisi yeterince hassas değil');
-    }
+    // Best-effort: tazelik veya doğruluk düşük olsa bile sunucuya gönder
 
     return {
       latitude: this.currentPosition.latitude,
       longitude: this.currentPosition.longitude,
-      accuracy: this.locationAccuracy,
+      accuracy: Math.min(Math.max(this.locationAccuracy ?? 0, 0), 50000),
       timestamp: this.lastLocationTime,
+      isFresh: this.isLocationFresh(),
+      isAccurate: this.isLocationAccurate(this.getDefaultAccuracyThreshold()),
       deviceInfo: {
         userAgent: navigator.userAgent,
         platform: navigator.platform,
@@ -165,22 +161,33 @@ class LocationService {
   // Sunucuda geofence kontrolü yap
   async checkGeofenceAccess(facultyId) {
     try {
+      // Ensure we have a recent and accurate location before sending
+      await this.ensureRecentAccurateLocation({
+        maxAccuracy: this.getDefaultAccuracyThreshold(),
+        timeout: 12000,
+        retry: true,
+        relaxUntil: 200
+      });
+
       const locationData = this.prepareLocationData();
       
-      const response = await apiService.post('/appointments/check-location', {
+      const response = await apiService.post('/geofence/verify-location', {
         facultyId,
         location: locationData
       });
 
       return {
         success: true,
-        allowed: response.data.allowed,
-        message: response.data.message,
-        distance: response.data.distance,
-        geofence: response.data.geofence
+        allowed: response.allowed ?? false,
+        message: response.message,
+        distance: response.distance ?? 0,
+        geofence: response.geofence ?? null
       };
     } catch (error) {
-      console.error('Geofence kontrol hatası:', error);
+      console.error('Geofence kontrol hatası:', error, {
+        accuracy: this.locationAccuracy,
+        isFresh: this.isLocationFresh(),
+      });
       return {
         success: false,
         allowed: false,
@@ -193,16 +200,24 @@ class LocationService {
   // Konum tabanlı randevu oluşturma
   async createLocationBasedAppointment(appointmentData) {
     try {
+      // Ensure fresh and accurate location before creating
+      await this.ensureRecentAccurateLocation({
+        maxAccuracy: this.getDefaultAccuracyThreshold(),
+        timeout: 12000,
+        retry: true,
+        relaxUntil: 200
+      });
+
       const locationData = this.prepareLocationData();
       
-      const response = await apiService.post('/appointments/create-with-location', {
+      const response = await apiService.post('/appointments', {
         ...appointmentData,
         location: locationData
       });
 
       return {
         success: true,
-        appointment: response.data.appointment,
+        appointment: response.appointment,
         message: 'Randevu başarıyla oluşturuldu'
       };
     } catch (error) {
@@ -235,6 +250,90 @@ class LocationService {
       isAccurate: this.isLocationAccurate(),
       lastUpdate: this.lastLocationTime
     };
+  }
+
+  // Cihaz tipine göre varsayılan doğruluk eşiği belirle
+  getDefaultAccuracyThreshold() {
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const isMobile = /android|iphone|ipad|ipod|mobile/.test(ua);
+    // Mobilde 200m, masaüstünde 300m (daha toleranslı)
+    return isMobile ? 200 : 300;
+  }
+
+  // Daha hassas ve güncel konum elde etmeyi dener (gerekirse tekrar dener)
+  async ensureRecentAccurateLocation(options = {}) {
+    const {
+      maxAccuracy = this.getDefaultAccuracyThreshold(),
+      timeout = 12000,
+      retry = true,
+      relaxUntil = 200 // son çare tolerans (masaüstü için)
+    } = options;
+
+    // Eğer veri yoksa veya eskiyse veya yeterince hassas değilse, yeniden al
+    if (!this.currentPosition || !this.isLocationFresh() || !this.isLocationAccurate(maxAccuracy)) {
+      try {
+        await this.getCurrentLocation({ enableHighAccuracy: true, timeout, maximumAge: 0 });
+      } catch (e) {
+        // İlk deneme başarısız olabilir, aşağıda yeniden ele alınacak
+      }
+    }
+
+    // Hâlâ yeterince hassas değilse tek seferlik tekrar dene
+    if (retry && !this.isLocationAccurate(maxAccuracy)) {
+      try {
+        await this.getCurrentLocation({ enableHighAccuracy: true, timeout: Math.max(timeout, 15000), maximumAge: 0 });
+      } catch (e) {
+        // yoksay, mevcut veriye bakacağız
+      }
+    }
+
+    // Son deneme: kısa süreli izleme ile doğruluğu artırmayı dene (maks 6s)
+    if (!this.isLocationAccurate(maxAccuracy)) {
+      await this._tryImproveAccuracyQuickly({ desiredAccuracy: maxAccuracy, maxWaitMs: 6000 });
+    }
+
+    // Best-effort: bu noktada hata fırlatma, mevcut verilerle devam et
+    return this.isLocationAccurate(maxAccuracy) || (this.locationAccuracy && this.locationAccuracy <= relaxUntil);
+  }
+
+  // Kısa süreli izleme ile doğruluğu artırmayı dener
+  _tryImproveAccuracyQuickly({ desiredAccuracy, maxWaitMs = 6000 }) {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve();
+      let resolved = false;
+      const cleanup = (id, timer) => {
+        try { if (id) navigator.geolocation.clearWatch(id); } catch (_) {}
+        try { if (timer) clearTimeout(timer); } catch (_) {}
+      };
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          this.currentPosition = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: position.timestamp
+          };
+          this.locationAccuracy = position.coords.accuracy;
+          this.lastLocationTime = Date.now();
+          if (!resolved && this.locationAccuracy <= desiredAccuracy) {
+            resolved = true;
+            cleanup(watchId, timerId);
+            resolve();
+          }
+        },
+        () => {
+          // Hata durumunda da zaman aşımını bekle
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: maxWaitMs }
+      );
+      const timerId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          cleanup(watchId, timerId);
+          resolve();
+        }
+      }, maxWaitMs);
+    });
   }
 }
 

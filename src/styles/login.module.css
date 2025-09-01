@@ -79,7 +79,7 @@
   }
 }
 
-.logo svg {
+.logo svg, .logo img {
   width: 2.5rem;
   height: 2.5rem;
   color: white;
@@ -401,7 +401,7 @@
     height: 4rem;
   }
   
-  .logo svg {
+  .logo svg, .logo img {
     width: 2rem;
     height: 2rem;
   }

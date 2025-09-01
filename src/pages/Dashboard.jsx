@@ -401,17 +401,7 @@ const Dashboard = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Web Sitesi
-                  </label>
-                  <input
-                    type="url"
-                    value={userProfile.website}
-                    onChange={(e) => setUserProfile(prev => ({ ...prev, website: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded-lg focus-ring-2 focus-ring-blue-500 focus-border-transparent"
-                  />
-                </div>
+                {/* Website field removed */}
               </div>
 
               <div className="flex space-x-3 mt-6">

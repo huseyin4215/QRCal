@@ -34,11 +34,11 @@ const GoogleAuthCallback = () => {
       setStatus('success');
       setMessage('Google Calendar başarıyla bağlandı!');
 
-      // Store token and redirect
+      // Store token immediately and optimistically redirect
       localStorage.setItem('token', token);
       apiService.setToken(token);
-      
-      // Get user data
+
+      // Fire-and-forget user fetch to hydrate context, but don't block redirect
       fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -47,30 +47,30 @@ const GoogleAuthCallback = () => {
       })
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          // Update user context
+        if (data?.success && data?.data) {
           login(token, data.data);
-          
-          // Redirect based on user role
-          setTimeout(() => {
-            if (data.data.role === 'admin') {
-              navigate('/admin-dashboard');
-            } else if (data.data.role === 'faculty') {
-              navigate('/faculty-dashboard');
-            } else if (data.data.role === 'student') {
-              navigate('/student-dashboard');
-            } else {
-              navigate('/dashboard');
-            }
-          }, 2000);
-        } else {
-          throw new Error('Failed to get user data');
         }
       })
-      .catch(error => {
-        console.error('Error getting user data:', error);
-        setStatus('error');
-        setMessage('Kullanıcı bilgileri alınamadı. Lütfen tekrar deneyin.');
+      .catch(() => {})
+      .finally(() => {
+        // Redirect based on role / first login
+        const stored = localStorage.getItem('user');
+        try {
+          const u = stored ? JSON.parse(stored) : null;
+          if (u?.isFirstLogin) {
+            navigate('/change-password', { replace: true });
+          } else if (u?.role === 'admin') {
+            navigate('/admin-dashboard', { replace: true });
+          } else if (u?.role === 'faculty') {
+            navigate('/faculty-dashboard?googleConnected=true', { replace: true });
+          } else if (u?.role === 'student') {
+            navigate('/student-dashboard', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
+        } catch {
+          navigate('/dashboard', { replace: true });
+        }
       });
     } else {
       setStatus('error');
@@ -103,10 +103,20 @@ const GoogleAuthCallback = () => {
           login(data.token, data.user);
         }
         
-        // Redirect to faculty dashboard
+        // Redirect based on role / first login
         setTimeout(() => {
-          navigate('/faculty-dashboard?googleConnected=true');
-        }, 2000);
+          if (data.user?.isFirstLogin) {
+            navigate('/change-password');
+          } else if (data.user?.role === 'admin') {
+            navigate('/admin-dashboard');
+          } else if (data.user?.role === 'faculty') {
+            navigate('/faculty-dashboard?googleConnected=true');
+          } else if (data.user?.role === 'student') {
+            navigate('/student-dashboard');
+          } else {
+            navigate('/dashboard');
+          }
+        }, 1000);
       } else {
         throw new Error(data.message || 'Token alınamadı');
       }

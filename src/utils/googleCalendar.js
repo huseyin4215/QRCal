@@ -1,7 +1,7 @@
 // Google Calendar API utility functions
 // Note: You'll need to set up Google Cloud Console and get your credentials
 
-const GOOGLE_CLIENT_ID = '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id';
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
 
 // Initialize Google API

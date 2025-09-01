@@ -13,7 +13,14 @@ const router = express.Router();
 
 // CORS middleware for Google OAuth
 router.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:8081');
+  // Allow both old and new frontend ports
+  const allowedOrigins = ['http://localhost:5173', 'http://localhost:8081'];
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Client-Data');
@@ -28,7 +35,7 @@ router.use((req, res, next) => {
 // Google OAuth 2.0 client - created dynamically to ensure environment variables are loaded
 function createOAuth2Client() {
   // Always create a new instance to ensure environment variables are current
-  const clientId = process.env.GOOGLE_CLIENT_ID || '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com';
+  const clientId = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id';
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback';
   
@@ -43,7 +50,7 @@ function createOAuth2Client() {
 
 // Log OAuth2Client configuration on startup
 console.log('=== Google OAuth2Client Configuration ===');
-console.log('Client ID:', process.env.GOOGLE_CLIENT_ID || '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com');
+console.log('Client ID:', process.env.GOOGLE_CLIENT_ID || 'your-google-client-id');
 console.log('Client Secret:', process.env.GOOGLE_CLIENT_SECRET ? 'present' : 'missing');
 console.log('Redirect URI:', process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback');
 
@@ -58,7 +65,7 @@ if (!process.env.GOOGLE_CLIENT_SECRET) {
   console.error('Please create a .env file in the backend directory with the following content:');
   console.error(`
 # Google OAuth Configuration
-GOOGLE_CLIENT_ID=194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=GOCSPX-your-actual-client-secret-here
 GOOGLE_REDIRECT_URI=http://localhost:5000/api/google/callback
   `);
@@ -78,7 +85,7 @@ router.get('/auth-url', asyncHandler(async (req, res) => {
   ];
 
   console.log('Environment variables:');
-  console.log('- GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID || '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com');
+  console.log('- GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID || 'your-google-client-id');
   console.log('- GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'present' : 'missing');
   console.log('- GOOGLE_REDIRECT_URI:', process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback');
   console.log('- Scopes:', scopes);
@@ -95,7 +102,7 @@ GOOGLE_CLIENT_SECRET environment variable is missing.
 Please create a .env file in the backend directory with the following content:
 
 # Google OAuth Configuration
-GOOGLE_CLIENT_ID=194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=GOCSPX-your-actual-client-secret-here
 GOOGLE_REDIRECT_URI=http://localhost:5000/api/google/callback
 
@@ -352,7 +359,7 @@ router.get('/test-config', asyncHandler(async (req, res) => {
   
   const config = {
     environment: {
-      clientId: process.env.GOOGLE_CLIENT_ID || '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com',
+      clientId: process.env.GOOGLE_CLIENT_ID || 'your-google-client-id',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'present' : 'missing',
       redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback',
       jwtSecret: process.env.JWT_SECRET ? 'present' : 'missing'
@@ -420,6 +427,36 @@ router.get('/calendar/events', authMiddleware, asyncHandler(async (req, res) => 
 
   } catch (error) {
     console.error('Calendar API error:', error);
+    
+    // Handle invalid_grant error (token expired or revoked) - check multiple conditions
+    const isInvalidGrant = (
+      (error.code === 400 && error.message && error.message.includes('invalid_grant')) ||
+      (error.message && error.message.includes('invalid_grant')) ||
+      (error.response && error.response.data && error.response.data.error === 'invalid_grant') ||
+      (typeof error === 'string' && error.includes('invalid_grant'))
+    );
+    
+    if (isInvalidGrant) {
+      console.log('Invalid grant error detected, clearing tokens...');
+      console.log('Error details:', {
+        code: error.code,
+        message: error.message,
+        response: error.response?.data
+      });
+      
+      // Clear invalid tokens
+      user.googleAccessToken = undefined;
+      user.googleRefreshToken = undefined;
+      user.googleTokenExpiry = undefined;
+      await user.save();
+      
+      return res.status(401).json({
+        success: false,
+        message: 'Google Calendar access expired. Please reconnect your account.',
+        error: 'invalid_grant',
+        requiresReauth: true
+      });
+    }
     
     // If token expired, try to refresh
     if (error.code === 401 && user.googleRefreshToken) {

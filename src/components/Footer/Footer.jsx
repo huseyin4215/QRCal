@@ -1,3 +1,4 @@
+import React from 'react';
 import { HeartIcon, AcademicCapIcon, QrCodeIcon, EnvelopeIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import styles from './Footer.module.css';
 
@@ -13,7 +14,7 @@ const Footer = () => {
           <div className={styles.footerSection}>
             <div className={styles.footerLogo}>
               <QrCodeIcon className={styles.logoIcon} />
-              <h3 className={styles.logoText}>QR Calendar</h3>
+              <h3 className={styles.logoText}>Qnnect</h3>
             </div>
             <p className={styles.footerDescription}>
               Öğretim elemanları ve öğrenciler için modern randevu yönetim sistemi. 
@@ -45,7 +46,7 @@ const Footer = () => {
               <li><a href="/" className={styles.footerLink}>Anasayfa</a></li>
               <li><a href="/qr-code" className={styles.footerLink}>QR Kod Oluştur</a></li>
               <li><a href="/appointments" className={styles.footerLink}>Randevular</a></li>
-              <li><a href="/profile" className={styles.footerLink}>Profil</a></li>
+              {/* Profil bağlantısı kaldırıldı */}
               <li><a href="/help" className={styles.footerLink}>Yardım</a></li>
             </ul>
           </div>
@@ -68,7 +69,7 @@ const Footer = () => {
             <div className={styles.contactInfo}>
               <div className={styles.contactItem}>
                 <EnvelopeIcon className={styles.contactIcon} />
-                <span>info@qrcalendar.com</span>
+                <span>infoqrcal@gmail.com</span>
               </div>
               <div className={styles.contactItem}>
                 <PhoneIcon className={styles.contactIcon} />
@@ -76,7 +77,7 @@ const Footer = () => {
               </div>
               <div className={styles.contactItem}>
                 <MapPinIcon className={styles.contactIcon} />
-                <span>İstanbul, Türkiye</span>
+                <span>Ankara, Türkiye</span>
               </div>
             </div>
           </div>
@@ -86,7 +87,7 @@ const Footer = () => {
         <div className={styles.footerBottom}>
           <div className={styles.footerBottomContent}>
             <p className={styles.copyright}>
-              © {currentYear} QR Calendar. Tüm hakları saklıdır.
+              © {currentYear} Qnnect. Tüm hakları saklıdır.
             </p>
             <div className={styles.footerBottomLinks}>
               <a href="/privacy" className={styles.bottomLink}>Gizlilik Politikası</a>

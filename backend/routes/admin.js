@@ -1,13 +1,18 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
+import { sendTemporaryPasswordEmail } from '../services/emailService.js';
 import Appointment from '../models/Appointment.js';
+import Notification from '../models/Notification.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
+import { adminMiddleware } from '../middleware/auth.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import appointmentScheduler from '../services/appointmentScheduler.js';
 
 const router = express.Router();
 
-// Apply auth middleware first, then admin middleware to all routes
-router.use(authMiddleware);
+// Apply admin middleware to all routes (auth is already applied in server.js)
 router.use(adminMiddleware);
 
 // @desc    Get all users
@@ -180,7 +185,7 @@ router.put('/availability', asyncHandler(async (req, res) => {
 // @route   POST /api/admin/users/faculty
 // @access  Private (Admin)
 router.post('/users/faculty', asyncHandler(async (req, res) => {
-  const { name, email, department, phone, title, office } = req.body;
+  const { name, email, department, phone, title, office, slug } = req.body;
 
   // Validation
   if (!name || !email || !department) {
@@ -205,6 +210,14 @@ router.post('/users/faculty', asyncHandler(async (req, res) => {
   
   console.log('Generated temp password:', tempPassword);
 
+  // Generate slug if not provided
+  const finalSlug = slug || name.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
   // Create faculty user
   const faculty = new User({
     name,
@@ -215,10 +228,18 @@ router.post('/users/faculty', asyncHandler(async (req, res) => {
     title: title || 'Öğretim Elemanı',
     office,
     role: 'faculty',
+    slug: finalSlug,
     isFirstLogin: true
   });
 
   await faculty.save();
+
+  // Send temporary password email (best-effort)
+  try {
+    await sendTemporaryPasswordEmail(faculty.email, faculty.name, tempPassword, `${process.env.FRONTEND_URL || 'http://localhost:8081'}/login`);
+  } catch (emailError) {
+    console.error('Failed to send temporary password email:', emailError);
+  }
   
   console.log('Faculty saved with ID:', faculty._id);
   console.log('Faculty slug:', faculty.slug);
@@ -497,6 +518,45 @@ router.put('/appointments/:id/status', asyncHandler(async (req, res) => {
 
   await appointment.save();
 
+  // Create notification for student about status change
+  try {
+    let notificationTitle, notificationMessage;
+    
+    switch (status) {
+      case 'approved':
+        notificationTitle = 'Randevu Onaylandı';
+        notificationMessage = `${appointment.facultyName} tarafından randevunuz onaylandı.`;
+        break;
+      case 'rejected':
+        notificationTitle = 'Randevu Reddedildi';
+        notificationMessage = `${appointment.facultyName} tarafından randevunuz reddedildi.`;
+        break;
+      case 'cancelled':
+        notificationTitle = 'Randevu İptal Edildi';
+        notificationMessage = `${appointment.facultyName} tarafından randevunuz iptal edildi.`;
+        break;
+    }
+
+    if (notificationTitle && notificationMessage) {
+      await Notification.createSystemNotification(
+        appointment.facultyId, // Send to faculty (they created the appointment)
+        notificationTitle,
+        notificationMessage,
+        {
+          appointmentId: appointment._id,
+          studentName: appointment.studentName,
+          status: status,
+          date: appointment.date,
+          time: appointment.startTime
+        }
+      );
+      console.log('Status change notification created for faculty:', appointment.facultyId);
+    }
+  } catch (notificationError) {
+    console.error('Failed to create status change notification:', notificationError);
+    // Don't fail the status update if notification fails
+  }
+
   res.json({
     success: true,
     data: appointment,
@@ -734,6 +794,19 @@ router.get('/export/appointments', asyncHandler(async (req, res) => {
 router.get('/qr-code', asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id).select('qrCodeUrl slug');
 
+  if (!user || !user.slug) {
+    return res.status(400).json({
+      success: false,
+      message: 'Kullanıcı slug bilgisi bulunamadı'
+    });
+  }
+
+  const expectedUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/appointment/${user.slug}`;
+  if (!user.qrCodeUrl || !user.qrCodeUrl.endsWith(`/appointment/${user.slug}`)) {
+    user.qrCodeUrl = expectedUrl;
+    await user.save();
+  }
+
   res.json({
     success: true,
     data: {
@@ -769,6 +842,56 @@ router.post('/qr-code', asyncHandler(async (req, res) => {
     },
     message: 'QR kod başarıyla oluşturuldu'
   });
+}));
+
+// @desc    Check expired appointments manually
+// @route   POST /api/admin/appointments/check-expired
+// @access  Private (Admin)
+router.post('/appointments/check-expired', asyncHandler(async (req, res) => {
+  try {
+    const processedCount = await appointmentScheduler.checkManual();
+    
+    res.json({
+      success: true,
+      data: {
+        processedCount
+      },
+      message: `${processedCount} adet zamanı geçen randevu işlendi`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Randevu kontrolü sırasında hata oluştu',
+      error: error.message
+    });
+  }
+}));
+
+// @desc    Check specific appointment
+// @route   POST /api/admin/appointments/:id/check-expired
+// @access  Private (Admin)
+router.post('/appointments/:id/check-expired', asyncHandler(async (req, res) => {
+  try {
+    const processed = await appointmentScheduler.checkSpecific(req.params.id);
+    
+    if (processed) {
+      res.json({
+        success: true,
+        message: 'Randevu başarıyla işlendi'
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'Randevu işleme gerek yok (zaten işlenmiş veya henüz zamanı gelmemiş)'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Randevu kontrolü sırasında hata oluştu',
+      error: error.message
+    });
+  }
 }));
 
 export default router; 

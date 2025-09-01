@@ -1,10 +1,10 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import React from 'react';
 import apiService from '../services/apiService';
 
-const AuthContext = createContext();
+const AuthContext = React.createContext();
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
@@ -12,17 +12,14 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [redirectTo, setRedirectTo] = useState(null);
+  const [user, setUser] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [redirectTo, setRedirectTo] = React.useState(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Check if user is already logged in
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
-    console.log('AuthContext - Token:', token);
-    console.log('AuthContext - User data from localStorage:', userData);
     
     if (token) {
       apiService.setToken(token);
@@ -30,25 +27,19 @@ export const AuthProvider = ({ children }) => {
     } else {
       // Clear any stale user data if no token
       if (userData) {
-        console.log('AuthContext - Clearing stale user data');
         localStorage.removeItem('user');
       }
-      console.log('AuthContext - No token found, setting loading to false');
       setLoading(false);
     }
   }, []);
 
   const loadCurrentUser = async () => {
     try {
-      console.log('AuthContext: Loading current user...');
       const response = await apiService.getCurrentUser();
-      console.log('AuthContext: getCurrentUser response:', response);
       
       if (response.success) {
-        console.log('AuthContext: User loaded successfully:', response.data);
         setUser(response.data);
       } else {
-        console.log('AuthContext: getCurrentUser failed:', response);
         // Token might be invalid, clear it
         apiService.clearToken();
       }
@@ -62,24 +53,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = (token, userData) => {
-    console.log('AuthContext - Login called with token:', token);
-    console.log('AuthContext - Login called with userData:', userData);
-    
     setUser(userData);
-    setLoading(false); // Set loading to false after login
+    setLoading(false);
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     apiService.setToken(token);
     
-    console.log('AuthContext - After login, localStorage token:', localStorage.getItem('token'));
-    console.log('AuthContext - After login, localStorage user:', localStorage.getItem('user'));
-    
     // Set redirect path based on role and first login status
     if (userData.isFirstLogin) {
-      console.log('AuthContext - Setting redirect to change password');
       setRedirectTo('/change-password');
     } else {
-      console.log('AuthContext - Setting redirect based on role:', userData.role);
       switch (userData.role) {
         case 'student':
           setRedirectTo('/student-dashboard');
@@ -88,11 +71,9 @@ export const AuthProvider = ({ children }) => {
           setRedirectTo('/faculty-dashboard');
           break;
         case 'admin':
-          console.log('AuthContext - Setting redirect to admin dashboard');
           setRedirectTo('/admin-dashboard');
           break;
         default:
-          console.log('AuthContext - Unknown role, setting redirect to home');
           setRedirectTo('/');
       }
     }
@@ -107,7 +88,19 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('qrcal_user_profile');
+      
+      // Tüm localStorage'ı temizle
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('qrcal_') || key.startsWith('auth_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
       apiService.clearToken();
+      
+      // Login sayfasına yönlendir
+      window.location.href = '/login';
     }
   };
 

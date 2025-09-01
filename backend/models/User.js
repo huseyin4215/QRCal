@@ -142,6 +142,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  passwordResetToken: {
+    type: String,
+    default: null
+  },
+  passwordResetExpires: {
+    type: Date,
+    default: null
+  },
   preferences: {
     theme: {
       type: String,
@@ -209,12 +217,25 @@ userSchema.pre('save', async function(next) {
 
 // Instance methods
 userSchema.methods.generateSlug = function() {
-  return this.name
+  const transliterate = (input) => {
+    // Normalize and map Turkish characters to ASCII equivalents
+    const map = {
+      'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u',
+      'Ç': 'c', 'Ğ': 'g', 'İ': 'i', 'I': 'i', 'Ö': 'o', 'Ş': 's', 'Ü': 'u'
+    };
+    return (input || '')
+      .replace(/[çğıöşüÇĞİIÖŞÜ]/g, ch => map[ch] || ch)
+      .normalize('NFD').replace(/\p{Diacritic}+/gu, '');
+  };
+
+  const asciiName = transliterate(this.name || '')
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-    .trim('-');
+    .replace(/^-+|-+$/g, '');
+
+  return asciiName || `user-${this._id?.toString().slice(-6)}`;
 };
 
 userSchema.methods.generateUniqueSlug = async function() {

@@ -1,0 +1,179 @@
+.radiusRow {
+	display: flex;
+	flex-direction: column;
+}
+
+.radiusDisplay {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 8px;
+}
+
+.radiusInputs {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.radiusNumber {
+	width: 110px;
+	padding: 6px 10px;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	font-size: 14px;
+}
+
+.radiusUnit {
+	color: #374151;
+	font-weight: 600;
+}
+
+.actionsRow {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	align-items: center;
+}
+
+.saveAndAdd {
+	background-color: #10b981;
+	color: white;
+	border: none;
+	padding: 10px 14px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+}
+
+.saveAndAdd:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.inlineForm {
+	margin-top: 12px;
+	padding: 12px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #ffffff;
+}
+
+.inlineRow {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+	margin-bottom: 10px;
+}
+
+.inlineCol {
+	display: flex;
+	flex-direction: column;
+}
+
+.inlineCol label {
+	font-size: 14px;
+	font-weight: 600;
+	margin-bottom: 6px;
+}
+
+.inlineCol input[type="text"],
+.inlineCol input[type="number"],
+.inlineCol select {
+	padding: 8px 10px;
+	border: 1px solid #d1d5db;
+	border-radius: 8px;
+	font-size: 14px;
+}
+
+.inlineCoordRow {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+
+.inlineActions {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 6px;
+}
+
+.inlineButtons {
+	display: flex;
+	gap: 8px;
+}
+
+.quickPickToggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 14px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+	.inlineForm {
+		padding: 1rem;
+		margin-top: 1rem;
+	}
+	
+	.inlineRow {
+		grid-template-columns: 1fr;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+	
+	.inlineCoordRow {
+		grid-template-columns: 1fr;
+		gap: 0.5rem;
+	}
+	
+	.inlineActions {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 1rem;
+	}
+	
+	.inlineButtons {
+		width: 100%;
+		justify-content: center;
+	}
+	
+	.quickPickToggle {
+		justify-content: center;
+		padding: 0.5rem;
+		background: #f3f4f6;
+		border-radius: 0.5rem;
+	}
+	
+	.radiusInputs {
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: stretch;
+	}
+	
+	.radiusNumber {
+		width: 100%;
+	}
+}
+
+@media (max-width: 640px) {
+	.inlineForm {
+		padding: 0.75rem;
+	}
+	
+	.inlineCol label {
+		font-size: 0.875rem;
+	}
+	
+	.inlineCol input,
+	.inlineCol select {
+		padding: 0.625rem;
+		font-size: 0.875rem;
+	}
+	
+	.quickPickToggle {
+		font-size: 0.875rem;
+	}
+}

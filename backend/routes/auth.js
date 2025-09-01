@@ -5,14 +5,16 @@ import User from '../models/User.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { authMiddleware } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { sendPasswordResetEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
-// Google OAuth configuration
+// Google OAuth configuration for LOGIN (separate from calendar linking)
 const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID || '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com',
+  process.env.GOOGLE_CLIENT_ID || 'your-google-client-id',
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
+  process.env.GOOGLE_AUTH_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback'
 );
 
 // Generate JWT token
@@ -156,6 +158,68 @@ router.post('/login', asyncHandler(async (req, res) => {
     },
     message: 'Giriş başarılı'
   });
+}));
+
+// @desc    Forgot password - send reset email
+// @route   POST /api/auth/forgot-password
+// @access  Public
+router.post('/forgot-password', asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'E-posta zorunludur' });
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) {
+    // Do not reveal user existence
+    return res.json({ success: true, message: 'Eğer bu e-posta sistemde kayıtlı ise sıfırlama maili gönderildi' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  user.passwordResetToken = token;
+  user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  await user.save();
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8081';
+  const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+
+  try {
+    await sendPasswordResetEmail(user.email, user.name, resetLink);
+  } catch (e) {
+    // Still return success for security; log the error
+    console.error('Failed to send reset email:', e);
+  }
+
+  return res.json({ success: true, message: 'Eğer bu e-posta sistemde kayıtlı ise sıfırlama maili gönderildi' });
+}));
+
+// @desc    Reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+router.post('/reset-password', asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Token ve yeni şifre zorunludur' });
+  }
+
+  const user = await User.findOne({
+    passwordResetToken: token,
+    passwordResetExpires: { $gt: new Date() }
+  });
+
+  if (!user) {
+    return res.status(400).json({ success: false, message: 'Geçersiz veya süresi geçmiş token' });
+  }
+
+  user.password = newPassword;
+  user.passwordResetToken = null;
+  user.passwordResetExpires = null;
+  user.isFirstLogin = false;
+  await user.save();
+
+  return res.json({ success: true, message: 'Şifreniz başarıyla sıfırlandı' });
 }));
 
 // @desc    Change password
@@ -500,7 +564,25 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
         user.googleRefreshToken = tokens.refresh_token;
         await user.save();
       } else {
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:8081'}/auth/error?message=Bu Google hesabı ile kayıtlı kullanıcı bulunamadı`);
+        // No user exists -> redirect to Google registration page with short-lived token
+        const regToken = jwt.sign(
+          {
+            type: 'google_register',
+            googleId: userInfo.id,
+            email: (userInfo.email || '').toLowerCase(),
+            name: userInfo.name,
+            picture: userInfo.picture || null,
+            tokens: {
+              access_token: tokens.access_token || null,
+              refresh_token: tokens.refresh_token || null
+            }
+          },
+          process.env.JWT_SECRET || 'qrcal-super-secret-jwt-key-2024-change-this-in-production',
+          { expiresIn: '15m' }
+        );
+
+        const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/google-register?token=${encodeURIComponent(regToken)}`;
+        return res.redirect(redirectUrl);
       }
     } else {
       // Update existing user
@@ -515,13 +597,120 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
     // Generate JWT token
     const token = generateToken(user._id);
 
-    // Redirect to frontend with token and Google connection status
-    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/faculty-dashboard?token=${token}&googleConnected=true`;
+    // Redirect to frontend callback page with token
+    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/google-auth-callback?token=${encodeURIComponent(token)}&success=true`;
     res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Google OAuth error:', error);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:8081'}/auth/error?message=OAuth hatası`);
+  }
+}));
+
+// @desc    Get registration info from Google reg token
+// @route   GET /api/auth/google/register-info
+// @access  Public
+router.get('/google/register-info', asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  if (!token) {
+    return res.status(400).json({ success: false, message: 'Token gerekli' });
+  }
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'qrcal-super-secret-jwt-key-2024-change-this-in-production');
+    if (payload.type !== 'google_register') {
+      return res.status(400).json({ success: false, message: 'Geçersiz token türü' });
+    }
+    return res.json({
+      success: true,
+      data: {
+        email: payload.email,
+        name: payload.name,
+        picture: payload.picture
+      }
+    });
+  } catch (e) {
+    return res.status(400).json({ success: false, message: 'Geçersiz veya süresi geçmiş token' });
+  }
+}));
+
+// @desc    Complete registration with Google token
+// @route   POST /api/auth/google/register
+// @access  Public
+router.post('/google/register', asyncHandler(async (req, res) => {
+  const { token, studentNumber, department, name } = req.body;
+
+  if (!token || !studentNumber || !department) {
+    return res.status(400).json({ success: false, message: 'Token, öğrenci numarası ve bölüm zorunludur' });
+  }
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'qrcal-super-secret-jwt-key-2024-change-this-in-production');
+    if (payload.type !== 'google_register') {
+      return res.status(400).json({ success: false, message: 'Geçersiz token türü' });
+    }
+
+    // Prevent duplicate registration
+    const existing = await User.findOne({ $or: [{ email: payload.email }, { googleId: payload.googleId }, { studentNumber }] });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Bu bilgilerle kayıt zaten mevcut' });
+    }
+
+    // Create student user
+    const user = new User({
+      name: name || payload.name,
+      email: payload.email,
+      password: Math.random().toString(36).slice(-10),
+      studentNumber,
+      department,
+      role: 'student',
+      googleId: payload.googleId,
+      picture: payload.picture || null,
+      isFirstLogin: false
+    });
+
+    // Store Google tokens if present
+    if (payload.tokens) {
+      user.googleAccessToken = payload.tokens.access_token || null;
+      user.googleRefreshToken = payload.tokens.refresh_token || null;
+    }
+
+    await user.save();
+
+    // Send password reset email (optional, since Google is linked)
+    try {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      user.passwordResetToken = resetToken;
+      user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
+      await user.save();
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8081';
+      const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+      await sendPasswordResetEmail(user.email, user.name, resetLink);
+    } catch (e) {
+      console.error('Failed to send password reset after Google register:', e);
+    }
+
+    // Generate JWT token and return user
+    const authToken = generateToken(user._id);
+
+    return res.json({
+      success: true,
+      data: {
+        token: authToken,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          department: user.department,
+          studentNumber: user.studentNumber,
+          isFirstLogin: user.isFirstLogin
+        }
+      },
+      message: 'Kayıt tamamlandı. Şifre sıfırlama bağlantısı e-postanıza gönderildi.'
+    });
+  } catch (e) {
+    console.error('Google register failed:', e);
+    return res.status(400).json({ success: false, message: 'Geçersiz veya süresi geçmiş token' });
   }
 }));
 

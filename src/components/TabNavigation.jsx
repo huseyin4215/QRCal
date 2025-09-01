@@ -3,7 +3,7 @@ import styles from '../styles/tabNavigation.module.css';
 
 const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
   return (
-    <nav className={styles.tabNavigation}>
+    <nav className={`${styles.tabNavigation} ${styles[`theme-${activeTab}`] || ''}`} data-active-tab={activeTab}>
       <div className={styles.tabContainer}>
         {tabs.map((tab, index) => (
           <button

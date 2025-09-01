@@ -8,6 +8,7 @@ class ApiService {
   getHeaders() {
     const headers = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
     
     // Always get the latest token from localStorage
@@ -29,11 +30,20 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`;
     const config = {
       headers: this.getHeaders(),
+      mode: 'cors',
+      cache: 'no-store',
+      credentials: 'include',
       ...options,
     };
 
     if (options.body) {
       config.body = options.body;
+    }
+
+    // Avoid sending Content-Type on GET/HEAD to prevent unnecessary CORS preflight
+    const method = (config.method || 'GET').toUpperCase();
+    if ((method === 'GET' || method === 'HEAD') && config.headers && config.headers['Content-Type']) {
+      delete config.headers['Content-Type'];
     }
 
     console.log(`API Request: ${options.method || 'GET'} ${url}`);
@@ -72,7 +82,31 @@ class ApiService {
         throw new Error(error.message || error.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      // Handle empty/no-content responses safely
+      const contentType = response.headers.get('content-type') || '';
+      if (response.status === 204 || contentType.length === 0) {
+        return { success: true, data: null };
+      }
+
+      // Prefer JSON; fallback to text if parsing fails
+      let data;
+      try {
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          try {
+            data = JSON.parse(text);
+          } catch {
+            data = { success: true, data: text };
+          }
+        }
+      } catch (parseError) {
+        console.error('API JSON parse error:', parseError);
+        const text = await response.text().catch(() => null);
+        return { success: true, data: text };
+      }
+
       console.log('API Success Response:', data);
       return data;
     } catch (error) {
@@ -104,6 +138,20 @@ class ApiService {
     return this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData)
+    });
+  }
+
+  async forgotPassword(email) {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  }
+
+  async resetPassword(token, newPassword) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword })
     });
   }
 
@@ -143,12 +191,50 @@ class ApiService {
   }
 
   async getGoogleCalendarEvents(timeMin, timeMax, maxResults = 50) {
-    const params = new URLSearchParams();
-    if (timeMin) params.append('timeMin', timeMin);
-    if (timeMax) params.append('timeMax', timeMax);
-    if (maxResults) params.append('maxResults', maxResults);
-    
-    return this.request(`/google/calendar/events?${params.toString()}`);
+    try {
+      const params = new URLSearchParams();
+      if (timeMin) params.append('timeMin', timeMin);
+      if (timeMax) params.append('timeMax', timeMax);
+      if (maxResults) params.append('maxResults', maxResults);
+      
+      return await this.request(`/google/calendar/events?${params.toString()}`);
+    } catch (error) {
+      console.error('Google Calendar Events Error:', error);
+      
+      // Check for various forms of invalid_grant or auth expired errors
+      const isAuthExpired = (
+        error.message.includes('Google Calendar access expired') ||
+        error.message.includes('invalid_grant') ||
+        error.message.includes('requiresReauth') ||
+        (error.response && error.response.status === 401) ||
+        (error.status === 401)
+      );
+      
+      if (isAuthExpired) {
+        console.log('Google Calendar access expired, redirecting to reconnect...');
+        
+        // Show user-friendly message
+        if (window.confirm('Google Calendar bağlantınızın süresi dolmuş. Yeniden bağlanmak ister misiniz?')) {
+          window.location.href = '/google-connect';
+        }
+        
+        return { 
+          success: false, 
+          data: [], 
+          message: 'Google Calendar access expired',
+          requiresReauth: true
+        };
+      }
+      
+      // For other errors, show a generic message
+      console.error('Google Calendar API Error:', error);
+      return { 
+        success: false, 
+        data: [], 
+        message: 'Google Calendar verilerine erişilemiyor',
+        error: error.message
+      };
+    }
   }
 
   async createGoogleCalendarEvent(eventData) {
@@ -166,11 +252,11 @@ class ApiService {
   }
 
   async getGoogleCalendarStatus() {
-    return this.request('/google/status', 'GET');
+    return this.request('/google/status');
   }
 
   async loadAvailabilityFromGoogleCalendar() {
-    return this.request('/google/calendar/load-availability', 'POST');
+    return this.request('/google/calendar/load-availability', { method: 'POST' });
   }
 
   async disconnectGoogleCalendar() {
@@ -407,6 +493,58 @@ class ApiService {
     return this.request('/admin/qr-code', {
       method: 'POST'
     });
+  }
+
+  // Get unread notifications
+  async getUnreadNotifications() {
+    return this.request('/notifications/unread', {
+      method: 'GET'
+    });
+  }
+
+  // Mark notification as read
+  async markNotificationAsRead(notificationId) {
+    return this.request(`/notifications/${notificationId}/read`, {
+      method: 'PUT'
+    });
+  }
+
+  // Mark all notifications as read
+  async markAllNotificationsAsRead() {
+    return this.request('/notifications/mark-all-read', {
+      method: 'PUT'
+    });
+  }
+
+  // Create faculty member
+  async createFaculty(facultyData) {
+    return this.request('/admin/users/faculty', {
+      method: 'POST',
+      body: JSON.stringify(facultyData)
+    });
+  }
+
+  // Convenience HTTP methods
+  async get(endpoint) {
+    return this.request(endpoint, { method: 'GET' });
+  }
+
+  async post(endpoint, body) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+  }
+
+  async put(endpoint, body) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
+  }
+
+  async delete(endpoint) {
+    return this.request(endpoint, { method: 'DELETE' });
   }
 }
 

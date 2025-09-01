@@ -1,14 +1,17 @@
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import styles from './FacultyAddModal.module.css';
 
-export default function FacultyAddModal({ 
-  isOpen, 
-  onClose, 
-  facultyData, 
-  onInputChange, 
-  onSubmit, 
-  loading, 
-  error, 
-  success 
+export default function FacultyAddModal({
+  isOpen,
+  onClose,
+  facultyData,
+  onInputChange,
+  onSubmit,
+  loading,
+  error,
+  success,
+  isEditMode = false,
+  editingUser = null
 }) {
   if (!isOpen) return null;
 
@@ -17,7 +20,9 @@ export default function FacultyAddModal({
                <div className="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
         <div className="mt-3">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Yeni Öğretim Üyesi Ekle</h3>
+            <h3 className="text-lg font-medium text-gray-900">
+              {isEditMode ? 'Öğretim Üyesi Düzenle' : 'Yeni Öğretim Üyesi Ekle'}
+            </h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <XMarkIcon className="w-6 h-6" />
             </button>
@@ -57,15 +62,19 @@ export default function FacultyAddModal({
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 E-posta Adresi *
+                {isEditMode && <span className="text-xs text-gray-500 ml-2">(Düzenlenemez)</span>}
               </label>
               <input
                 type="email"
                 id="email"
                 name="email"
                 required
+                readOnly={isEditMode}
                 value={facultyData.email || ''}
                 onChange={onInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
                 placeholder="ahmet.yilmaz@universite.edu.tr"
               />
             </div>
@@ -139,30 +148,43 @@ export default function FacultyAddModal({
               />
             </div>
 
-            <div className="flex justify-end space-x-3 pt-4">
+            <div className={styles.buttonContainer}>
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                className={styles.cancelButton}
               >
                 İptal
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={styles.submitButton}
               >
-                {loading ? 'Oluşturuluyor...' : 'Öğretim Üyesi Ekle'}
+                {loading
+                  ? (isEditMode ? 'Güncelleniyor...' : 'Oluşturuluyor...')
+                  : (isEditMode ? 'Öğretim Üyesi Güncelle' : 'Öğretim Üyesi Ekle')
+                }
               </button>
             </div>
           </form>
 
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-xs text-blue-700">
-              <strong>Not:</strong> Öğretim üyesi oluşturulduktan sonra, ilk girişte Google hesabı ile bağlantı kurması gerekecektir. 
-              Bu sayede Google Calendar entegrasyonu aktif olacak ve QR kod oluşturulabilecektir.
-            </p>
-          </div>
+          {!isEditMode && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-xs text-blue-700">
+                <strong>Not:</strong> Öğretim üyesi oluşturulduktan sonra, ilk girişte Google hesabı ile bağlantı kurması gerekecektir.
+                Bu sayede Google Calendar entegrasyonu aktif olacak ve QR kod oluşturulabilecektir.
+              </p>
+            </div>
+          )}
+
+          {isEditMode && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-xs text-blue-700">
+                <strong>Not:</strong> E-posta adresi güvenlik nedeniyle düzenlenemez. Diğer bilgiler başarıyla güncellenecektir.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

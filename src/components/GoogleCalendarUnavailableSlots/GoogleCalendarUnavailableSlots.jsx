@@ -4,9 +4,9 @@ import apiService from '../../services/apiService';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './GoogleCalendarUnavailableSlots.module.css';
 
-const GoogleCalendarUnavailableSlots = () => {
+const GoogleCalendarEvents = () => {
   const { user } = useAuth();
-  const [unavailableSlots, setUnavailableSlots] = useState([]);
+  const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -24,7 +24,7 @@ const GoogleCalendarUnavailableSlots = () => {
       if (response.success) {
         setIsConnected(response.data.isConnected);
         if (response.data.isConnected) {
-          loadUnavailableSlots();
+          loadEvents();
         }
       } else {
         console.log('Google Calendar not connected:', response.message);
@@ -33,12 +33,11 @@ const GoogleCalendarUnavailableSlots = () => {
     } catch (error) {
       console.error('Failed to check Google Calendar status:', error);
       setIsConnected(false);
-      // Try to load events anyway to see if we can get sample data
-      loadUnavailableSlots();
+      loadEvents(); // Try to load events anyway to see if we can get sample data
     }
   };
 
-  const loadUnavailableSlots = async () => {
+  const loadEvents = async () => {
     setIsLoading(true);
     setError(null);
 
@@ -54,9 +53,9 @@ const GoogleCalendarUnavailableSlots = () => {
       );
 
       if (response.success) {
-        const events = response.data || [];
-        const unavailable = processEventsToUnavailableSlots(events);
-        setUnavailableSlots(unavailable);
+        const calendarEvents = response.data || [];
+        const processedEvents = processEvents(calendarEvents);
+        setEvents(processedEvents);
         setLastUpdated(new Date());
         setIsConnected(true);
       } else {
@@ -64,29 +63,37 @@ const GoogleCalendarUnavailableSlots = () => {
       }
     } catch (error) {
       console.error('Calendar loading error:', error);
-      // Try to use sample data as fallback
-      try {
-        const sampleEvents = getSampleEvents();
-        const unavailable = processEventsToUnavailableSlots(sampleEvents);
-        setUnavailableSlots(unavailable);
-        setLastUpdated(new Date());
-        setError('Google Calendar bağlantısı yok. Örnek veriler gösteriliyor.');
-      } catch (fallbackError) {
-        console.error('Fallback data error:', fallbackError);
-        setError('Takvim yüklenirken bir hata oluştu. Lütfen Google Calendar bağlantınızı kontrol edin.');
+      
+      // Check if it's an auth error
+      if (error.requiresReauth || error.message?.includes('invalid_grant') || error.message?.includes('access expired')) {
+        setError('Google Calendar bağlantınızın süresi dolmuş. Yeniden bağlanmanız gerekiyor.');
+        setIsConnected(false);
+        setEvents([]);
+      } else {
+        // Try to use sample data as fallback for other errors
+        try {
+          const sampleEvents = getSampleEvents();
+          const processedEvents = processEvents(sampleEvents);
+          setEvents(processedEvents);
+          setLastUpdated(new Date());
+          setError('Google Calendar bağlantısı yok. Örnek veriler gösteriliyor.');
+        } catch (fallbackError) {
+          console.error('Fallback data error:', fallbackError);
+          setError('Takvim yüklenirken bir hata oluştu. Lütfen Google Calendar bağlantınızı kontrol edin.');
+        }
+        setIsConnected(false);
       }
-      setIsConnected(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const processEventsToUnavailableSlots = (events) => {
-    const unavailable = [];
+  const processEvents = (calendarEvents) => {
+    const processed = [];
     
     // Group events by day
     const eventsByDay = {};
-    events.forEach(event => {
+    calendarEvents.forEach(event => {
       if (event.start?.dateTime) {
         const date = new Date(event.start.dateTime);
         const dateKey = date.toDateString();
@@ -106,78 +113,28 @@ const GoogleCalendarUnavailableSlots = () => {
       // Sort events by start time
       dayEvents.sort((a, b) => new Date(a.start.dateTime) - new Date(b.start.dateTime));
       
-      // Find unavailable time slots (gaps between events and outside business hours)
-      const businessStart = 9; // 9:00 AM
-      const businessEnd = 17; // 5:00 PM
-      
-      const unavailableSlots = [];
-      
-      // Check before first event
       if (dayEvents.length > 0) {
-        const firstEventStart = new Date(dayEvents[0].start.dateTime);
-        const firstEventHour = firstEventStart.getHours();
-        
-        if (firstEventHour > businessStart) {
-          unavailableSlots.push({
-            start: `${businessStart.toString().padStart(2, '0')}:00`,
-            end: firstEventStart.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            reason: 'İlk etkinlikten önce',
-            type: 'before_first'
-          });
-        }
-      }
-      
-      // Check between events
-      for (let i = 0; i < dayEvents.length - 1; i++) {
-        const currentEventEnd = new Date(dayEvents[i].end.dateTime);
-        const nextEventStart = new Date(dayEvents[i + 1].start.dateTime);
-        
-        if (nextEventStart - currentEventEnd > 15 * 60 * 1000) { // More than 15 minutes gap
-          unavailableSlots.push({
-            start: currentEventEnd.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            end: nextEventStart.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            reason: 'Etkinlikler arası boşluk',
-            type: 'between_events'
-          });
-        }
-      }
-      
-      // Check after last event
-      if (dayEvents.length > 0) {
-        const lastEventEnd = new Date(dayEvents[dayEvents.length - 1].end.dateTime);
-        const lastEventHour = lastEventEnd.getHours();
-        
-        if (lastEventHour < businessEnd) {
-          unavailableSlots.push({
-            start: lastEventEnd.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-            end: `${businessEnd.toString().padStart(2, '0')}:00`,
-            reason: 'Son etkinlikten sonra',
-            type: 'after_last'
-          });
-        }
-      }
-      
-      // If no events, mark entire business day as unavailable
-      if (dayEvents.length === 0) {
-        unavailableSlots.push({
-          start: `${businessStart.toString().padStart(2, '0')}:00`,
-          end: `${businessEnd.toString().padStart(2, '0')}:00`,
-          reason: 'Etkinlik yok',
-          type: 'no_events'
-        });
-      }
-      
-      if (unavailableSlots.length > 0) {
-        unavailable.push({
+        processed.push({
           date: date,
           dateKey: dateKey,
           dayName: getDayDisplayName(date),
-          slots: unavailableSlots
+          events: dayEvents.map(event => ({
+            title: event.summary || 'Etkinlik',
+            start: new Date(event.start.dateTime).toLocaleTimeString('tr-TR', {
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            end: new Date(event.end.dateTime).toLocaleTimeString('tr-TR', {
+              hour: '2-digit',
+              minute: '2-digit'
+            }),
+            duration: Math.round((new Date(event.end.dateTime) - new Date(event.start.dateTime)) / (1000 * 60))
+          }))
         });
       }
     });
 
-    return unavailable;
+    return processed;
   };
 
   const getDayDisplayName = (date) => {
@@ -213,9 +170,13 @@ const GoogleCalendarUnavailableSlots = () => {
           <h3 className={styles.notConnectedTitle}>
             Google Calendar Bağlı Değil
           </h3>
-          <p className={styles.notConnectedText}>
-            Müsait olmayan zaman aralıklarını görmek için Google Calendar hesabınızı bağlayın.
-          </p>
+          <p className={styles.notConnectedText}>Etkinlikleri görmek için Google Calendar hesabınızı bağlayın.</p>
+          <button
+            className={styles.viewButton}
+            onClick={() => (window.location.href = '/google-connect')}
+          >
+            Google Calendar'a Bağlan
+          </button>
         </div>
       </div>
     );
@@ -227,22 +188,23 @@ const GoogleCalendarUnavailableSlots = () => {
         <div className={styles.headerLeft}>
           <CalendarIcon className={styles.headerIcon} />
           <h3 className={styles.headerTitle}>
-            Google Calendar - Müsait Olmayan Zaman Aralıkları
+            Google Calendar - Haftalık Etkinlikler
           </h3>
         </div>
         <div className={styles.headerRight}>
           {lastUpdated && (
             <span className={styles.lastUpdated}>
-              Son güncelleme: {lastUpdated.toLocaleTimeString('tr-TR')}
+              Son güncelleme: {lastUpdated.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
           <button
-            onClick={loadUnavailableSlots}
-            disabled={isLoading}
             className={styles.refreshButton}
+            onClick={loadEvents}
+            disabled={isLoading}
+            title="Etkinlikleri yenile"
           >
             <ArrowPathIcon className={`${styles.refreshIcon} ${isLoading ? styles.spinning : ''}`} />
-            Yenile
+            {isLoading ? 'Yükleniyor...' : 'Yenile'}
           </button>
         </div>
       </div>
@@ -259,19 +221,19 @@ const GoogleCalendarUnavailableSlots = () => {
           <div className={styles.loadingSpinner}></div>
           <span className={styles.loadingText}>Yükleniyor...</span>
         </div>
-      ) : unavailableSlots.length > 0 ? (
+      ) : events.length > 0 ? (
         <div className={styles.tableContainer}>
           <table className={styles.table}>
             <thead className={styles.tableHeader}>
               <tr>
                 <th className={styles.tableHeaderCell}>Gün</th>
                 <th className={styles.tableHeaderCell}>Tarih</th>
-                <th className={styles.tableHeaderCell}>Müsait Olmayan Zaman Aralıkları</th>
+                <th className={styles.tableHeaderCell}>Etkinlikler</th>
                 <th className={styles.tableHeaderCell}>Toplam Süre</th>
               </tr>
             </thead>
             <tbody className={styles.tableBody}>
-              {unavailableSlots.map((day, dayIndex) => (
+              {events.map((day, dayIndex) => (
                 <tr key={dayIndex} className={styles.tableRow}>
                   <td className={styles.tableCell}>
                     <div className={styles.dayInfo}>
@@ -287,18 +249,16 @@ const GoogleCalendarUnavailableSlots = () => {
                     </span>
                   </td>
                   <td className={styles.tableCell}>
-                    <div className={styles.slotsContainer}>
-                      {day.slots.map((slot, slotIndex) => (
-                        <div key={slotIndex} className={styles.slotItem}>
-                          <div className={styles.slotTime}>
-                            <ClockIcon className={styles.slotIcon} />
-                            <span>{slot.start} - {slot.end}</span>
+                    <div className={styles.eventsContainer}>
+                      {day.events.map((event, eventIndex) => (
+                        <div key={eventIndex} className={styles.eventItem}>
+                          <div className={styles.eventTime}>
+                            <ClockIcon className={styles.eventIcon} />
+                            <span>{event.start} - {event.end}</span>
                           </div>
-                          <div className={styles.slotDetails}>
-                            <span className={`${styles.slotType} ${getSlotTypeColor(slot.type)}`}>
-                              {getSlotTypeLabel(slot.type)}
-                            </span>
-                            <span className={styles.slotReason}>{slot.reason}</span>
+                          <div className={styles.eventDetails}>
+                            <span className={styles.eventTitle}>{event.title}</span>
+                            <span className={styles.eventDuration}>({event.duration} dk)</span>
                           </div>
                         </div>
                       ))}
@@ -306,7 +266,7 @@ const GoogleCalendarUnavailableSlots = () => {
                   </td>
                   <td className={styles.tableCell}>
                     <span className={styles.totalTime}>
-                      {calculateTotalUnavailableTime(day.slots)}
+                      {calculateTotalEventTime(day.events)}
                     </span>
                   </td>
                 </tr>
@@ -318,10 +278,10 @@ const GoogleCalendarUnavailableSlots = () => {
         <div className={styles.emptyState}>
           <CalendarIcon className={styles.emptyIcon} />
           <p className={styles.emptyText}>
-            Bu hafta için müsait olmayan zaman aralığı bulunamadı.
+            Bu hafta için etkinlik bulunamadı.
           </p>
           <p className={styles.emptySubtext}>
-            Tüm zaman aralıkları müsait veya henüz etkinlik eklenmemiş.
+            Google Calendar'da henüz etkinlik eklenmemiş.
           </p>
         </div>
       )}
@@ -373,17 +333,11 @@ const getSampleEvents = () => {
   return events;
 };
 
-const calculateTotalUnavailableTime = (slots) => {
+const calculateTotalEventTime = (events) => {
   let totalMinutes = 0;
   
-  slots.forEach(slot => {
-    const startTime = slot.start.split(':').map(Number);
-    const endTime = slot.end.split(':').map(Number);
-    
-    const startMinutes = startTime[0] * 60 + startTime[1];
-    const endMinutes = endTime[0] * 60 + endTime[1];
-    
-    totalMinutes += endMinutes - startMinutes;
+  events.forEach(event => {
+    totalMinutes += event.duration;
   });
   
   const hours = Math.floor(totalMinutes / 60);
@@ -395,4 +349,4 @@ const calculateTotalUnavailableTime = (slots) => {
   return `${minutes}dk`;
 };
 
-export default GoogleCalendarUnavailableSlots;
+export default GoogleCalendarEvents;

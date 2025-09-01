@@ -1,0 +1,147 @@
+.card {
+	background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+	border: 1px solid #e5e7eb;
+	border-radius: 16px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+	min-height: 280px;
+	display: flex;
+	flex-direction: column;
+}
+
+.card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 14px 30px rgba(0, 0, 0, 0.1);
+}
+
+.avatar {
+	width: 48px;
+	height: 48px;
+	border-radius: 9999px;
+	background: #dbeafe;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.title {
+	font-size: 18px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.subtle {
+	color: #6b7280;
+	font-size: 14px;
+}
+
+.statusDot {
+	width: 8px;
+	height: 8px;
+	border-radius: 9999px;
+	margin-right: 8px;
+}
+
+.primaryButton {
+	width: 100%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 14px;
+	border-radius: 10px;
+	border: none;
+	background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+	color: #ffffff;
+	font-weight: 600;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+}
+
+.primaryButton:hover {
+	background: linear-gradient(135deg, #2f6fe5 0%, #1e4fd3 100%);
+	box-shadow: 0 10px 22px rgba(37, 99, 235, 0.35);
+}
+
+.primaryButton:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.icon {
+	width: 16px;
+	height: 16px;
+	margin-right: 8px;
+}
+
+/* Responsive Design */
+@media (max-width: 1280px) {
+  .card {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .card {
+    min-height: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .card {
+    min-height: 220px;
+  }
+  
+  .title {
+    font-size: 16px;
+  }
+  
+  .avatar {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    min-height: 200px;
+  }
+  
+  .title {
+    font-size: 15px;
+  }
+  
+  .subtle {
+    font-size: 13px;
+  }
+  
+  .primaryButton {
+    padding: 0.75rem 1rem;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    min-height: 180px;
+  }
+  
+  .title {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+  
+  .avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .primaryButton {
+    padding: 0.625rem 0.875rem;
+    font-size: 13px;
+  }
+  
+  .icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+

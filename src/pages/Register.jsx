@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
+import api from '../services/api';
 import { 
   EyeIcon, 
   EyeSlashIcon,
@@ -110,58 +111,16 @@ const Register = () => {
     setError('');
 
     try {
-      // Initialize Google Sign-In
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: '194091113508-rvckovns6g1gnn7mrh8atrnjoq53dm6l.apps.googleusercontent.com',
-          callback: async (response) => {
-            try {
-              console.log('Google OAuth response:', response);
-              
-              const result = await apiService.googleAuth(response.credential);
-              
-              if (result.success) {
-                setSuccess('Google ile kayıt başarılı!');
-                login(result.data.token, result.data.user);
-                
-                // Redirect based on role and first login status
-                if (result.data.user.isFirstLogin) {
-                  navigate('/change-password');
-                } else {
-                  switch (result.data.user.role) {
-                    case 'student':
-                      navigate('/student-dashboard');
-                      break;
-                    case 'faculty':
-                      navigate('/faculty-dashboard');
-                      break;
-                    case 'admin':
-                      navigate('/admin-dashboard');
-                      break;
-                    default:
-                      navigate('/');
-                  }
-                }
-              }
-            } catch (error) {
-              console.error('Google auth error:', error);
-              setError(error.message || 'Google ile kayıt olurken bir hata oluştu');
-            } finally {
-              setLoading(false);
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          prompt_parent_id: 'google-register-container'
-        });
-
-        window.google.accounts.id.prompt();
+      const response = await api.getGoogleAuthUrl();
+      const authUrl = response?.data?.authUrl || response?.data?.url || response?.authUrl;
+      if (response?.success && authUrl) {
+        window.location.href = authUrl;
       } else {
-        setError('Google Sign-In yüklenemedi');
+        setError(response?.message || 'Google ile kayıt başlatılamadı');
         setLoading(false);
       }
     } catch (error) {
-      setError('Google ile kayıt olurken bir hata oluştu');
+      setError(error.message || 'Google ile kayıt başlatılamadı');
       setLoading(false);
     }
   };
@@ -174,7 +133,7 @@ const Register = () => {
           <div className={styles.logo}>
             <AcademicCapIcon />
           </div>
-          <h1 className={styles.title}>QRCal</h1>
+          <h1 className={styles.title}>Qnnect</h1>
           <p className={styles.subtitle}>Akıllı Akademik Randevu Sistemi</p>
           <p className={styles.description}>Öğrenci hesabı oluşturun</p>
         </div>

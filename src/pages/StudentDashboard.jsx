@@ -14,6 +14,7 @@ import {
 
 // Import modern components
 import Header from '../components/Header/Header';
+import headerStyles from '../components/Header/Header.module.css';
 import StatsCard from '../components/StatsCard/StatsCard';
 import AppointmentList from '../components/AppointmentList/AppointmentList';
 import AppointmentDetails from '../components/AppointmentDetails/AppointmentDetails';
@@ -22,7 +23,7 @@ import PasswordModal from '../components/PasswordModal/PasswordModal';
 import TabNavigation from '../components/TabNavigation';
 
 const StudentDashboard = () => {
-  const { user, login } = useAuth();
+  const { user, login, logout } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('appointments');
@@ -57,21 +58,106 @@ const StudentDashboard = () => {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+  const [globalError, setGlobalError] = useState('');
+  const [globalSuccess, setGlobalSuccess] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Load notifications from localStorage
+  const loadNotificationsFromStorage = () => {
+    try {
+      const storedNotifications = localStorage.getItem('notifications');
+      const storedUnreadCount = localStorage.getItem('unreadCount');
+      if (storedNotifications) {
+        const parsedNotifications = JSON.parse(storedNotifications);
+        setNotifications(parsedNotifications);
+        setUnreadCount(storedUnreadCount ? parseInt(storedUnreadCount) : 0);
+      }
+    } catch (error) {
+      console.error('Error loading notifications from storage:', error);
+    }
+  };
+
+  // Save notifications to localStorage
+  const saveNotificationsToStorage = (newNotifications, newUnreadCount) => {
+    try {
+      localStorage.setItem('notifications', JSON.stringify(newNotifications));
+      localStorage.setItem('unreadCount', newUnreadCount.toString());
+    } catch (error) {
+      console.error('Error saving notifications to storage:', error);
+    }
+  };
 
   useEffect(() => {
     if (user) {
       console.log('StudentDashboard - User loaded:', user);
       loadAppointments();
+      loadNotificationsFromStorage(); // Load notifications from localStorage
     } else {
       console.log('StudentDashboard - User not loaded yet');
     }
   }, [user]);
 
+  // Save notifications to localStorage when they change
+  useEffect(() => {
+    if (notifications.length > 0 || unreadCount > 0) {
+      saveNotificationsToStorage(notifications, unreadCount);
+    }
+  }, [notifications, unreadCount]);
+
+  // Load notifications on mount and when dropdown opens
+  useEffect(() => {
+    if (!user) return;
+    const load = async () => {
+      try {
+        const res = await apiService.getUnreadNotifications();
+        if (res.success) {
+          const list = res.data?.notifications || res.data || [];
+          setNotifications(list);
+          setUnreadCount(res.data?.unreadCount ?? list.filter(n => !n.read).length);
+        }
+      } catch (e) {
+        console.error('Notifications load error:', e);
+      }
+    };
+    load();
+  }, [user]);
+
+  const toggleNotifications = async () => {
+    const next = !showNotifications;
+    setShowNotifications(next);
+    if (next) {
+      try {
+        const res = await apiService.getUnreadNotifications();
+        if (res.success) {
+          const list = res.data?.notifications || res.data || [];
+          setNotifications(list);
+          setUnreadCount(res.data?.unreadCount ?? list.filter(n => !n.read).length);
+        }
+      } catch (e) {
+        console.error('Notifications refresh error:', e);
+      }
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      // Mark all notifications as read (keep them, just mark as read)
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+      saveNotificationsToStorage(notifications.map(n => ({ ...n, read: true })));
+      
+      // Also call API to mark as read on server
+      await apiService.markAllNotificationsAsRead();
+    } catch (e) {
+      console.error('Mark all read failed:', e);
+    }
+  };
+
   const handleLogout = () => {
     if (window.confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      logout(); // AuthContext'teki logout'u kullan
     }
   };
 
@@ -187,19 +273,40 @@ const StudentDashboard = () => {
   const loadAppointments = async () => {
     try {
       setLoading(true);
+
+      // Load profile data first
+      try {
+        const profileResponse = await apiService.getCurrentUser();
+        const profileData = profileResponse.data;
+
+        // Update profile state with loaded data
+        setProfileData({
+          name: profileData.name || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          studentNumber: profileData.studentNumber || '',
+          department: profileData.department || ''
+        });
+      } catch (error) {
+        console.error('Failed to load profile data:', error);
+      }
+
       const response = await apiService.getStudentAppointments();
-      
+
       // API response yapısını düzgün şekilde işle
       const appointmentsData = response.data?.appointments || response.data || [];
-      setAppointments(appointmentsData);
-      
+
+      // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
+      const sortedAppointments = [...appointmentsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setAppointments(sortedAppointments);
+
       // Calculate stats
       const stats = {
-        total: appointmentsData.length,
-        pending: appointmentsData.filter(apt => apt.status === 'pending').length,
-        approved: appointmentsData.filter(apt => apt.status === 'approved').length,
-        rejected: appointmentsData.filter(apt => apt.status === 'rejected').length,
-        cancelled: appointmentsData.filter(apt => apt.status === 'cancelled').length
+        total: sortedAppointments.length,
+        pending: sortedAppointments.filter(apt => apt.status === 'pending').length,
+        approved: sortedAppointments.filter(apt => apt.status === 'approved').length,
+        rejected: sortedAppointments.filter(apt => apt.status === 'rejected').length,
+        cancelled: sortedAppointments.filter(apt => apt.status === 'cancelled').length
       };
       setStats(stats);
     } catch (error) {
@@ -228,6 +335,8 @@ const StudentDashboard = () => {
         return <XCircleIcon className="h-5 w-5 text-red-500" />;
       case 'cancelled':
         return <ExclamationTriangleIcon className="h-5 w-5 text-gray-500" />;
+      case 'no_response':
+        return <ExclamationTriangleIcon className="h-5 w-5 text-orange-500" />;
       default:
         return <ClockIcon className="h-5 w-5 text-gray-500" />;
     }
@@ -243,6 +352,8 @@ const StudentDashboard = () => {
         return 'Reddedildi';
       case 'cancelled':
         return 'İptal Edildi';
+      case 'no_response':
+        return 'Öğretim Üyesi Cevaplamadı';
       default:
         return status;
     }
@@ -258,6 +369,8 @@ const StudentDashboard = () => {
         return 'bg-red-100 text-red-800';
       case 'cancelled':
         return 'bg-gray-100 text-gray-800';
+      case 'no_response':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -297,15 +410,17 @@ const StudentDashboard = () => {
         
         const response = await apiService.cancelAppointment(appointment._id, user.email, cancellationReason);
         if (response.success) {
-          // Randevuları yeniden yükle
           await loadAppointments();
-          alert('Randevu başarıyla iptal edildi');
+          setGlobalSuccess('Randevu başarıyla iptal edildi');
+          setTimeout(() => setGlobalSuccess(''), 3000);
         } else {
-          alert('Randevu iptal edilirken hata oluştu: ' + response.message);
+          setGlobalError(response.message || 'Randevu iptal edilirken hata oluştu');
+          setTimeout(() => setGlobalError(''), 4000);
         }
       } catch (error) {
         console.error('Cancel appointment error:', error);
-        alert('Randevu iptal edilirken hata oluştu: ' + error.message);
+        setGlobalError(error.message || 'Randevu iptal edilirken hata oluştu');
+        setTimeout(() => setGlobalError(''), 4000);
       }
     }
   };
@@ -365,68 +480,81 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Modern Header */}
-      <Header 
-        user={user} 
-        onProfile={openProfileModal} 
-        onPassword={openPasswordModal} 
+            <Header
+        user={user}
+        onProfile={openProfileModal}
+        onPassword={openPasswordModal}
         onLogout={handleLogout}
+        theme="student"
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onToggleNotifications={toggleNotifications}
+        onMarkAllRead={markAllNotificationsRead}
+        onNotificationClick={(notification) => {
+          // Student dashboard'da bildirimlere tıklandığında faculty listesine git
+          window.location.href = '/faculty-list';
+          // Bildirimi okundu olarak işaretle
+          setNotifications(prev => prev.map(n =>
+            n.id === notification.id ? { ...n, read: true } : n
+          ));
+          setUnreadCount(prev => Math.max(0, prev - 1));
+          // localStorage automatically updated via useEffect
+        }}
+        showNotifications={showNotifications}
       >
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Öğrenci Paneli</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Hoş geldiniz, {user?.name}
-          </p>
+
+        <div className={headerStyles.navigationButtons}>
+          <button
+            onClick={() => window.location.href = '/faculty-list'}
+            className={headerStyles.navLink}
+          >
+            <CalendarIcon className={headerStyles.navIcon} />
+            Yeni Randevu
+          </button>
         </div>
-        <button
-          onClick={() => window.location.href = '/faculty-list'}
-          className="btn-primary"
-        >
-          <CalendarIcon className="w-4 h-4 mr-2" />
-          Yeni Randevu
-        </button>
       </Header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <div className="dashboard-main max-w-7xl mx-auto py-8">
         {/* Stats Cards */}
-        <div className="flex flex-wrap gap-4 mb-8">
-          <div className="flex-1 min-w-[200px]">
+        <div className="stats-container">
+          <div>
             <StatsCard
               title="Toplam Randevu"
               value={stats.total}
-              icon={<CalendarIcon className="h-6 w-6 text-gray-400" />}
-              color="border-gray-400"
+              icon={<CalendarIcon className="h-6 w-6" />}
+              color="blue"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div>
             <StatsCard
               title="Bekleyen"
               value={stats.pending}
-              icon={<ClockIconSolid className="h-6 w-6 text-yellow-500" />}
-              color="border-yellow-500"
+              icon={<ClockIconSolid className="h-6 w-6" />}
+              color="yellow"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div>
             <StatsCard
               title="Onaylanan"
               value={stats.approved}
-              icon={<CheckCircleIcon className="h-6 w-6 text-green-500" />}
-              color="border-green-500"
+              icon={<CheckCircleIcon className="h-6 w-6" />}
+              color="green"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div>
             <StatsCard
               title="Reddedilen"
               value={stats.rejected}
-              icon={<XCircleIcon className="h-6 w-6 text-red-500" />}
-              color="border-red-500"
+              icon={<XCircleIcon className="h-6 w-6" />}
+              color="red"
             />
           </div>
-          <div className="flex-1 min-w-[200px]">
+          <div>
             <StatsCard
               title="İptal Edilen"
               value={stats.cancelled}
-              icon={<ExclamationTriangleIcon className="h-6 w-6 text-gray-500" />}
-              color="border-gray-500"
+              icon={<ExclamationTriangleIcon className="h-6 w-6" />}
+              color="purple"
             />
           </div>
         </div>
@@ -451,6 +579,16 @@ const StudentDashboard = () => {
           />
 
           <div className="p-6">
+            {globalError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-red-700">
+                {globalError}
+              </div>
+            )}
+            {globalSuccess && (
+              <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-3 text-green-700">
+                {globalSuccess}
+              </div>
+            )}
             {activeTab === 'appointments' ? (
               <div>
                 <div className="flex justify-between items-center mb-4">

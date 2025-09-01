@@ -25,7 +25,7 @@ const PrivacyPolicy = () => {
               Giriş
             </h2>
             <p className="policy-text">
-              QR Calendar olarak, kullanıcılarımızın gizliliğine saygı duyuyor ve kişisel verilerin korunmasına
+              Qnnect olarak, kullanıcılarımızın gizliliğine saygı duyuyor ve kişisel verilerin korunmasına
               büyük önem veriyoruz. Bu gizlilik politikası, uygulamamızı kullanırken hangi bilgileri topladığımızı,
               nasıl kullandığımızı ve koruduğumuzu açıklar.
             </p>
@@ -225,7 +225,7 @@ const PrivacyPolicy = () => {
             <div className="policy-contact-info">
               <div className="policy-contact-item">
                 <span className="policy-contact-label">E-posta</span>
-                <span className="policy-contact-value">privacy@qrcalendar.com</span>
+                <span className="policy-contact-value">infoqrcal@gmail.com</span>
               </div>
               <div className="policy-contact-item">
                 <span className="policy-contact-label">Telefon</span>
@@ -233,7 +233,7 @@ const PrivacyPolicy = () => {
               </div>
               <div className="policy-contact-item">
                 <span className="policy-contact-label">Adres</span>
-                <span className="policy-contact-value">İstanbul, Türkiye</span>
+                <span className="policy-contact-value">Ankara, Türkiye</span>
               </div>
             </div>
           </section>

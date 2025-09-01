@@ -19,6 +19,19 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Backend environment variables
+backend/.env
+backend/.env.local
+backend/.env.development.local
+backend/.env.test.local
+backend/.env.production.local
+
+# Sensitive files
+*.key
+*.pem
+*.p12
+config/secrets.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

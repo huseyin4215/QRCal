@@ -50,6 +50,25 @@
   cursor: not-allowed;
 }
 
+/* Responsive Button Sizes */
+@media (max-width: 768px) {
+  .btn-primary {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-primary {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    border-radius: 8px;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .btn-secondary {
   background: rgba(255, 255, 255, 0.9);
   color: #374151;
@@ -99,6 +118,161 @@
 /* Layout Styles */
 .min-h-screen {
   min-height: 100vh;
+}
+
+/* Global Responsive Design */
+/* Mobile First Approach - Base styles are mobile optimized */
+
+/* Mobile Styles (max-width: 640px) */
+@media (max-width: 640px) {
+  /* Typography adjustments */
+  h1 { font-size: 1.75rem !important; }
+  h2 { font-size: 1.5rem !important; }
+  h3 { font-size: 1.25rem !important; }
+  h4 { font-size: 1.125rem !important; }
+
+  /* Button adjustments */
+  .btn, .btn-primary, .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Card adjustments */
+  .card {
+    margin: 0.5rem;
+    padding: 1.5rem;
+    border-radius: 16px;
+  }
+
+  /* Form adjustments */
+  .form-input, .form-select, .form-textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.875rem 1rem;
+  }
+
+  /* Table adjustments */
+  table {
+    font-size: 0.875rem;
+  }
+
+  th, td {
+    padding: 0.5rem;
+    white-space: nowrap;
+  }
+
+  /* Hide less important elements on mobile */
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+/* Tablet Styles (641px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Tablet specific adjustments */
+  .card {
+    padding: 1.75rem;
+  }
+
+  .btn, .btn-primary, .btn-secondary {
+    font-size: 0.9rem;
+    padding: 0.75rem 1.25rem;
+  }
+
+  /* Two column layouts for tablets */
+  .tablet-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  /* Hide tablet-specific elements */
+  .hidden-tablet {
+    display: none !important;
+  }
+}
+
+/* Large Desktop Styles (min-width: 1280px) */
+@media (min-width: 1280px) {
+  /* Large screen optimizations */
+  .container {
+    max-width: 1400px;
+  }
+
+  .card {
+    padding: 2.5rem;
+  }
+
+  /* Hide large screen specific elements */
+  .hidden-desktop {
+    display: none !important;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (pointer: coarse) {
+  /* Larger touch targets for touch devices */
+  .btn, .btn-primary, .btn-secondary {
+    min-height: 44px;
+    padding: 0.875rem 1.5rem;
+  }
+
+  .form-input, .form-select {
+    min-height: 44px;
+    padding: 0.875rem 1rem;
+  }
+
+  /* Better spacing for touch */
+  .card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .btn, .btn-primary, .btn-secondary {
+    display: none;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    break-inside: avoid;
+  }
+
+  .hidden-print {
+    display: none !important;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .card {
+    border: 2px solid currentColor;
+    background: white;
+  }
+
+  .btn-primary {
+    background: black;
+    color: white;
+    border: 2px solid black;
+  }
+
+  .btn-secondary {
+    background: white;
+    color: black;
+    border: 2px solid black;
+  }
 }
 
 .bg-gray-50 {

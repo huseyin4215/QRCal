@@ -62,8 +62,14 @@
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 2.5rem;
+}
+
+@media (min-width: 1280px) and (orientation: landscape) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .previewSection {
