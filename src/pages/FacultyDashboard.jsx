@@ -893,6 +893,9 @@ Hata detayı: ${error.message}
       const sortedAppointments = [...appointmentsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setAppointments(sortedAppointments);
 
+      // Refresh AppointmentHistory when appointments are loaded
+      setHistoryRefreshTrigger(prev => prev + 1);
+
       // Load profile data
       const profileResponse = await apiService.getCurrentUser();
       const profileData = profileResponse.data;
