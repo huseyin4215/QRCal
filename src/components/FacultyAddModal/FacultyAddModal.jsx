@@ -19,6 +19,10 @@ export default function FacultyAddModal({
 
   // Başarılı işlem sonrası başarı modalını göster
   if (success) {
+    // Extract temporary password from success message
+    const tempPasswordMatch = success.match(/Geçici şifre:\s*(\S+)/);
+    const tempPassword = tempPasswordMatch ? tempPasswordMatch[1] : null;
+
     return (
       <SuccessModal
         isOpen={true}
@@ -26,7 +30,8 @@ export default function FacultyAddModal({
         title={isEditMode ? 'Güncelleme Başarılı!' : 'Öğretim Üyesi Oluşturuldu!'}
         message={isEditMode ? 'Öğretim üyesi bilgileri başarıyla güncellendi!' : 'Öğretim üyesi sisteme başarıyla eklendi!'}
         details={success}
-        showCopyButton={!isEditMode && success.includes('Geçici şifre')}
+        showCopyButton={!isEditMode && tempPassword !== null}
+        tempPassword={tempPassword}
       />
     );
   }

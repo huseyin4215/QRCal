@@ -112,7 +112,9 @@ router.post('/register', asyncHandler(async (req, res) => {
 // @route   POST /api/auth/login
 // @access  Public
 router.post('/login', asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  // Trim email and password to remove leading/trailing whitespace
+  const email = req.body.email?.trim();
+  const password = req.body.password?.trim();
 
   // Validation
   if (!email || !password) {
@@ -235,7 +237,9 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 // @route   POST /api/auth/change-password
 // @access  Private
 router.post('/change-password', authMiddleware, asyncHandler(async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  // Trim passwords to remove leading/trailing whitespace
+  const currentPassword = req.body.currentPassword?.trim();
+  const newPassword = req.body.newPassword?.trim();
 
   if (!currentPassword || !newPassword) {
     res.status(400);

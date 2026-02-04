@@ -8,20 +8,24 @@ export default function SuccessModal({
   message,
   details,
   buttonText = 'Kapat',
-  showCopyButton = false
+  showCopyButton = false,
+  tempPassword = null // Add tempPassword prop for copying only the password
 }) {
   if (!isOpen) return null;
 
   const handleCopy = () => {
-    if (details) {
-      navigator.clipboard.writeText(details);
+    const textToCopy = tempPassword || details;
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy);
       // Optional: Show a toast notification
       const btn = document.getElementById('copy-btn');
       if (btn) {
         const originalText = btn.innerText;
-        btn.innerText = 'Kopyalandı!';
+        btn.innerText = '✓ Kopyalandı!';
+        btn.style.background = '#10b981';
         setTimeout(() => {
           btn.innerText = originalText;
+          btn.style.background = '';
         }, 2000);
       }
     }
