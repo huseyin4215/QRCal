@@ -654,11 +654,17 @@ const AdminDashboard = () => {
           office: ''
         });
 
-        // Kullanıcı listesini yenile (await ile bekle)
+        // Kullanıcı listesini ve istatistikleri hızlıca yenile
         try {
-          await loadDashboardData();
+          await Promise.all([
+            refreshUsersList(),
+            apiService.getSystemStats().then(statsResponse => {
+              const allStats = statsResponse.data || {};
+              setStats(allStats);
+            })
+          ]);
         } catch (reloadError) {
-          console.error('Error reloading dashboard data:', reloadError);
+          console.error('Error reloading data:', reloadError);
           // Hata olsa bile devam et
         }
 
@@ -1270,10 +1276,11 @@ const AdminDashboard = () => {
       try {
         const response = await apiService.cancelAppointment(appointment._id);
         if (response.success) {
-          // Reload appointments with proper sorting
-          const [allAppointmentsResponse, facultyAppointmentsResponse] = await Promise.all([
+          // Reload appointments and stats in parallel
+          const [allAppointmentsResponse, facultyAppointmentsResponse, statsResponse] = await Promise.all([
             apiService.getAllAppointments(),
-            apiService.getFacultyAppointments()
+            apiService.getFacultyAppointments(),
+            apiService.getSystemStats()
           ]);
 
           const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
@@ -1286,6 +1293,12 @@ const AdminDashboard = () => {
           setAppointments(sortedAllAppointments);
           setSystemAppointments(sortedAllAppointments);
           setAdminAppointments(sortedAdminAppointments);
+
+          // Update stats
+          if (statsResponse.success) {
+            const allStats = statsResponse.data || {};
+            setStats(allStats);
+          }
 
           // Show success notification
           showActionNotification('Randevu başarıyla iptal edildi!');
@@ -1356,8 +1369,12 @@ const AdminDashboard = () => {
     try {
       const response = await apiService.cancelAdminAppointment(cancellingAppointment._id, reason);
       if (response.success) {
-        // Refresh appointments
-        const allAppointmentsResponse = await apiService.getAllAppointments();
+        // Refresh appointments and stats in parallel
+        const [allAppointmentsResponse, statsResponse] = await Promise.all([
+          apiService.getAllAppointments(),
+          apiService.getSystemStats()
+        ]);
+        
         const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
 
         const ownAppointments = allAppointments.filter(isOwnAppointment);
@@ -1366,6 +1383,12 @@ const AdminDashboard = () => {
         setAppointments(allAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         setSystemAppointments(otherAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         setAdminAppointments(ownAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+
+        // Update stats
+        if (statsResponse.success) {
+          const allStats = statsResponse.data || {};
+          setStats(allStats);
+        }
 
         // Show success notification
         showActionNotification('Onaylanmış randevu başarıyla iptal edildi ve öğrenciye bildirim gönderildi!');

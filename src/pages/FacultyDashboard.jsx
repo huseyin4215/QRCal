@@ -963,33 +963,13 @@ Hata detayı: ${error.message}
       }
 
       if (response.success) {
-        // Reload appointments
+        // Reload appointments only (faster)
         const updatedResponse = await apiService.getFacultyAppointments();
         const updatedAppointments = updatedResponse.data?.appointments || updatedResponse.data || [];
 
         // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
         const sortedUpdatedAppointments = [...updatedAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setAppointments(sortedUpdatedAppointments);
-        
-        // Profil verilerini de yenile (randevu sayısı değişebilir)
-        try {
-          const profileResponse = await apiService.getCurrentUser();
-          const profileData = profileResponse.data;
-          if (profileData) {
-            setProfileData({
-              name: profileData.name || '',
-              email: profileData.email || '',
-              phone: profileData.phone || '',
-              office: profileData.office || '',
-              website: profileData.website || '',
-              title: profileData.title || '',
-              department: profileData.department || '',
-              role: profileData.role || ''
-            });
-          }
-        } catch (profileError) {
-          console.error('Error refreshing profile:', profileError);
-        }
         
         // Always refresh AppointmentHistory (even if not on history tab, it will refresh when tab is opened)
         setHistoryRefreshTrigger(prev => prev + 1);
@@ -1172,6 +1152,10 @@ Hata detayı: ${error.message}
             .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setAppointments(sortedAppointments);
         }
+        
+        // Refresh AppointmentHistory
+        setHistoryRefreshTrigger(prev => prev + 1);
+        
         // Show success notification
         const newNotification = {
           id: Date.now(),
