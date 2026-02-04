@@ -1,10 +1,37 @@
 // PDF Export Utility for Appointment Statistics
 import pdfMakeModule from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { formatFacultyName } from './formatUserName';
 
 const pdfMake = pdfMakeModule?.default || pdfMakeModule;
-pdfMake.vfs = pdfFonts?.pdfMake?.vfs || pdfFonts;
+
+// Initialize vfs fonts - lazy load to prevent build errors
+let vfsInitialized = false;
+
+const initializeVfs = async () => {
+  if (vfsInitialized || !pdfMake) return;
+  
+  try {
+    // Try to import vfs_fonts dynamically
+    const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+    const fonts = pdfFontsModule?.default || pdfFontsModule;
+    
+    // Handle different module structures
+    if (fonts?.pdfMake?.vfs) {
+      pdfMake.vfs = fonts.pdfMake.vfs;
+    } else if (fonts) {
+      pdfMake.vfs = fonts;
+    } else {
+      // Initialize empty vfs to prevent errors
+      pdfMake.vfs = pdfMake.vfs || {};
+    }
+    vfsInitialized = true;
+  } catch (e) {
+    // If vfs_fonts can't be loaded, initialize empty vfs
+    console.warn('Could not load pdfmake vfs_fonts. PDF may have limited font support.');
+    pdfMake.vfs = pdfMake.vfs || {};
+    vfsInitialized = true;
+  }
+};
 
 const getStatusText = (status) => {
     const statusMap = {
@@ -50,8 +77,11 @@ const buildReportTableData = (appointments = [], topics = []) => {
     });
 };
 
-export const exportAppointmentsToPDF = (appointments, title = 'Tüm Sistem Randevuları', topics = []) => {
+export const exportAppointmentsToPDF = async (appointments, title = 'Tüm Sistem Randevuları', topics = []) => {
     try {
+        // Ensure vfs is initialized before creating PDF
+        await initializeVfs();
+        
         if (!appointments || !Array.isArray(appointments)) {
             alert('Geçerli randevu verisi bulunamadı.');
             return { success: false, error: 'Invalid appointments data' };

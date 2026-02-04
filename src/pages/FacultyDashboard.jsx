@@ -1827,7 +1827,7 @@ Hata detayı: ${error.message}
                 
                 <StatisticsCards
                   appointments={appointments}
-                  onExportPDF={() => exportAppointmentsToPDF(appointments, `${formatUserName(user) || 'Öğretim Üyesi'} - Randevu Raporu`)}
+                  onExportPDF={async () => await exportAppointmentsToPDF(appointments, `${formatUserName(user) || 'Öğretim Üyesi'} - Randevu Raporu`)}
                   title="Genel Randevu İstatistikleri"
                 />
 

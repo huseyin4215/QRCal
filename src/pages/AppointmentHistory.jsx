@@ -259,7 +259,7 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
     return '/';
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (filteredAppointments.length === 0) {
       alert('Dışa aktarılacak randevu bulunamadı.');
       return;
@@ -269,7 +269,7 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
       ? `${userInfo.name} - Randevu Geçmişi${filter !== 'all' ? ` (${filter === 'past' ? 'Geçmiş' : 'Yaklaşan'})` : ''}`
       : 'Randevu Geçmişi';
     
-    exportAppointmentsToPDF(filteredAppointments, title);
+    await exportAppointmentsToPDF(filteredAppointments, title);
   };
 
   if (loading) {

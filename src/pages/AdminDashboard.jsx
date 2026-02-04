@@ -2213,7 +2213,7 @@ const AdminDashboard = () => {
                   <StatisticsCards
                     appointments={appointments}
                     title="Genel Randevu İstatistikleri"
-                    onExportPDF={() => exportAppointmentsToPDF(appointments, 'Tüm Sistem Randevuları', topics)}
+                    onExportPDF={async () => await exportAppointmentsToPDF(appointments, 'Tüm Sistem Randevuları', topics)}
                   />
                 </div>
 
@@ -2367,7 +2367,7 @@ const AdminDashboard = () => {
                             Randevu Geçmişi
                           </button>
                           <button
-                            onClick={() => exportAppointmentsToPDF(facultyAppts, `${formatUserName(faculty)} - Randevu Raporu (${filterLabel})`, topics)}
+                            onClick={async () => await exportAppointmentsToPDF(facultyAppts, `${formatUserName(faculty)} - Randevu Raporu (${filterLabel})`, topics)}
                             disabled={stats.total === 0}
                             className={statsStyles.pdfButton}
                             style={stats.total === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
