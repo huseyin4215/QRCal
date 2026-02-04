@@ -22,14 +22,8 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false, refreshTrigg
   // Use prop userId if provided (embedded mode), otherwise use param from route
   const userId = propUserId || paramUserId;
   
-  // Refresh appointments when refreshTrigger changes
   useEffect(() => {
-    if (userInfo || user) {
-      loadAppointments();
-    }
-  }, [refreshTrigger]);
-
-  useEffect(() => {
+    // Initialize userInfo
     if (userId) {
       loadUserInfo();
     } else if (user) {
@@ -47,8 +41,8 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false, refreshTrigg
   }, [userId, user]);
 
   useEffect(() => {
-    // Load appointments if we have userInfo OR if we have user context (for embedded mode)
-    if (userInfo && userId) {
+    // Load appointments when userInfo is available or when refreshTrigger changes
+    if (userInfo) {
       loadAppointments();
     } else if (user && !userId) {
       // Embedded mode without userId prop - use current user
@@ -61,22 +55,8 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false, refreshTrigg
         department: user.department,
         title: user.title
       });
-    } else if (!userInfo && user) {
-      // Fallback: if userInfo failed to load but we have user context, try loading appointments anyway
-      const currentUserId = user._id || user.id;
-      if (currentUserId) {
-        setUserInfo({
-          _id: currentUserId,
-          name: formatUserName(user),
-          email: user.email,
-          role: user.role,
-          studentNumber: user.studentNumber,
-          department: user.department,
-          title: user.title
-        });
-      }
     }
-  }, [userInfo, userId, user]);
+  }, [userInfo, refreshTrigger]);
 
   const loadUserInfo = async () => {
     try {
