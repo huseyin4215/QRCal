@@ -988,10 +988,8 @@ Hata detayı: ${error.message}
           console.error('Error refreshing profile:', profileError);
         }
         
-        // Refresh AppointmentHistory if history tab is active
-        if (activeTab === 'history') {
-          setHistoryRefreshTrigger(prev => prev + 1);
-        }
+        // Always refresh AppointmentHistory (even if not on history tab, it will refresh when tab is opened)
+        setHistoryRefreshTrigger(prev => prev + 1);
         
         // Close appointment details modal if open
         if (showAppointmentDetails && selectedAppointment?._id === appointmentId) {

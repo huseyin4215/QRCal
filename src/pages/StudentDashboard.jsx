@@ -525,10 +525,8 @@ const StudentDashboard = () => {
         if (response.success) {
           await loadAppointments();
           
-          // Refresh AppointmentHistory if history tab is active
-          if (activeTab === 'history') {
-            setHistoryRefreshTrigger(prev => prev + 1);
-          }
+          // Always refresh AppointmentHistory (even if not on history tab, it will refresh when tab is opened)
+          setHistoryRefreshTrigger(prev => prev + 1);
           
           setGlobalSuccess('Randevu başarıyla iptal edildi');
           setTimeout(() => setGlobalSuccess(''), 3000);
