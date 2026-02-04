@@ -9,14 +9,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react()],
   build: {
-    // Remove console.log in production builds
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
+    // Use esbuild for faster minification (terser is slower)
+    minify: 'esbuild',
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 1000,
+    // Optimize chunk splitting
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'pdf-vendor': ['pdfmake', 'jspdf', 'jspdf-autotable'],
+          'map-vendor': ['leaflet', 'react-leaflet'],
+        },
       },
     },
+    // Increase memory limit for build
+    target: 'es2015',
   },
   resolve: {
     dedupe: ['react', 'react-dom'],
