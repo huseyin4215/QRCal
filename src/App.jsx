@@ -31,7 +31,6 @@ function AppContent() {
   // Handle redirect
   useEffect(() => {
     if (redirectTo) {
-      console.log('AppContent - Redirecting to:', redirectTo);
       setRedirectTo(null); // Clear redirect
     }
   }, [redirectTo, setRedirectTo]);
@@ -74,18 +73,13 @@ function AppContent() {
     
     // Check if user exists and has admin role
     if (!user) {
-      console.log('AdminRoute: No user found, redirecting to login');
       return <Navigate to="/login" replace />;
     }
     
     if (user.role !== 'admin') {
-      console.log('AdminRoute: User role is', user.role, 'but admin required');
-      console.log('AdminRoute: User object:', user);
       return <Navigate to="/login" replace />;
     }
     
-    console.log('AdminRoute: User authenticated as admin, allowing access');
-    console.log('AdminRoute: User details:', user);
     return children;
   };
 

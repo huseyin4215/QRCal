@@ -52,40 +52,50 @@ app.use(helmet({
   contentSecurityPolicy: false
 }));
 
-// Rate limiting - temporarily disabled for development
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100, // limit each IP to 100 requests per windowMs
-//   message: 'Too many requests from this IP, please try again later.'
-// });
-// app.use(limiter);
+// Rate limiting - enabled in production
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Stricter limit in production
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health checks
+    return req.path === '/api/health';
+  }
+});
+app.use('/api', limiter);
 
 // CORS configuration for Google Sign-In compatibility
 app.use(cors({
   origin: function (origin, callback) {
+    // Parse CORS_ORIGIN from environment variable (comma-separated)
+    const corsOrigins = process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+      : [];
+    
     const allowedOrigins = [
-      // Development
-      'http://localhost:8081',
-      'http://localhost:5173',
-      'http://localhost:8082',
-      'http://localhost:3000',
-      'http://localhost:5000', // Backend self-origin for email action forms
-      'http://127.0.0.1:8081',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:5000', // Backend self-origin for email action forms
-      'http://192.168.0.103:8081',
-      'http://192.168.0.103:5173',
-      'http://192.168.0.103:8082',
-      'http://192.168.0.103:3000',
+      // Development (only in non-production)
+      ...(process.env.NODE_ENV !== 'production' ? [
+        'http://localhost:8081',
+        'http://localhost:5173',
+        'http://localhost:8082',
+        'http://localhost:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:8081',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:5000',
+        // Local network IPs (from environment variable)
+        ...(process.env.DEV_ORIGINS ? process.env.DEV_ORIGINS.split(',') : [])
+      ] : []),
       // Google APIs
       'https://accounts.google.com',
       'https://www.googleapis.com',
-      // Production
-      'https://qrnnect.com',
-      'http://qrnnect.com',
-      'https://www.qrnnect.com',
+      // CORS origins from environment variable
+      ...corsOrigins,
       // Production backend self-origin for email action forms
-      process.env.BACKEND_URL
+      process.env.BACKEND_URL,
+      process.env.FRONTEND_URL
     ].filter(Boolean);
 
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -123,26 +133,30 @@ app.use(cors({
 // Handle preflight OPTIONS requests for Google Sign-In
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
+  
+  // Parse CORS_ORIGIN from environment variable (comma-separated)
+  const corsOrigins = process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : [];
+  
   const allowedOrigins = [
-    // Development
-    'http://localhost:8081',
-    'http://localhost:5173',
-    'http://localhost:8082',
-    'http://localhost:3000',
-    'http://localhost:5000', // Backend self-origin for email action forms
-    'http://127.0.0.1:8081',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5000', // Backend self-origin for email action forms
-    'http://192.168.0.103:8081',
-    'http://192.168.0.103:5173',
-    'http://192.168.0.103:8082',
-    'http://192.168.0.103:3000',
-    // Production
-    'https://qrnnect.com',
-    'http://qrnnect.com',
-    'https://www.qrnnect.com',
+    // Development (only in non-production)
+    ...(process.env.NODE_ENV !== 'production' ? [
+      'http://localhost:8081',
+      'http://localhost:5173',
+      'http://localhost:8082',
+      'http://localhost:3000',
+      'http://localhost:5000',
+      'http://127.0.0.1:8081',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:5000',
+      ...(process.env.DEV_ORIGINS ? process.env.DEV_ORIGINS.split(',') : [])
+    ] : []),
+    // CORS origins from environment variable
+    ...corsOrigins,
     // Production backend self-origin
-    process.env.BACKEND_URL
+    process.env.BACKEND_URL,
+    process.env.FRONTEND_URL
   ].filter(Boolean);
 
   if (allowedOrigins.includes(origin)) {
@@ -217,14 +231,20 @@ app.use('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:8081'}`);
-  console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:8081'}`);
+    console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+  } else {
+    console.log(`🚀 Server running on port ${PORT} (Production)`);
+  }
 
   // Start appointment scheduler
   try {
     appointmentScheduler.start();
-    console.log('📅 Otomatik randevu kontrol servisi başlatıldı');
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📅 Otomatik randevu kontrol servisi başlatıldı');
+    }
   } catch (error) {
     console.error('❌ Otomatik randevu kontrol servisi başlatılamadı:', error);
   }

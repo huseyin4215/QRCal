@@ -13,8 +13,30 @@ const router = express.Router();
 
 // CORS middleware for Google OAuth
 router.use((req, res, next) => {
-  // Allow both old and new frontend ports
-  const allowedOrigins = ['http://localhost:5173', 'http://localhost:8081'];
+  // Parse CORS_ORIGIN from environment variable (comma-separated)
+  const corsOrigins = process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+    : [];
+  
+  // Build allowed origins list
+  const allowedOrigins = [
+    // Development origins
+    ...(process.env.NODE_ENV !== 'production' ? [
+      'http://localhost:5173',
+      'http://localhost:8081',
+      'http://localhost:8082',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:8081'
+    ] : []),
+    // CORS origins from environment variable
+    ...corsOrigins,
+    // Production domains
+    process.env.FRONTEND_URL,
+    'https://qrnnect.com',
+    'http://qrnnect.com'
+  ].filter(Boolean);
+  
   const origin = req.headers.origin;
   
   if (allowedOrigins.includes(origin)) {

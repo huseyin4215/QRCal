@@ -423,7 +423,6 @@ const AdminDashboard = () => {
     if (Notification.permission === 'default') {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        console.log('Notification permission granted');
       }
     }
   };
@@ -432,7 +431,6 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
 
-      console.log('AdminDashboard: Loading dashboard data...');
 
       // Request notification permission
       await requestNotificationPermission();
@@ -446,9 +444,6 @@ const AdminDashboard = () => {
         apiService.get('/topics')
       ]);
 
-      console.log('AdminDashboard: Users response:', usersResponse);
-      console.log('AdminDashboard: Appointments response:', appointmentsResponse);
-      console.log('AdminDashboard: Stats response:', statsResponse);
       console.log('AdminDashboard: Departments response:', departmentsResponse);
       console.log('AdminDashboard: Topics response:', topicsResponse);
 

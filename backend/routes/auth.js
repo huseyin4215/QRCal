@@ -19,7 +19,6 @@ const oauth2Client = new google.auth.OAuth2(
 
 // Generate JWT token
 const generateToken = (id) => {
-  console.log('Generating token for user ID:', id);
   return jwt.sign({ id }, process.env.JWT_SECRET || 'qrcal-super-secret-jwt-key-2024-change-this-in-production', {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
@@ -115,8 +114,6 @@ router.post('/register', asyncHandler(async (req, res) => {
 router.post('/login', asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
-  console.log('Login - Request received:', { email, hasPassword: !!password });
-
   // Validation
   if (!email || !password) {
     return res.status(400).json({
@@ -129,26 +126,16 @@ router.post('/login', asyncHandler(async (req, res) => {
   const user = await User.findOne({ email: email.toLowerCase() });
 
   if (!user) {
-    console.log('Login - User not found:', email);
     return res.status(401).json({
       success: false,
       message: 'Geçersiz e-posta veya şifre'
     });
   }
 
-  console.log('Login - User found:', {
-    userId: user._id,
-    email: user.email,
-    role: user.role,
-    isFirstLogin: user.isFirstLogin
-  });
-
   // Check password
   const isPasswordValid = await user.comparePassword(password);
-  console.log('Login - Password valid:', isPasswordValid);
 
   if (!isPasswordValid) {
-    console.log('Login - Invalid password for user:', email);
     return res.status(401).json({
       success: false,
       message: 'Geçersiz e-posta veya şifre'
@@ -162,8 +149,6 @@ router.post('/login', asyncHandler(async (req, res) => {
   // Generate token
   const token = generateToken(user._id);
 
-  console.log('Login successful for user:', user.email, 'Role:', user.role, 'isFirstLogin:', user.isFirstLogin);
-
   const userResponse = {
     id: user._id,
     name: user.name,
@@ -173,8 +158,6 @@ router.post('/login', asyncHandler(async (req, res) => {
     studentNumber: user.studentNumber,
     isFirstLogin: user.isFirstLogin
   };
-
-  console.log('Login response user data:', userResponse);
 
   res.json({
     success: true,
@@ -748,17 +731,14 @@ router.post('/google/register', asyncHandler(async (req, res) => {
 // @route   GET /api/auth/me
 // @access  Private
 router.get('/me', authMiddleware, asyncHandler(async (req, res) => {
-  console.log('getCurrentUser: Request from user:', req.user.email);
-
   const user = await User.findById(req.user.id).select('-password');
 
-  console.log('getCurrentUser: User data retrieved:', {
-    id: user._id,
-    email: user.email,
-    role: user.role,
-    studentNumber: user.studentNumber,
-    isActive: user.isActive
-  });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Kullanıcı bulunamadı'
+    });
+  }
 
   res.json({
     success: true,

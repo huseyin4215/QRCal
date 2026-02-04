@@ -373,7 +373,6 @@ const FacultyDashboard = () => {
   // Auto-load availability data when availability tab is opened
   useEffect(() => {
     if (activeTab === 'availability' && user) {
-      console.log('Availability tab opened, reloading data...');
       loadAvailabilityData();
     }
   }, [activeTab, user]);
@@ -395,11 +394,9 @@ const FacultyDashboard = () => {
 
     if (code) {
       // Handle OAuth 2.0 authorization code
-      console.log('Google OAuth authorization code received');
       handleOAuthCallback(code);
     } else if (token && (googleConnectedParam === 'true' || !googleConnected)) {
       // Handle direct token (e.g., from old flow or other redirects)
-      console.log('Google OAuth callback successful');
 
       // Store token
       localStorage.setItem('token', token);
@@ -430,8 +427,6 @@ const FacultyDashboard = () => {
   // Handle OAuth 2.0 callback
   const handleOAuthCallback = async (code) => {
     try {
-      console.log('Processing OAuth callback with code:', code);
-
       // Call backend to exchange code for tokens
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/google/callback?code=${code}`, {
         method: 'GET',
