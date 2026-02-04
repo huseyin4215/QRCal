@@ -11,28 +11,47 @@ const createTransporter = () => {
     return null;
   }
 
-  return nodemailer.createTransport({
-    service: 'gmail',
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use TLS
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_APP_PASSWORD
-    },
-    tls: {
-      rejectUnauthorized: false,
-      minVersion: 'TLSv1.2'
-    },
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 10,
-    rateDelta: 1000,
-    rateLimit: 5
-  });
+  // Check if using localhost SMTP (Exim4) or external SMTP (Gmail)
+  const isLocalhost = process.env.EMAIL_USER.includes('@qrnnect.com');
+
+  if (isLocalhost) {
+    // Use localhost SMTP (Exim4)
+    return nodemailer.createTransport({
+      host: 'localhost',
+      port: 25,
+      secure: false,
+      tls: {
+        rejectUnauthorized: false
+      },
+      connectionTimeout: 5000,
+      greetingTimeout: 5000,
+      socketTimeout: 10000
+    });
+  } else {
+    // Use external SMTP (Gmail)
+    return nodemailer.createTransport({
+      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // Use TLS
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_APP_PASSWORD
+      },
+      tls: {
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 10,
+      rateDelta: 1000,
+      rateLimit: 5
+    });
+  }
 };
 
 // Send appointment request notification to faculty/admin
