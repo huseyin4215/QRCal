@@ -413,6 +413,9 @@ const StudentDashboard = () => {
       const sortedAppointments = [...appointmentsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setAppointments(sortedAppointments);
 
+      // Refresh AppointmentHistory when appointments are loaded
+      setHistoryRefreshTrigger(prev => prev + 1);
+
       // Calculate stats
       const stats = {
         total: sortedAppointments.length,
