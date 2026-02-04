@@ -17,18 +17,27 @@ async function cleanDuplicateIndexes() {
 
     const db = mongoose.connection.db;
     const usersCollection = db.collection('users');
+    const topicsCollection = db.collection('topics');
 
+    // Check users collection
     console.log('\n📋 Current indexes on users collection:');
-    const indexes = await usersCollection.indexes();
-    indexes.forEach(index => {
+    const usersIndexes = await usersCollection.indexes();
+    usersIndexes.forEach(index => {
       console.log(`  - ${index.name}:`, index.key);
     });
 
-    // List of indexes to drop (duplicate ones)
-    const indexesToDrop = ['name_1'];
+    // Check topics collection
+    console.log('\n📋 Current indexes on topics collection:');
+    const topicsIndexes = await topicsCollection.indexes();
+    topicsIndexes.forEach(index => {
+      console.log(`  - ${index.name}:`, index.key);
+    });
 
-    console.log('\n🗑️  Dropping duplicate indexes...');
-    for (const indexName of indexesToDrop) {
+    // List of indexes to drop from users collection
+    const usersIndexesToDrop = ['name_1'];
+
+    console.log('\n🗑️  Dropping duplicate indexes from users collection...');
+    for (const indexName of usersIndexesToDrop) {
       try {
         await usersCollection.dropIndex(indexName);
         console.log(`  ✅ Dropped index: ${indexName}`);
@@ -41,10 +50,36 @@ async function cleanDuplicateIndexes() {
       }
     }
 
+    // Check if topics has duplicate name index (name_1 exists alongside unique name index)
+    const hasNameIndex = topicsIndexes.some(idx => idx.name === 'name_1' && !idx.unique);
+    if (hasNameIndex) {
+      console.log('\n🗑️  Dropping non-unique name index from topics collection...');
+      try {
+        await topicsCollection.dropIndex('name_1');
+        console.log(`  ✅ Dropped index: name_1`);
+      } catch (error) {
+        if (error.codeName === 'IndexNotFound') {
+          console.log(`  ⚠️  Index not found: name_1`);
+        } else {
+          console.error(`  ❌ Error dropping index name_1:`, error.message);
+        }
+      }
+    } else {
+      console.log('\n✅ Topics collection already has correct indexes (unique name index only)');
+    }
+
+    // Show final state
     console.log('\n📋 Indexes after cleanup:');
-    const updatedIndexes = await usersCollection.indexes();
-    updatedIndexes.forEach(index => {
+    console.log('\nUsers collection:');
+    const updatedUsersIndexes = await usersCollection.indexes();
+    updatedUsersIndexes.forEach(index => {
       console.log(`  - ${index.name}:`, index.key);
+    });
+
+    console.log('\nTopics collection:');
+    const updatedTopicsIndexes = await topicsCollection.indexes();
+    updatedTopicsIndexes.forEach(index => {
+      console.log(`  - ${index.name}:`, index.key, index.unique ? '(unique)' : '');
     });
 
     console.log('\n✅ Index cleanup completed successfully!');
