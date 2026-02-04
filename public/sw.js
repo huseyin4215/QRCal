@@ -3,25 +3,36 @@ const CACHE_NAME = 'qnnect-v1.0.0';
 const STATIC_CACHE = 'qnnect-static-v1.0.0';
 const DYNAMIC_CACHE = 'qnnect-dynamic-v1.0.0';
 
-// Static assets to cache
+// Static assets to cache (only essential files that definitely exist)
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
-  '/manifest.json',
-  '/src/main.jsx',
-  '/src/App.jsx',
-  '/src/index.css',
-  '/src/App.css',
-  '/vite.svg',
-  '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
-  '/icons/icon-128x128.png',
-  '/icons/icon-144x144.png',
-  '/icons/icon-152x152.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png'
+  '/index.html'
 ];
+
+// Helper function to cache assets with error handling
+const cacheAssets = async (cache, assets) => {
+  const results = await Promise.allSettled(
+    assets.map(url => 
+      fetch(url)
+        .then(response => {
+          if (response.ok) {
+            return cache.put(url, response);
+          } else {
+            console.warn(`Failed to fetch ${url}: ${response.status}`);
+            return null;
+          }
+        })
+        .catch(err => {
+          console.warn(`Failed to cache ${url}:`, err.message);
+          return null; // Continue even if one fails
+        })
+    )
+  );
+  
+  const successful = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+  console.log(`Cached ${successful}/${assets.length} assets`);
+  return results;
+};
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
@@ -30,7 +41,7 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        return cacheAssets(cache, STATIC_ASSETS);
       })
       .then(() => {
         console.log('Static assets cached successfully');
@@ -38,6 +49,8 @@ self.addEventListener('install', (event) => {
       })
       .catch((error) => {
         console.error('Failed to cache static assets:', error);
+        // Continue installation even if caching fails
+        return self.skipWaiting();
       })
   );
 });
