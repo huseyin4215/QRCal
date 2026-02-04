@@ -222,12 +222,11 @@ userSchema.virtual('appointmentUrl').get(function () {
 });
 
 // Indexes
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 });
-userSchema.index({ slug: 1 }, { sparse: true });
+// Note: email, googleId, slug, and studentNumber already have unique indexes defined in schema fields
+// Only add indexes for fields that don't have unique: true
 userSchema.index({ role: 1 });
 userSchema.index({ department: 1 });
-userSchema.index({ studentNumber: 1 });
+userSchema.index({ name: 1 }); // For name-based searches
 
 // Pre-save middleware
 userSchema.pre('save', async function (next) {

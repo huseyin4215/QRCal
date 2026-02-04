@@ -11,10 +11,7 @@ import User from './models/User.js';
 const createTestUser = async () => {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/qrcal', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/qrcal');
 
     console.log('✅ MongoDB connected successfully');
 
