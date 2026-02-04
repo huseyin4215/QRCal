@@ -45,6 +45,10 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { authMiddleware } from './middleware/auth.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Trust proxy - required when behind reverse proxy (nginx)
+app.set('trust proxy', true);
+
 // Security middleware (configure for cross-origin API usage in dev)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
