@@ -428,6 +428,17 @@ const AdminDashboard = () => {
     }
   };
 
+  // Lightweight function to refresh only users list
+  const refreshUsersList = async () => {
+    try {
+      const usersResponse = await apiService.getAllUsers();
+      const allUsers = usersResponse.data?.users || [];
+      setUsers(allUsers);
+    } catch (error) {
+      console.error('Error refreshing users list:', error);
+    }
+  };
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
@@ -576,9 +587,25 @@ const AdminDashboard = () => {
 
     try {
       await apiService.deleteUser(userToDelete._id);
-      // Kullanıcı listesini yenile
+      
+      // Kullanıcı listesini yenile - hem local state hem de server'dan
       const updatedUsers = users.filter(user => user._id !== userToDelete._id);
       setUsers(updatedUsers);
+      
+      // Server'dan güncel verileri yükle (sadece kullanıcı listesi ve istatistikler)
+      try {
+        await Promise.all([
+          refreshUsersList(),
+          apiService.getSystemStats().then(statsResponse => {
+            const allStats = statsResponse.data || {};
+            setStats(allStats);
+          })
+        ]);
+      } catch (reloadError) {
+        console.error('Error reloading data:', reloadError);
+        // Hata olsa bile devam et
+      }
+      
       setShowDeleteConfirmModal(false);
       setUserToDelete(null);
     } catch (error) {
@@ -1211,6 +1238,15 @@ const AdminDashboard = () => {
         setSystemAppointments(sortedOthers);
         setAdminAppointments(sortedOwn);
 
+        // İstatistikleri de yenile
+        try {
+          const statsResponse = await apiService.getSystemStats();
+          const allStats = statsResponse.data || {};
+          setStats(allStats);
+        } catch (statsError) {
+          console.error('Error refreshing stats:', statsError);
+        }
+
         // Show success notification
         const actionText = action === 'approved' ? 'onaylandı' : action === 'rejected' ? 'reddedildi' : 'iptal edildi';
         showActionNotification(`Randevu başarıyla ${actionText}!`);
@@ -1466,8 +1502,23 @@ const AdminDashboard = () => {
           office: ''
         });
 
-        // Kullanıcı listesini yenile
-        loadDashboardData();
+        // Kullanıcı listesini ve istatistikleri yenile (await ile bekle)
+        try {
+          // Sadece kullanıcı listesini ve istatistikleri yenile (daha hızlı)
+          await Promise.all([
+            refreshUsersList(),
+            apiService.getSystemStats().then(statsResponse => {
+              const allStats = statsResponse.data || {};
+              setStats(allStats);
+            })
+          ]);
+        } catch (reloadError) {
+          console.error('Error reloading data:', reloadError);
+          // Hata olsa bile devam et
+        }
+
+        // Loading state'i kapat
+        setFacultyLoading(false);
 
         // Modal'ı 2 saniye sonra kapat
         setTimeout(() => {
@@ -1479,7 +1530,6 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Faculty update error:', error);
       setFacultyError(error.message || 'Öğretim üyesi güncellenirken hata oluştu');
-    } finally {
       setFacultyLoading(false);
     }
   };
