@@ -212,7 +212,9 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (user) {
       // Check if admin needs to complete first login setup
-      if (user.role === 'admin' && (user.isFirstLogin || !user.title || !user.department)) {
+      // Only show first login modal if isFirstLogin is true AND title/department is missing
+      // This prevents showing the modal when user already completed first login via /change-password
+      if (user.role === 'admin' && user.isFirstLogin === true && (!user.title || !user.department)) {
         // Load departments first for the first login modal
         const loadDepartmentsForFirstLogin = async () => {
           try {
@@ -638,10 +640,10 @@ const AdminDashboard = () => {
 
       const response = await apiService.createFaculty(facultyData);
 
-      console.log('Faculty creation response:', response);
+      // Loading state'i hemen kapat
+      setFacultyLoading(false);
 
       if (response && response.success) {
-        console.log('Temp password from response:', response.data.tempPassword);
         setFacultySuccess(`Öğretim üyesi başarıyla oluşturuldu!\n\nGeçici şifre: ${response.data.tempPassword}\n\nÖğretim üyesi ilk girişte bu şifreyi kullanarak giriş yapmalı ve şifresini değiştirmelidir.`);
 
         // Form'u temizle
@@ -654,33 +656,18 @@ const AdminDashboard = () => {
           office: ''
         });
 
-        // Kullanıcı listesini ve istatistikleri hızlıca yenile
-        try {
-          await Promise.all([
-            refreshUsersList(),
-            apiService.getSystemStats().then(statsResponse => {
-              const allStats = statsResponse.data || {};
-              setStats(allStats);
-            })
-          ]);
-        } catch (reloadError) {
-          console.error('Error reloading data:', reloadError);
-          // Hata olsa bile devam et
-        }
+        // Kullanıcı listesini ve istatistikleri arka planda yenile (beklemeden)
+        refreshUsersList().catch(err => console.error('Error refreshing users:', err));
+        apiService.getSystemStats().then(statsResponse => {
+          const allStats = statsResponse.data || {};
+          setStats(allStats);
+        }).catch(err => console.error('Error refreshing stats:', err));
 
-        // Loading state'i kapat
-        setFacultyLoading(false);
-
-        // Modal'ı 3 saniye sonra kapat
-        setTimeout(() => {
-          setShowAddUserModal(false);
-          setFacultySuccess('');
-        }, 3000);
+        // Modal otomatik kapanmasın - kullanıcı kendisi kapatsın
       } else {
         // Response başarısız olduğunda
         const errorMessage = response?.message || 'Öğretim üyesi oluşturulurken hata oluştu';
         setFacultyError(errorMessage);
-        setFacultyLoading(false);
       }
     } catch (error) {
       console.error('Faculty creation error:', error);
@@ -1070,15 +1057,12 @@ const AdminDashboard = () => {
         const updatedUser = { ...user, title: firstLoginData.title, department: firstLoginData.department };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
-        // Close first login modal and open password change modal
+        // Close first login modal
         setShowFirstLoginModal(false);
-        setShowPasswordModal(true);
         
-        // Load dashboard data after profile update
-        loadDashboardData();
-        loadFacultyData();
-        loadNotificationsFromStorage();
-        startRealTimeUpdates();
+        // Redirect to change password page instead of showing modal
+        // This prevents duplicate password modals
+        navigate('/change-password');
       }
     } catch (error) {
       console.error('First login setup error:', error);
@@ -1234,31 +1218,11 @@ const AdminDashboard = () => {
         response = await apiService.updateAppointment(appointmentId, { status: action });
       }
 
+      // Loading state'i hemen kapat - kullanıcı bekletilmesin
+      setAppointmentActionLoading(null);
+
       if (response.success) {
-        // Reload appointments and re-separate lists
-        const allAppointmentsResponse = await apiService.getAllAppointments();
-        const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
-        const ownAppointments = allAppointments.filter(isOwnAppointment);
-        const otherAppointments = allAppointments.filter(a => !isOwnAppointment(a));
-
-        const sortedAllAppointments = [...allAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        const sortedOwn = [...ownAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        const sortedOthers = [...otherAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        setAppointments(sortedAllAppointments);
-        setSystemAppointments(sortedOthers);
-        setAdminAppointments(sortedOwn);
-
-        // İstatistikleri de yenile
-        try {
-          const statsResponse = await apiService.getSystemStats();
-          const allStats = statsResponse.data || {};
-          setStats(allStats);
-        } catch (statsError) {
-          console.error('Error refreshing stats:', statsError);
-        }
-
-        // Show success notification
+        // Show success notification immediately
         const actionText = action === 'approved' ? 'onaylandı' : action === 'rejected' ? 'reddedildi' : 'iptal edildi';
         showActionNotification(`Randevu başarıyla ${actionText}!`);
         
@@ -1267,11 +1231,31 @@ const AdminDashboard = () => {
           setShowAppointmentDetails(false);
           setSelectedAppointment(null);
         }
+
+        // Reload appointments in background (don't await)
+        apiService.getAllAppointments().then(allAppointmentsResponse => {
+          const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
+          const ownAppointments = allAppointments.filter(isOwnAppointment);
+          const otherAppointments = allAppointments.filter(a => !isOwnAppointment(a));
+
+          const sortedAllAppointments = [...allAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          const sortedOwn = [...ownAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          const sortedOthers = [...otherAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+          setAppointments(sortedAllAppointments);
+          setSystemAppointments(sortedOthers);
+          setAdminAppointments(sortedOwn);
+        }).catch(err => console.error('Error refreshing appointments:', err));
+
+        // Refresh stats in background
+        apiService.getSystemStats().then(statsResponse => {
+          const allStats = statsResponse.data || {};
+          setStats(allStats);
+        }).catch(err => console.error('Error refreshing stats:', err));
       }
     } catch (error) {
       console.error('Appointment action error:', error);
       alert('İşlem sırasında hata oluştu: ' + error.message);
-    } finally {
       setAppointmentActionLoading(null);
     }
   };
@@ -1517,6 +1501,9 @@ const AdminDashboard = () => {
     try {
       const response = await apiService.updateUser(editingUser._id, newFaculty);
 
+      // Loading state'i hemen kapat
+      setFacultyLoading(false);
+
       if (response && response.success) {
         setFacultySuccess('Öğretim üyesi başarıyla güncellendi!');
 
@@ -1530,35 +1517,18 @@ const AdminDashboard = () => {
           office: ''
         });
 
-        // Kullanıcı listesini ve istatistikleri yenile (await ile bekle)
-        try {
-          // Sadece kullanıcı listesini ve istatistikleri yenile (daha hızlı)
-          await Promise.all([
-            refreshUsersList(),
-            apiService.getSystemStats().then(statsResponse => {
-              const allStats = statsResponse.data || {};
-              setStats(allStats);
-            })
-          ]);
-        } catch (reloadError) {
-          console.error('Error reloading data:', reloadError);
-          // Hata olsa bile devam et
-        }
+        // Kullanıcı listesini ve istatistikleri arka planda yenile (beklemeden)
+        refreshUsersList().catch(err => console.error('Error refreshing users:', err));
+        apiService.getSystemStats().then(statsResponse => {
+          const allStats = statsResponse.data || {};
+          setStats(allStats);
+        }).catch(err => console.error('Error refreshing stats:', err));
 
-        // Loading state'i kapat
-        setFacultyLoading(false);
-
-        // Modal'ı 2 saniye sonra kapat
-        setTimeout(() => {
-          setShowAddUserModal(false);
-          setFacultySuccess('');
-          setEditingUser(null);
-        }, 2000);
+        // Modal otomatik kapanmasın - kullanıcı kendisi kapatsın
       } else {
         // Response başarısız olduğunda
         const errorMessage = response?.message || 'Öğretim üyesi güncellenirken hata oluştu';
         setFacultyError(errorMessage);
-        setFacultyLoading(false);
       }
     } catch (error) {
       console.error('Faculty update error:', error);

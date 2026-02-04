@@ -1,4 +1,4 @@
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import styles from './FacultyAddModal.module.css';
 
 export default function FacultyAddModal({
@@ -16,6 +16,33 @@ export default function FacultyAddModal({
 }) {
   if (!isOpen) return null;
 
+  // Başarılı işlem sonrası başarı mesajı ve kapatma butonu göster
+  if (success) {
+    return (
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div className="relative top-20 mx-auto p-6 border w-full max-w-md shadow-lg rounded-md bg-white">
+          <div className="text-center">
+            <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              {isEditMode ? 'Güncelleme Başarılı!' : 'Öğretim Üyesi Oluşturuldu!'}
+            </h3>
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md mb-4">
+              <div className="text-sm text-green-700 whitespace-pre-line text-left">
+                {success}
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
@@ -24,7 +51,7 @@ export default function FacultyAddModal({
             <h3 className="text-lg font-medium text-gray-900">
               {isEditMode ? 'Öğretim Üyesi Düzenle' : 'Yeni Öğretim Üyesi Ekle'}
             </h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600" disabled={loading}>
               <XMarkIcon className="w-6 h-6" />
             </button>
           </div>
@@ -32,14 +59,6 @@ export default function FacultyAddModal({
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
-              <div className="text-sm text-green-700 whitespace-pre-line">
-                {success}
-              </div>
             </div>
           )}
 

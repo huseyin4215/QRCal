@@ -962,28 +962,29 @@ Hata detayı: ${error.message}
         response = await apiService.updateAppointment(appointmentId, { status: action });
       }
 
-      if (response.success) {
-        // Reload appointments only (faster)
-        const updatedResponse = await apiService.getFacultyAppointments();
-        const updatedAppointments = updatedResponse.data?.appointments || updatedResponse.data || [];
+      // Loading state'i hemen kapat - kullanıcı bekletilmesin
+      setAppointmentActionLoading(null);
 
-        // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
-        const sortedUpdatedAppointments = [...updatedAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setAppointments(sortedUpdatedAppointments);
-        
-        // Always refresh AppointmentHistory (even if not on history tab, it will refresh when tab is opened)
-        setHistoryRefreshTrigger(prev => prev + 1);
-        
+      if (response.success) {
         // Close appointment details modal if open
         if (showAppointmentDetails && selectedAppointment?._id === appointmentId) {
           setShowAppointmentDetails(false);
           setSelectedAppointment(null);
         }
+
+        // Reload appointments in background (don't await)
+        apiService.getFacultyAppointments().then(updatedResponse => {
+          const updatedAppointments = updatedResponse.data?.appointments || updatedResponse.data || [];
+          const sortedUpdatedAppointments = [...updatedAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setAppointments(sortedUpdatedAppointments);
+          
+          // Refresh AppointmentHistory
+          setHistoryRefreshTrigger(prev => prev + 1);
+        }).catch(err => console.error('Error refreshing appointments:', err));
       }
     } catch (error) {
       console.error('Appointment action error:', error);
       alert('İşlem sırasında hata oluştu: ' + error.message);
-    } finally {
       setAppointmentActionLoading(null);
     }
   };
