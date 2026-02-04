@@ -1,5 +1,5 @@
 import React from 'react';
-import { HeartIcon, AcademicCapIcon, QrCodeIcon, EnvelopeIcon, PhoneIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { HeartIcon, AcademicCapIcon, QrCodeIcon, EnvelopeIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import styles from './Footer.module.css';
 
 const Footer = () => {
@@ -70,10 +70,6 @@ const Footer = () => {
               <div className={styles.contactItem}>
                 <EnvelopeIcon className={styles.contactIcon} />
                 <span>infoqrcal@gmail.com</span>
-              </div>
-              <div className={styles.contactItem}>
-                <PhoneIcon className={styles.contactIcon} />
-                <span>+90 (212) 555 0123</span>
               </div>
               <div className={styles.contactItem}>
                 <MapPinIcon className={styles.contactIcon} />

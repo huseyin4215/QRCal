@@ -45,7 +45,6 @@ const PrivacyPolicy = () => {
                 </h3>
                 <ul className="policy-feature-list">
                   <li>Ad, soyad ve e-posta adresi</li>
-                  <li>Telefon numarası (isteğe bağlı)</li>
                   <li>Kullanıcı rolü (öğrenci, öğretim elemanı, admin)</li>
                   <li>Profil fotoğrafı (isteğe bağlı)</li>
                 </ul>
@@ -226,10 +225,6 @@ const PrivacyPolicy = () => {
               <div className="policy-contact-item">
                 <span className="policy-contact-label">E-posta</span>
                 <span className="policy-contact-value">infoqrcal@gmail.com</span>
-              </div>
-              <div className="policy-contact-item">
-                <span className="policy-contact-label">Telefon</span>
-                <span className="policy-contact-value">+90 (212) 555 0123</span>
               </div>
               <div className="policy-contact-item">
                 <span className="policy-contact-label">Adres</span>

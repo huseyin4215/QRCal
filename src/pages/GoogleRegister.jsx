@@ -12,6 +12,8 @@ const GoogleRegister = () => {
   const [studentNumber, setStudentNumber] = useState('');
   const [department, setDepartment] = useState('');
   const [name, setName] = useState('');
+  const [advisor, setAdvisor] = useState('');
+  const [facultyList, setFacultyList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -32,6 +34,7 @@ const GoogleRegister = () => {
   useEffect(() => {
     const loadInfo = async () => {
       try {
+        // Fetch Google register info
         const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google/register-info?token=${encodeURIComponent(token)}`);
         const data = await res.json();
         if (data?.success) {
@@ -39,6 +42,12 @@ const GoogleRegister = () => {
           setName(data.data.name || '');
         } else {
           setError(data?.message || 'Kayıt bilgileri alınamadı');
+        }
+
+        // Fetch faculty list
+        const facultyResponse = await apiService.get('/auth/faculty');
+        if (facultyResponse.success && facultyResponse.data) {
+          setFacultyList(facultyResponse.data);
         }
       } catch (e) {
         setError(e.message || 'Kayıt bilgileri alınamadı');
@@ -51,8 +60,8 @@ const GoogleRegister = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!studentNumber || !department) {
-      setError('Öğrenci numarası ve bölüm zorunludur');
+    if (!studentNumber || !department || !advisor) {
+      setError('Öğrenci numarası, bölüm ve danışman zorunludur');
       return;
     }
     setLoading(true);
@@ -60,7 +69,7 @@ const GoogleRegister = () => {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/google/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, studentNumber, department, name })
+        body: JSON.stringify({ token, studentNumber, department, name, advisor })
       });
       const data = await res.json();
       if (data?.success) {
@@ -176,6 +185,39 @@ const GoogleRegister = () => {
                 ))}
               </select>
               <BuildingOfficeIcon className={styles.inputIcon} />
+            </div>
+          </div>
+
+          {/* Advisor Field - Required */}
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Danışman *</label>
+            <div className={styles.inputWrapper}>
+              <select
+                value={advisor}
+                onChange={(e) => setAdvisor(e.target.value)}
+                required
+                className={`${styles.input} ${styles.select}`}
+              >
+                <option value="">Danışman seçiniz</option>
+                {Object.entries(
+                  facultyList.reduce((acc, faculty) => {
+                    const dept = faculty.department || 'Diğer';
+                    if (!acc[dept]) acc[dept] = [];
+                    acc[dept].push(faculty);
+                    return acc;
+                  }, {})
+                ).flatMap(([department, members]) => [
+                  <option key={`header-${department}`} disabled style={{ fontWeight: 'bold', color: '#000' }}>
+                    {department}
+                  </option>,
+                  ...members.map((faculty) => (
+                    <option key={faculty._id} value={faculty._id}>
+                      {faculty.title ? `${faculty.title} ` : ''}{faculty.name}
+                    </option>
+                  ))
+                ])}
+              </select>
+              <UserIcon className={styles.inputIcon} />
             </div>
           </div>
 

@@ -29,7 +29,7 @@ const generateToken = (id) => {
 // @route   POST /api/auth/register
 // @access  Public
 router.post('/register', asyncHandler(async (req, res) => {
-  const { name, email, password, studentNumber, department } = req.body;
+  const { name, email, password, studentNumber, department, advisor } = req.body;
 
   // Validation
   if (!name || !email || !password || !studentNumber || !department) {
@@ -39,15 +39,40 @@ router.post('/register', asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user already exists
-  const existingUser = await User.findOne({
-    $or: [{ email: email.toLowerCase() }, { studentNumber }]
-  });
-
-  if (existingUser) {
+  // Validate student number format (8 digits)
+  if (!/^\d{8}$/.test(studentNumber)) {
     return res.status(400).json({
       success: false,
-      message: 'Bu e-posta adresi veya öğrenci numarası zaten kullanılıyor'
+      message: 'Öğrenci numarası tam olarak 8 haneli olmalıdır'
+    });
+  }
+
+  // Validate advisor if provided
+  if (advisor) {
+    const advisorUser = await User.findById(advisor);
+    if (!advisorUser || advisorUser.role !== 'faculty') {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçersiz danışman seçimi'
+      });
+    }
+  }
+
+  // Check if email already exists
+  const existingEmail = await User.findOne({ email: email.toLowerCase() });
+  if (existingEmail) {
+    return res.status(400).json({
+      success: false,
+      message: 'Bu e-posta adresi zaten kullanılıyor'
+    });
+  }
+
+  // Check if student number already exists
+  const existingStudentNumber = await User.findOne({ studentNumber });
+  if (existingStudentNumber) {
+    return res.status(400).json({
+      success: false,
+      message: 'Bu öğrenci numarası zaten kullanılıyor'
     });
   }
 
@@ -58,7 +83,8 @@ router.post('/register', asyncHandler(async (req, res) => {
     password,
     studentNumber,
     department,
-    role: 'student'
+    role: 'student',
+    advisor: advisor || null
   });
 
   await user.save();
@@ -110,11 +136,11 @@ router.post('/login', asyncHandler(async (req, res) => {
     });
   }
 
-  console.log('Login - User found:', { 
-    userId: user._id, 
-    email: user.email, 
+  console.log('Login - User found:', {
+    userId: user._id,
+    email: user.email,
     role: user.role,
-    isFirstLogin: user.isFirstLogin 
+    isFirstLogin: user.isFirstLogin
   });
 
   // Check password
@@ -228,29 +254,16 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 router.post('/change-password', authMiddleware, asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  console.log('Change Password - Request received:', { 
-    userId: req.user.id, 
-    hasCurrentPassword: !!currentPassword, 
-    hasNewPassword: !!newPassword 
-  });
-
   if (!currentPassword || !newPassword) {
     res.status(400);
     throw new Error('Mevcut şifre ve yeni şifre gereklidir');
   }
 
   const user = await User.findById(req.user.id);
-  console.log('Change Password - User found:', { 
-    userId: user._id, 
-    email: user.email, 
-    role: user.role,
-    isFirstLogin: user.isFirstLogin 
-  });
 
   // Check current password
   const isMatch = await bcrypt.compare(currentPassword, user.password);
-  console.log('Change Password - Password match:', isMatch);
-  
+
   if (!isMatch) {
     res.status(400);
     throw new Error('Mevcut şifre yanlış');
@@ -259,11 +272,8 @@ router.post('/change-password', authMiddleware, asyncHandler(async (req, res) =>
   // Update user - password will be hashed by pre-save middleware
   user.password = newPassword;
   user.isFirstLogin = false;
-  
+
   await user.save();
-  console.log('Change Password - User saved successfully:', { 
-    isFirstLogin: user.isFirstLogin 
-  });
 
   // Generate new token after password change
   const newToken = generateToken(user._id);
@@ -439,7 +449,7 @@ router.post('/google', asyncHandler(async (req, res) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Client-Data');
-  
+
   const { idToken } = req.body;
 
   if (!idToken) {
@@ -528,7 +538,7 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Client-Data, Sec-Fetch-Mode, Sec-Fetch-Site, Sec-Fetch-Dest');
-  
+
   const { code } = req.query;
 
   if (!code) {
@@ -637,10 +647,15 @@ router.get('/google/register-info', asyncHandler(async (req, res) => {
 // @route   POST /api/auth/google/register
 // @access  Public
 router.post('/google/register', asyncHandler(async (req, res) => {
-  const { token, studentNumber, department, name } = req.body;
+  const { token, studentNumber, department, name, advisor } = req.body;
 
   if (!token || !studentNumber || !department) {
     return res.status(400).json({ success: false, message: 'Token, öğrenci numarası ve bölüm zorunludur' });
+  }
+
+  // Validate student number format (8 digits)
+  if (!/^\d{8}$/.test(studentNumber)) {
+    return res.status(400).json({ success: false, message: 'Öğrenci numarası tam olarak 8 haneli olmalıdır' });
   }
 
   try {
@@ -649,10 +664,24 @@ router.post('/google/register', asyncHandler(async (req, res) => {
       return res.status(400).json({ success: false, message: 'Geçersiz token türü' });
     }
 
-    // Prevent duplicate registration
-    const existing = await User.findOne({ $or: [{ email: payload.email }, { googleId: payload.googleId }, { studentNumber }] });
-    if (existing) {
-      return res.status(409).json({ success: false, message: 'Bu bilgilerle kayıt zaten mevcut' });
+    // Validate advisor if provided
+    if (advisor) {
+      const advisorUser = await User.findById(advisor);
+      if (!advisorUser || advisorUser.role !== 'faculty') {
+        return res.status(400).json({ success: false, message: 'Geçersiz danışman seçimi' });
+      }
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email: payload.email });
+    if (existingEmail) {
+      return res.status(409).json({ success: false, message: 'Bu e-posta adresi zaten kullanılıyor' });
+    }
+
+    // Check if student number already exists
+    const existingStudentNumber = await User.findOne({ studentNumber });
+    if (existingStudentNumber) {
+      return res.status(409).json({ success: false, message: 'Bu öğrenci numarası zaten kullanılıyor' });
     }
 
     // Create student user
@@ -665,7 +694,8 @@ router.post('/google/register', asyncHandler(async (req, res) => {
       role: 'student',
       googleId: payload.googleId,
       picture: payload.picture || null,
-      isFirstLogin: false
+      isFirstLogin: false,
+      advisor: advisor || null
     });
 
     // Store Google tokens if present
@@ -719,9 +749,9 @@ router.post('/google/register', asyncHandler(async (req, res) => {
 // @access  Private
 router.get('/me', authMiddleware, asyncHandler(async (req, res) => {
   console.log('getCurrentUser: Request from user:', req.user.email);
-  
+
   const user = await User.findById(req.user.id).select('-password');
-  
+
   console.log('getCurrentUser: User data retrieved:', {
     id: user._id,
     email: user.email,
@@ -736,24 +766,6 @@ router.get('/me', authMiddleware, asyncHandler(async (req, res) => {
   });
 }));
 
-// @desc    Test admin user
-// @route   GET /api/auth/test-admin
-// @access  Public
-router.get('/test-admin', asyncHandler(async (req, res) => {
-  const adminUser = await User.findOne({ role: 'admin' }).select('-password');
-  
-  if (!adminUser) {
-    return res.status(404).json({
-      success: false,
-      message: 'Admin kullanıcısı bulunamadı'
-    });
-  }
-
-  res.json({
-    success: true,
-    data: adminUser
-  });
-}));
 
 // @desc    Logout user
 // @route   POST /api/auth/logout
@@ -804,6 +816,22 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       message: 'Geçersiz token'
     });
   }
+}));
+
+// @desc    Get faculty list (public endpoint for registration)
+// @route   GET /api/auth/faculty
+// @access  Public
+router.get('/faculty', asyncHandler(async (req, res) => {
+  const faculty = await User.find({
+    $or: [{ role: 'faculty' }, { role: 'admin' }]
+  })
+    .select('name email department title')
+    .sort({ name: 1 });
+
+  res.json({
+    success: true,
+    data: faculty
+  });
 }));
 
 export default router; 

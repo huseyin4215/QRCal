@@ -18,7 +18,7 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: function() {
+    required: function () {
       // Şifre sadece öğrenci ve admin için zorunlu
       return this.role === 'student' || this.role === 'admin';
     },
@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
   },
   studentNumber: {
     type: String,
-    required: function() {
+    required: function () {
       return this.role === 'student';
     },
     unique: true,
@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true,
-    required: function() {
+    required: function () {
       return this.role === 'faculty' || this.role === 'admin';
     }
   },
@@ -127,8 +127,7 @@ const userSchema = new mongoose.Schema({
   slotDuration: {
     type: Number,
     default: 15,
-    min: [10, 'Slot süresi en az 10 dakika olmalıdır'],
-    max: [20, 'Slot süresi en fazla 20 dakika olmalıdır']
+    min: [15, 'Slot süresi minimum 15 dakika olmalıdır']
   },
   isActive: {
     type: Boolean,
@@ -171,6 +170,40 @@ const userSchema = new mongoose.Schema({
         default: true
       }
     }
+  },
+  // Student-specific: Academic advisor assignment
+  advisor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+    default: null,
+    validate: {
+      validator: async function (v) {
+        // Only validate if advisor is set
+        if (!v) return true;
+
+        // Only students can have advisors
+        if (this.role !== 'student') return false;
+
+        // Advisor must be a faculty member
+        const advisor = await mongoose.model('User').findById(v);
+        return advisor && advisor.role === 'faculty';
+      },
+      message: 'Danışman bir öğretim üyesi olmalıdır'
+    }
+  },
+  // Email verification for email changes
+  emailVerificationCode: {
+    type: String,
+    default: null
+  },
+  emailVerificationExpiry: {
+    type: Date,
+    default: null
+  },
+  pendingEmail: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true,
@@ -179,12 +212,12 @@ const userSchema = new mongoose.Schema({
 });
 
 // Virtual for full name
-userSchema.virtual('fullName').get(function() {
+userSchema.virtual('fullName').get(function () {
   return `${this.title} ${this.name}`;
 });
 
 // Virtual for appointment URL
-userSchema.virtual('appointmentUrl').get(function() {
+userSchema.virtual('appointmentUrl').get(function () {
   return `${process.env.FRONTEND_URL}/appointment/${this.slug}`;
 });
 
@@ -197,7 +230,7 @@ userSchema.index({ department: 1 });
 userSchema.index({ studentNumber: 1 });
 
 // Pre-save middleware
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   // Generate slug if not exists (only for faculty and admin)
   if ((this.role === 'faculty' || this.role === 'admin') && (!this.slug || this.isModified('name'))) {
     try {
@@ -206,17 +239,17 @@ userSchema.pre('save', async function(next) {
       console.error('Error generating slug:', error);
     }
   }
-  
+
   // Hash password if modified
   if (this.isModified('password') && this.password) {
     this.password = await bcrypt.hash(this.password, 12);
   }
-  
+
   next();
 });
 
 // Instance methods
-userSchema.methods.generateSlug = function() {
+userSchema.methods.generateSlug = function () {
   const transliterate = (input) => {
     // Normalize and map Turkish characters to ASCII equivalents
     const map = {
@@ -238,25 +271,25 @@ userSchema.methods.generateSlug = function() {
   return asciiName || `user-${this._id?.toString().slice(-6)}`;
 };
 
-userSchema.methods.generateUniqueSlug = async function() {
+userSchema.methods.generateUniqueSlug = async function () {
   let baseSlug = this.generateSlug();
   let slug = baseSlug;
   let counter = 1;
-  
+
   // Check if slug already exists and generate a unique one
   while (await this.constructor.findOne({ slug, _id: { $ne: this._id } })) {
     slug = `${baseSlug}-${counter}`;
     counter++;
   }
-  
+
   return slug;
 };
 
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-userSchema.methods.toPublicJSON = function() {
+userSchema.methods.toPublicJSON = function () {
   const user = this.toObject();
   delete user.password;
   delete user.googleId;
@@ -265,19 +298,19 @@ userSchema.methods.toPublicJSON = function() {
 };
 
 // Static methods
-userSchema.statics.findBySlug = function(slug) {
+userSchema.statics.findBySlug = function (slug) {
   return this.findOne({ slug, isActive: true });
 };
 
-userSchema.statics.findByEmail = function(email) {
+userSchema.statics.findByEmail = function (email) {
   return this.findOne({ email: email.toLowerCase() });
 };
 
-userSchema.statics.findByGoogleId = function(googleId) {
+userSchema.statics.findByGoogleId = function (googleId) {
   return this.findOne({ googleId });
 };
 
-userSchema.statics.findByStudentNumber = function(studentNumber) {
+userSchema.statics.findByStudentNumber = function (studentNumber) {
   return this.findOne({ studentNumber });
 };
 

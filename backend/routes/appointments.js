@@ -5,6 +5,7 @@ import Appointment from '../models/Appointment.js';
 import AppointmentSlot from '../models/AppointmentSlot.js';
 import Geofence from '../models/Geofence.js';
 import Notification from '../models/Notification.js';
+import Topic from '../models/Topic.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { optionalAuth, authMiddleware } from '../middleware/auth.js';
 import { sendAppointmentRequestEmail } from '../services/emailService.js';
@@ -31,11 +32,11 @@ const updateAvailabilityFromGoogleCalendar = async (faculty, targetDate) => {
     });
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-    
+
     // Get events for the target date
     const startOfDay = new Date(targetDate);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -48,18 +49,18 @@ const updateAvailabilityFromGoogleCalendar = async (faculty, targetDate) => {
     });
 
     const events = response.data.items || [];
-    
+
     if (events.length > 0) {
       // Update faculty availability for this date
       const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
       const existingAvailability = faculty.availability.find(a => a.day === dayName);
-      
+
       if (existingAvailability) {
         // Add busy times to availability
         const busySlots = events.map(event => {
           const start = new Date(event.start.dateTime || event.start.date);
           const end = new Date(event.end.dateTime || event.end.date);
-          
+
           return {
             start: start.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
             end: end.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
@@ -111,7 +112,7 @@ router.get('/faculty/:slug', asyncHandler(async (req, res) => {
 // @access  Private (Student)
 router.get('/student', authMiddleware, asyncHandler(async (req, res) => {
   const { user } = req;
-  
+
   if (!user || user.role !== 'student') {
     return res.status(403).json({
       success: false,
@@ -131,7 +132,7 @@ router.get('/student', authMiddleware, asyncHandler(async (req, res) => {
 // @route   GET /api/appointments/faculty-list
 // @access  Public
 router.get('/faculty-list', asyncHandler(async (req, res) => {
-  const faculty = await User.find({ 
+  const faculty = await User.find({
     $or: [
       { role: 'faculty', isActive: true },
       { role: 'admin', isActive: true, slug: { $exists: true, $ne: null } }
@@ -182,14 +183,36 @@ router.get('/faculty/:slug/slots', asyncHandler(async (req, res) => {
   // Get existing slots from database
   let slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
 
-  // If no slots exist for this date, generate them
-  if (slots.length === 0) {
-    const generatedSlots = await AppointmentSlot.generateSlotsForDate(faculty._id, targetDate, faculty.availability);
-    
-    if (generatedSlots.length > 0) {
-      await AppointmentSlot.insertMany(generatedSlots);
-      slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
-    }
+  // Generate slots based on current availability
+  const generatedSlots = await AppointmentSlot.generateSlotsForDate(faculty._id, targetDate, faculty.availability);
+
+  // Find existing slot times for comparison
+  const existingSlotTimes = new Set(slots.map(s => s.startTime));
+
+  // Filter out slots that already exist
+  const newSlots = generatedSlots.filter(slot => !existingSlotTimes.has(slot.startTime));
+
+  // Insert new slots if any
+  if (newSlots.length > 0) {
+    await AppointmentSlot.insertMany(newSlots);
+    // Refresh slots list
+    slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
+  }
+
+  // Also check if any existing available slots should be removed (no longer in availability)
+  const generatedSlotTimes = new Set(generatedSlots.map(s => s.startTime));
+  const slotsToRemove = slots.filter(s => 
+    s.status === 'available' && 
+    !s.isBooked && 
+    !generatedSlotTimes.has(s.startTime)
+  );
+
+  if (slotsToRemove.length > 0) {
+    await AppointmentSlot.deleteMany({
+      _id: { $in: slotsToRemove.map(s => s._id) }
+    });
+    // Refresh slots list
+    slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
   }
 
   // Format slots for response
@@ -215,15 +238,9 @@ router.post('/', [
   body('studentName').trim().isLength({ min: 2, max: 100 }).withMessage('Öğrenci adı 2-100 karakter arasında olmalıdır'),
   body('studentId').trim().isLength({ min: 1, max: 20 }).withMessage('Öğrenci numarası 1-20 karakter arasında olmalıdır'),
   body('studentEmail').isEmail().withMessage('Geçerli bir e-posta adresi giriniz'),
-  body('topic').isIn([
-    'Staj görüşmesi',
-    'Ders destek talebi',
-    'Bitirme projesi danışmanlığı',
-    'Kariyer gelişimi/mentorluk',
-    'Akademik danışmanlık',
-    'Ders değerlendirme görüşmesi'
-  ]).withMessage('Geçerli bir görüşme konusu seçiniz'),
+  body('topic').isMongoId().withMessage('Geçerli bir görüşme konusu seçiniz'),
   body('description').optional().trim().isLength({ max: 500 }).withMessage('Açıklama 500 karakterden uzun olamaz'),
+  body('advisorOnlyWarning').optional().isBoolean().withMessage('Geçersiz uyarı değeri'),
   body('facultyId').isMongoId().withMessage('Geçerli bir öğretim elemanı seçiniz'),
   body('date').isISO8601().withMessage('Geçerli bir tarih giriniz'),
   body('startTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Geçerli bir başlangıç saati giriniz'),
@@ -255,7 +272,8 @@ router.post('/', [
     startTime,
     endTime,
     duration,
-    location
+    location,
+    advisorOnlyWarning
   } = req.body;
 
   // Check if faculty exists
@@ -267,6 +285,16 @@ router.post('/', [
     });
   }
 
+  // Check if topic exists and get topic name
+  const topicDoc = await Topic.findById(topic);
+  if (!topicDoc) {
+    return res.status(404).json({
+      success: false,
+      message: 'Geçerli bir görüşme konusu seçiniz'
+    });
+  }
+  const topicName = topicDoc.name;
+
   // Location verification and requirement when geofences exist
   {
     try {
@@ -277,66 +305,65 @@ router.post('/', [
       });
 
       if (geofences.length > 0) {
-        // Require location when geofences exist
-        if (!location) {
-          return res.status(400).json({
-            success: false,
-            message: 'Bu öğretim elemanı için konum doğrulaması zorunludur. Lütfen konum erişimine izin verin.'
-          });
-        }
+        // Location verification is now OPTIONAL
+        // If location is provided, validate it against geofences
+        // If not provided, allow appointment without location verification
+        if (location) {
+          // Faculty has geofence restrictions and location was provided, verify location
+          let locationVerified = false;
+          let closestGeofence = null;
+          let minDistance = Infinity;
 
-        // Faculty has geofence restrictions, verify location
-        let locationVerified = false;
-        let closestGeofence = null;
-        let minDistance = Infinity;
+          for (const geofence of geofences) {
+            const distance = geofence.calculateDistance(location.latitude, location.longitude);
 
-        for (const geofence of geofences) {
-          const distance = geofence.calculateDistance(location.latitude, location.longitude);
-          
-          if (distance < minDistance) {
-            minDistance = distance;
-            closestGeofence = geofence;
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestGeofence = geofence;
+            }
           }
-        }
 
-        if (closestGeofence) {
-          // Check accuracy requirements
-          if (location.accuracy > closestGeofence.settings.maxAccuracy) {
+          if (closestGeofence) {
+            // Check accuracy requirements
+            if (location.accuracy > closestGeofence.settings.maxAccuracy) {
+              return res.status(400).json({
+                success: false,
+                message: `Konum doğruluğu yetersiz. Gerekli: ${closestGeofence.settings.maxAccuracy}m, Mevcut: ${location.accuracy}m`
+              });
+            }
+
+            // Check location freshness
+            const locationAge = (Date.now() - location.timestamp) / 1000; // seconds
+            if (locationAge > closestGeofence.settings.locationFreshness) {
+              return res.status(400).json({
+                success: false,
+                message: `Konum bilgisi çok eski. Gerekli: ${closestGeofence.settings.locationFreshness}s, Mevcut: ${Math.round(locationAge)}s`
+              });
+            }
+
+            // Check if inside geofence
+            if (closestGeofence.isPointInside(location.latitude, location.longitude)) {
+              // Accept regardless of working hours
+              locationVerified = true;
+              // Store the verified geofence ID for later use
+              location.geofenceId = closestGeofence._id;
+            } else {
+              return res.status(400).json({
+                success: false,
+                message: `Belirtilen alan dışındasınız. Mesafe: ${minDistance}m, Yarıçap: ${closestGeofence.radius}m`
+              });
+            }
+          }
+
+          if (!locationVerified) {
             return res.status(400).json({
               success: false,
-              message: `Konum doğruluğu yetersiz. Gerekli: ${closestGeofence.settings.maxAccuracy}m, Mevcut: ${location.accuracy}m`
-            });
-          }
-
-          // Check location freshness
-          const locationAge = (Date.now() - location.timestamp) / 1000; // seconds
-          if (locationAge > closestGeofence.settings.locationFreshness) {
-            return res.status(400).json({
-              success: false,
-              message: `Konum bilgisi çok eski. Gerekli: ${closestGeofence.settings.locationFreshness}s, Mevcut: ${Math.round(locationAge)}s`
-            });
-          }
-
-          // Check if inside geofence
-          if (closestGeofence.isPointInside(location.latitude, location.longitude)) {
-            // Accept regardless of working hours
-            locationVerified = true;
-            // Store the verified geofence ID for later use
-            location.geofenceId = closestGeofence._id;
-          } else {
-            return res.status(400).json({
-              success: false,
-              message: `Belirtilen alan dışındasınız. Mesafe: ${minDistance}m, Yarıçap: ${closestGeofence.radius}m`
+              message: 'Konum doğrulaması başarısız. Lütfen geofence alanı içinde olduğunuzdan emin olun.'
             });
           }
         }
-
-        if (!locationVerified) {
-          return res.status(400).json({
-            success: false,
-            message: 'Konum doğrulaması başarısız. Lütfen geofence alanı içinde olduğunuzdan emin olun.'
-          });
-        }
+        // If no location provided, continue without verification (optional)
+        console.log('Location not provided, proceeding without geofence verification');
       }
     } catch (error) {
       console.error('Location verification error:', error);
@@ -349,17 +376,67 @@ router.post('/', [
 
   // Check if date and time is valid (same day is allowed if time is in future)
   const appointmentDate = new Date(date);
-  
+
+  // Check daily appointment limit - same student can only have 1 appointment per day from same faculty
+  const startOfDay = new Date(appointmentDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(appointmentDate);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const existingDailyAppointment = await Appointment.findOne({
+    studentEmail: studentEmail.toLowerCase(),
+    facultyId,
+    date: { $gte: startOfDay, $lte: endOfDay },
+    status: { $in: ['pending', 'approved'] }
+  });
+
+  if (existingDailyAppointment) {
+    return res.status(400).json({
+      success: false,
+      message: 'Bu öğretim üyesinden bugün için zaten bir randevunuz bulunmaktadır. Aynı gün içinde aynı kişiden sadece 1 randevu alabilirsiniz.'
+    });
+  }
+
+  // Check if student has another appointment at the same date and time (time conflict check)
+  const existingAppointmentsSameTime = await Appointment.find({
+    studentEmail: studentEmail.toLowerCase(),
+    date: { $gte: startOfDay, $lte: endOfDay },
+    status: { $in: ['pending', 'approved'] }
+  });
+
+  // Check for time conflicts
+  const [newStartHour, newStartMinute] = startTime.split(':').map(Number);
+  const [newEndHour, newEndMinute] = endTime.split(':').map(Number);
+  const newStartMinutes = newStartHour * 60 + newStartMinute;
+  const newEndMinutes = newEndHour * 60 + newEndMinute;
+
+  for (const existingAppt of existingAppointmentsSameTime) {
+    const [existingStartHour, existingStartMinute] = existingAppt.startTime.split(':').map(Number);
+    const [existingEndHour, existingEndMinute] = existingAppt.endTime.split(':').map(Number);
+    const existingStartMinutes = existingStartHour * 60 + existingStartMinute;
+    const existingEndMinutes = existingEndHour * 60 + existingEndMinute;
+
+    // Check if time ranges overlap
+    // Two time ranges overlap if: newStart < existingEnd AND newEnd > existingStart
+    if (newStartMinutes < existingEndMinutes && newEndMinutes > existingStartMinutes) {
+      const facultyName = existingAppt.facultyName || 'Öğretim Üyesi';
+      return res.status(400).json({
+        success: false,
+        message: `Bu tarih ve saatte zaten bir randevunuz bulunmaktadır (${existingAppt.startTime} - ${existingAppt.endTime}, ${facultyName}). Aynı saatte birden fazla randevu alamazsınız.`
+      });
+    }
+  }
+
   // Automatically update availability from Google Calendar
   await updateAvailabilityFromGoogleCalendar(faculty, appointmentDate);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Start of today
-  
+
   // If appointment is today, check if time is in the future
   if (appointmentDate.getTime() === today.getTime()) {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const appointmentTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), startHour, startMinute);
-    
+
     if (appointmentTime <= now) {
       return res.status(400).json({
         success: false,
@@ -405,12 +482,15 @@ router.post('/', [
     studentId,
     studentEmail,
     topic,
+    topicName,
     description,
     facultyId,
-    facultyName: faculty.name,
+    facultyName: faculty.title ? `${faculty.title} ${faculty.name}` : faculty.name,
     date: appointmentDate,
     startTime,
     endTime,
+    duration, // Store the duration from frontend
+    advisorOnlyWarning: advisorOnlyWarning || false,
     location: location ? {
       ...location,
       verified: true
@@ -451,12 +531,13 @@ router.post('/', [
         studentName: appointment.studentName,
         studentId: appointment.studentId,
         studentEmail: appointment.studentEmail,
-        topic: appointment.topic,
+        topic: appointment.topicName,
         description: appointment.description,
         date: appointment.date,
         startTime: appointment.startTime,
         endTime: appointment.endTime
-      }
+      },
+      appointment.emailActionToken // Pass the token for email actions
     );
     console.log('Appointment request email sent to faculty:', faculty.email);
   } catch (emailError) {

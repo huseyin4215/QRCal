@@ -29,11 +29,11 @@ export const authMiddleware = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'qrcal-super-secret-jwt-key-2024-change-this-in-production');
       console.log('Auth Middleware: Token decoded:', decoded);
-      
+
       // Get user from database
       const user = await User.findById(decoded.id).select('-password');
       console.log('Auth Middleware: User found:', user ? user.email : 'Not found');
-      
+
       if (!user) {
         console.log('Auth Middleware: User not found in database');
         return res.status(401).json({
@@ -76,7 +76,7 @@ export const adminMiddleware = async (req, res, next) => {
     console.log('Admin Middleware: Checking admin access');
     console.log('Admin Middleware: User:', req.user ? req.user.email : 'No user');
     console.log('Admin Middleware: User role:', req.user ? req.user.role : 'No role');
-    
+
     if (!req.user) {
       console.log('Admin Middleware: No user found');
       return res.status(401).json({
@@ -146,7 +146,7 @@ export const optionalAuth = async (req, res, next) => {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await User.findById(decoded.id).select('-password');
-        
+
         if (user) {
           req.user = user;
         }
@@ -161,4 +161,26 @@ export const optionalAuth = async (req, res, next) => {
     console.error('Optional auth middleware error:', error);
     next();
   }
-}; 
+};
+
+// Aliases for compatibility
+export const protect = authMiddleware;
+export const authorize = (...roles) => {
+  return async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Yetkilendirme gerekli'
+      });
+    }
+
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bu işlem için yetkiniz yok'
+      });
+    }
+
+    next();
+  };
+};

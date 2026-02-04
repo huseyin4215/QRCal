@@ -15,9 +15,13 @@ const createTransporter = () => {
 };
 
 // Send appointment request notification to faculty/admin
-export const sendAppointmentRequestEmail = async (facultyEmail, facultyName, appointmentData) => {
+export const sendAppointmentRequestEmail = async (facultyEmail, facultyName, appointmentData, emailActionToken) => {
   try {
     const transporter = createTransporter();
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    
+    const approveUrl = `${backendUrl}/api/email-actions/approve/${emailActionToken}`;
+    const rejectUrl = `${backendUrl}/api/email-actions/reject/${emailActionToken}`;
     
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -40,11 +44,41 @@ export const sendAppointmentRequestEmail = async (facultyEmail, facultyName, app
             ${appointmentData.description ? `<p><strong>Açıklama:</strong> ${appointmentData.description}</p>` : ''}
           </div>
           
-          <p>Randevuyu onaylamak veya reddetmek için sisteme giriş yapabilirsiniz.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <p style="margin-bottom: 16px; color: #374151; font-weight: 600;">
+              Bu e-postadan direkt işlem yapabilirsiniz:
+            </p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+              <tr>
+                <td style="padding-right: 12px;">
+                  <a href="${approveUrl}" 
+                     style="display: inline-block; background-color: #059669; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                    ✓ Onayla
+                  </a>
+                </td>
+                <td style="padding-left: 12px;">
+                  <a href="${rejectUrl}" 
+                     style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                    ✗ Reddet
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="background-color: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #2563eb; margin: 20px 0;">
+            <p style="margin: 0; color: #1e40af; font-size: 14px;">
+              <strong>💡 İpucu:</strong> Yukarıdaki butonları kullanarak e-postadan direkt onaylayabilir veya reddedebilirsiniz. 
+              Alternatif olarak sisteme giriş yaparak da işlem yapabilirsiniz.
+            </p>
+          </div>
           
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 14px;">
               Bu e-posta otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+            </p>
+            <p style="color: #9ca3af; font-size: 12px; margin-top: 8px;">
+              Bu linkler 7 gün boyunca geçerlidir.
             </p>
           </div>
         </div>
@@ -158,6 +192,56 @@ export const sendAppointmentRejectionEmail = async (studentEmail, studentName, a
   }
 };
 
+// Send appointment cancellation email to student
+export const sendAppointmentCancellationEmail = async (studentEmail, studentName, appointmentData, cancellationReason) => {
+  try {
+    const transporter = createTransporter();
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: studentEmail,
+      subject: 'Randevunuz İptal Edildi',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f59e0b;">Randevunuz İptal Edildi</h2>
+          <p>Sayın ${studentName},</p>
+          <p>Daha önce onaylanmış randevunuz öğretim üyesi tarafından iptal edilmiştir:</p>
+          
+          <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+            <h3 style="color: #92400e; margin-top: 0;">İptal Edilen Randevu</h3>
+            <p><strong>Öğretim Elemanı:</strong> ${appointmentData.facultyName}</p>
+            <p><strong>Konu:</strong> ${appointmentData.topicName || appointmentData.topic}</p>
+            <p><strong>Tarih:</strong> ${new Date(appointmentData.date).toLocaleDateString('tr-TR')}</p>
+            <p><strong>Saat:</strong> ${appointmentData.startTime} - ${appointmentData.endTime}</p>
+            ${cancellationReason ? `
+              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #fcd34d;">
+                <p><strong>İptal Nedeni:</strong></p>
+                <p style="color: #92400e; font-style: italic;">${cancellationReason}</p>
+              </div>
+            ` : ''}
+          </div>
+          
+          <p>Uygun bir başka tarih ve saat için yeni randevu talebinde bulunabilirsiniz.</p>
+          <p>Özür dileriz ve anlayışınız için teşekkür ederiz.</p>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px;">
+              Bu e-posta otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+            </p>
+          </div>
+        </div>
+      `
+    };
+    
+    await transporter.sendMail(mailOptions);
+    console.log(`Appointment cancellation email sent to ${studentEmail}`);
+    
+  } catch (error) {
+    console.error('Failed to send appointment cancellation email:', error);
+    throw error;
+  }
+};
+
 // Send password reset email
 export const sendPasswordResetEmail = async (toEmail, toName, resetLink) => {
   try {
@@ -228,10 +312,56 @@ export const sendTemporaryPasswordEmail = async (toEmail, toName, tempPassword, 
   }
 };
 
+// Send email verification code
+export const sendEmailVerificationCode = async (toEmail, toName, verificationCode) => {
+  try {
+    const transporter = createTransporter();
+    const appName = process.env.APP_NAME || 'QRCal';
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: toEmail,
+      subject: `${appName} | E-posta Doğrulama Kodu`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">E-posta Doğrulama Kodu</h2>
+          <p>Sayın ${toName || 'Kullanıcı'},</p>
+          <p>E-posta adresinizi değiştirmek için aşağıdaki doğrulama kodunu kullanın. Kod 10 dakika içerisinde geçerlidir.</p>
+          
+          <div style="background-color: #eff6ff; padding: 24px; border-radius: 8px; margin: 24px 0; text-align: center; border: 2px solid #2563eb;">
+            <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">Doğrulama Kodu:</p>
+            <p style="margin: 0; font-size: 32px; font-weight: 700; color: #2563eb; letter-spacing: 8px; font-family: monospace;">
+              ${verificationCode}
+            </p>
+          </div>
+          
+          <p style="color: #dc2626; font-size: 14px;">
+            <strong>Güvenlik Uyarısı:</strong> Bu kodu kimseyle paylaşmayın. Eğer bu işlemi siz yapmadıysanız, lütfen hemen şifrenizi değiştirin.
+          </p>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px;">
+              Bu e-posta otomatik olarak gönderilmiştir. Lütfen yanıtlamayınız.
+            </p>
+          </div>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Email verification code sent to ${toEmail}`);
+  } catch (error) {
+    console.error('Failed to send email verification code:', error);
+    throw error;
+  }
+};
+
 export default {
   sendAppointmentRequestEmail,
   sendAppointmentApprovalEmail,
   sendAppointmentRejectionEmail,
+  sendAppointmentCancellationEmail,
   sendPasswordResetEmail,
-  sendTemporaryPasswordEmail
+  sendTemporaryPasswordEmail,
+  sendEmailVerificationCode
 };

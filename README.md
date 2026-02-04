@@ -1,145 +1,114 @@
-# Qnnect - Akademik Randevu Yönetim Sistemi
+# Qnnect - QR Takvim Randevu Sistemi
 
-Modern ve kullanıcı dostu akademik randevu yönetim platformu. QR kod teknolojisi ile kolay randevu alma, Google Calendar entegrasyonu ve gerçek zamanlı bildirimler.
+Akademik randevu yönetimi için QR kod tabanlı sistem.
 
-## 🚀 Özellikler
+## Kurulum
 
-- **QR Kod Tabanlı Randevu Sistemi**: Hızlı ve kolay randevu alma
-- **Google Calendar Entegrasyonu**: Çift yönlü senkronizasyon
-- **Konum Bazlı Doğrulama**: Geofence teknolojisi ile güvenli randevu alma
-- **Gerçek Zamanlı Bildirimler**: Anlık bildirim sistemi
-- **Responsive Tasarım**: Tüm cihazlarda mükemmel görünüm
-- **Rol Bazlı Yetkilendirme**: Admin, Faculty, Student rolleri
+### 1. Tüm Bağımlılıkları Kur (Tek Seferde)
 
-## 🛠️ Teknoloji Stack
+```bash
+npm run setup
+```
+
+Bu komut hem frontend hem backend için tüm paketleri kuracak.
+
+### 2. Ortam Değişkenlerini Ayarla
+
+`.env` dosyasını düzenleyin:
+
+```bash
+# Backend Environment Variables
+NODE_ENV=development
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/qrcal
+
+# JWT Configuration
+JWT_SECRET=qrcal-super-secret-jwt-key-2024-change-this-in-production
+JWT_EXPIRE=7d
+
+# Frontend URL
+FRONTEND_URL=http://localhost:8081
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8081/api/google/callback
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:8081,http://localhost:5173,http://localhost:3000
+
+# Email Configuration
+EMAIL_USER=your-email@gmail.com
+EMAIL_APP_PASSWORD="your-app-password"
+
+# Frontend Environment Variables
+VITE_API_URL=http://localhost:5000/api
+VITE_APP_NAME=QR Takvim
+VITE_APP_DESCRIPTION=Akademik Randevu Sistemi
+VITE_GOOGLE_CLIENT_ID=your-client-id
+```
+
+### 3. MongoDB'yi Başlat
+
+MongoDB'nin çalıştığından emin olun:
+
+```bash
+mongod
+```
+
+### 4. Admin Kullanıcı Oluştur
+
+```bash
+cd backend
+node createAdmin.js
+```
+
+Script sizden şu bilgileri isteyecek:
+- 👤 **Ad Soyad** (minimum 2 karakter)
+- 📧 **E-posta adresi** (geçerli format kontrolü)
+- 🔑 **Şifre** (minimum 6 karakter)
+- 🏢 **Departman** (isteğe bağlı, varsayılan: "Yönetim")
+
+**Not:** Eğer admin kullanıcı zaten varsa, script size mevcut admin bilgilerini gösterecek ve yeni bir tane oluşturmak isteyip istemediğinizi soracak.
+
+## Çalıştırma
+
+### Tek Komutla Her Şeyi Başlat
+
+```bash
+npm start
+```
+
+Bu komut hem frontend (port 8081) hem backend (port 5000) servislerini başlatacak.
+
+### Ayrı Ayrı Başlatma
+
+**Frontend:**
+```bash
+npm run dev
+```
+
+**Backend:**
+```bash
+npm run dev:backend
+```
+
+## Kullanılan Teknolojiler
 
 ### Frontend
-- React.js 18
-- CSS Modules
+- React 18
 - Vite
-- Heroicons
-- QR Code React
-- Leaflet (Harita)
+- TailwindCSS
+- React Router
+- QRCode.react
+- Leaflet (harita)
 
 ### Backend
 - Node.js
-- Express.js
+- Express
 - MongoDB
-- JWT Authentication
-- Google APIs
+- Mongoose
+- JWT
+- Google OAuth
 - Nodemailer
 
-## 📋 Kurulum
-
-### Gereksinimler
-- Node.js 18+
-- MongoDB 6.0+
-- npm veya yarn
-
-### 1. Projeyi Klonlayın
-```bash
-git clone https://github.com/huseyin4215/QRCal.git
-cd QRCal
-```
-
-### 2. Frontend Kurulumu
-```bash
-npm install
-```
-
-### 3. Backend Kurulumu
-```bash
-cd backend
-npm install
-```
-
-### 4. Environment Dosyalarını Yapılandırın
-
-#### Frontend (.env)
-```bash
-cp env.example .env
-```
-
-#### Backend (backend/.env)
-```bash
-cd backend
-cp env.example .env
-```
-
-Environment dosyalarını kendi bilgilerinizle güncelleyin.
-
-### 5. Uygulamayı Başlatın
-
-#### Backend
-```bash
-cd backend
-npm run dev
-```
-
-#### Frontend
-```bash
-npm run dev
-```
-
-## 🔧 Yapılandırma
-
-### Google OAuth Kurulumu
-1. Google Cloud Console'da proje oluşturun
-2. OAuth 2.0 Client ID oluşturun
-3. Redirect URI'leri ekleyin
-4. Client ID ve Secret'ı env dosyalarına ekleyin
-
-### MongoDB Kurulumu
-1. MongoDB'yi yerel olarak kurun veya MongoDB Atlas kullanın
-2. Connection string'i backend/.env dosyasına ekleyin
-
-### Email Kurulumu
-1. Gmail App Password oluşturun
-2. Email bilgilerini backend/.env dosyasına ekleyin
-
-## 📱 Kullanım
-
-### Admin Paneli
-- Kullanıcı yönetimi
-- Sistem istatistikleri
-- Geofence yönetimi
-- QR kod oluşturma
-
-### Faculty Dashboard
-- Müsaitlik takvimi
-- Randevu yönetimi
-- Google Calendar senkronizasyonu
-- Öğrenci listesi
-
-### Student Dashboard
-- Randevu alma
-- QR kod tarama
-- Randevu geçmişi
-- Bildirimler
-
-## 🔒 Güvenlik
-
-- JWT tabanlı authentication
-- Role-based access control
-- Input validation
-- XSS ve CSRF koruması
-- Rate limiting
-
-
-
-## 🤝 Katkıda Bulunma
-
-1. Fork edin
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit edin (`git commit -m 'Add amazing feature'`)
-4. Push edin (`git push origin feature/amazing-feature`)
-5. Pull Request açın
-
-## 📞 İletişim
-
-- Email: infoqrcal@gmail.com
-- Proje Linki: https://github.com/huseyin4215/QRCal
-
-## 🙏 Teşekkürler
-
-Bu projeyi geliştirirken kullanılan açık kaynak kütüphanelerin geliştiricilerine teşekkürler.

@@ -262,9 +262,6 @@ const TermsOfUse = () => {
                 <strong>E-posta:</strong> infoqrcal@gmail.com
               </p>
               <p className="text-gray-700">
-                <strong>Telefon:</strong> +90 (212) 555 0123
-              </p>
-              <p className="text-gray-700">
                 <strong>Adres:</strong> Ankara, Türkiye
               </p>
             </div>

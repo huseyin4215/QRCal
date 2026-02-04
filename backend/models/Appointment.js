@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const appointmentSchema = new mongoose.Schema({
   studentName: {
@@ -21,16 +22,18 @@ const appointmentSchema = new mongoose.Schema({
     match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Geçerli bir e-posta adresi giriniz']
   },
   topic: {
-    type: String,
-    enum: [
-      'Staj görüşmesi',
-      'Ders destek talebi',
-      'Bitirme projesi danışmanlığı',
-      'Kariyer gelişimi/mentorluk',
-      'Akademik danışmanlık',
-      'Ders değerlendirme görüşmesi'
-    ],
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Topic',
     required: [true, 'Görüşme konusu zorunludur']
+  },
+  topicName: {
+    type: String,
+    required: [true, 'Konu adı zorunludur'],
+    trim: true
+  },
+  advisorOnlyWarning: {
+    type: Boolean,
+    default: false
   },
   description: {
     type: String,
@@ -51,10 +54,22 @@ const appointmentSchema = new mongoose.Schema({
     required: [true, 'Bitiş saati zorunludur'],
     match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Geçerli bir saat formatı giriniz (HH:MM)']
   },
+  duration: {
+    type: Number,
+    required: [true, 'Randevu süresi zorunludur'],
+    min: [5, 'Randevu süresi en az 5 dakika olmalıdır'],
+    max: [120, 'Randevu süresi en fazla 120 dakika olabilir'],
+    default: 15
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'cancelled', 'no_response'],
     default: 'pending'
+  },
+  // When the appointment request was created/sent
+  requestedAt: {
+    type: Date,
+    default: Date.now
   },
   facultyId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -139,6 +154,16 @@ const appointmentSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [200, 'İptal gerekçesi 200 karakterden uzun olamaz']
+  },
+  // Email action token for approve/reject from email
+  emailActionToken: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  emailActionTokenExpiry: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,
@@ -147,7 +172,7 @@ const appointmentSchema = new mongoose.Schema({
 });
 
 // Virtual for formatted date
-appointmentSchema.virtual('formattedDate').get(function() {
+appointmentSchema.virtual('formattedDate').get(function () {
   return this.date.toLocaleDateString('tr-TR', {
     weekday: 'long',
     year: 'numeric',
@@ -157,12 +182,12 @@ appointmentSchema.virtual('formattedDate').get(function() {
 });
 
 // Virtual for time range
-appointmentSchema.virtual('timeRange').get(function() {
+appointmentSchema.virtual('timeRange').get(function () {
   return `${this.startTime} - ${this.endTime}`;
 });
 
 // Virtual for status in Turkish
-appointmentSchema.virtual('statusTR').get(function() {
+appointmentSchema.virtual('statusTR').get(function () {
   const statusMap = {
     pending: 'Beklemede',
     approved: 'Onaylandı',
@@ -174,7 +199,7 @@ appointmentSchema.virtual('statusTR').get(function() {
 });
 
 // Virtual for topic in Turkish
-appointmentSchema.virtual('topicTR').get(function() {
+appointmentSchema.virtual('topicTR').get(function () {
   return this.topic; // Already in Turkish
 });
 
@@ -186,17 +211,24 @@ appointmentSchema.index({ createdAt: -1 });
 appointmentSchema.index({ date: 1, startTime: 1, endTime: 1 });
 
 // Pre-save middleware
-appointmentSchema.pre('save', function(next) {
+appointmentSchema.pre('save', function (next) {
   // Auto-generate faculty name if not provided
   if (!this.facultyName && this.facultyId) {
     // This will be populated when querying
   }
-  
+
+  // Generate email action token for new appointments
+  if (this.isNew && this.status === 'pending') {
+    this.emailActionToken = crypto.randomBytes(32).toString('hex');
+    // Token expires in 7 days
+    this.emailActionTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  }
+
   next();
 });
 
 // Instance methods
-appointmentSchema.methods.isOverlapping = async function() {
+appointmentSchema.methods.isOverlapping = async function () {
   const Appointment = this.constructor;
   const overlapping = await Appointment.findOne({
     facultyId: this.facultyId,
@@ -210,21 +242,21 @@ appointmentSchema.methods.isOverlapping = async function() {
       }
     ]
   });
-  
+
   return overlapping !== null;
 };
 
-appointmentSchema.methods.canBeCancelled = function() {
+appointmentSchema.methods.canBeCancelled = function () {
   const now = new Date();
   const appointmentDate = new Date(this.date);
   const timeDiff = appointmentDate - now;
   const hoursDiff = timeDiff / (1000 * 60 * 60);
-  
+
   // Can be cancelled if more than 2 hours before appointment
   return hoursDiff > 2;
 };
 
-appointmentSchema.methods.toPublicJSON = function() {
+appointmentSchema.methods.toPublicJSON = function () {
   const appointment = this.toObject();
   delete appointment.ipAddress;
   delete appointment.userAgent;
@@ -232,32 +264,32 @@ appointmentSchema.methods.toPublicJSON = function() {
 };
 
 // Static methods
-appointmentSchema.statics.findByFaculty = function(facultyId, options = {}) {
+appointmentSchema.statics.findByFaculty = function (facultyId, options = {}) {
   const query = { facultyId };
-  
+
   if (options.status) {
     query.status = options.status;
   }
-  
+
   if (options.date) {
     query.date = {
       $gte: new Date(options.date),
       $lt: new Date(new Date(options.date).setDate(new Date(options.date).getDate() + 1))
     };
   }
-  
+
   return this.find(query)
     .sort({ date: 1, startTime: 1 })
     .populate('facultyId', 'name title department');
 };
 
-appointmentSchema.statics.findByStudent = function(studentEmail) {
+appointmentSchema.statics.findByStudent = function (studentEmail) {
   return this.find({ studentEmail })
     .sort({ createdAt: -1 })
     .populate('facultyId', 'name title department');
 };
 
-appointmentSchema.statics.getStats = async function(facultyId, startDate, endDate) {
+appointmentSchema.statics.getStats = async function (facultyId, startDate, endDate) {
   const stats = await this.aggregate([
     {
       $match: {
@@ -272,7 +304,7 @@ appointmentSchema.statics.getStats = async function(facultyId, startDate, endDat
       }
     }
   ]);
-  
+
   const result = {
     pending: 0,
     approved: 0,
@@ -280,12 +312,12 @@ appointmentSchema.statics.getStats = async function(facultyId, startDate, endDat
     cancelled: 0,
     total: 0
   };
-  
+
   stats.forEach(stat => {
     result[stat._id] = stat.count;
     result.total += stat.count;
   });
-  
+
   return result;
 };
 

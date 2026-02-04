@@ -83,12 +83,12 @@ const appointmentSlotSchema = new mongoose.Schema({
 });
 
 // Virtual for formatted time range
-appointmentSlotSchema.virtual('timeRange').get(function() {
+appointmentSlotSchema.virtual('timeRange').get(function () {
   return `${this.startTime} - ${this.endTime}`;
 });
 
 // Virtual for duration in minutes
-appointmentSlotSchema.virtual('duration').get(function() {
+appointmentSlotSchema.virtual('duration').get(function () {
   const start = new Date(`2000-01-01T${this.startTime}`);
   const end = new Date(`2000-01-01T${this.endTime}`);
   return Math.round((end - start) / (1000 * 60));
@@ -102,13 +102,13 @@ appointmentSlotSchema.index({ isAvailable: 1 });
 appointmentSlotSchema.index({ isBooked: 1 });
 
 // Pre-save middleware to update timestamp
-appointmentSlotSchema.pre('save', function(next) {
+appointmentSlotSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
 
 // Instance methods
-appointmentSlotSchema.methods.isOverlapping = async function() {
+appointmentSlotSchema.methods.isOverlapping = async function () {
   const AppointmentSlot = this.constructor;
   const overlapping = await AppointmentSlot.findOne({
     facultyId: this.facultyId,
@@ -122,15 +122,15 @@ appointmentSlotSchema.methods.isOverlapping = async function() {
       }
     ]
   });
-  
+
   return overlapping !== null;
 };
 
-appointmentSlotSchema.methods.canBeBooked = function() {
+appointmentSlotSchema.methods.canBeBooked = function () {
   return this.isAvailable && !this.isBooked && this.status === 'available';
 };
 
-appointmentSlotSchema.methods.book = async function(appointmentId) {
+appointmentSlotSchema.methods.book = async function (appointmentId) {
   this.isBooked = true;
   this.isAvailable = false;
   this.status = 'booked';
@@ -138,7 +138,7 @@ appointmentSlotSchema.methods.book = async function(appointmentId) {
   return await this.save();
 };
 
-appointmentSlotSchema.methods.unbook = async function() {
+appointmentSlotSchema.methods.unbook = async function () {
   this.isBooked = false;
   this.isAvailable = true;
   this.status = 'available';
@@ -147,54 +147,75 @@ appointmentSlotSchema.methods.unbook = async function() {
 };
 
 // Static methods
-appointmentSlotSchema.statics.findByFaculty = function(facultyId, options = {}) {
+appointmentSlotSchema.statics.findByFaculty = function (facultyId, options = {}) {
   const query = { facultyId };
-  
+
   if (options.date) {
     const startDate = new Date(options.date);
     const endDate = new Date(options.date);
     endDate.setDate(endDate.getDate() + 1);
     query.date = { $gte: startDate, $lt: endDate };
   }
-  
+
   if (options.status) {
     query.status = options.status;
   }
-  
+
   if (options.isAvailable !== undefined) {
     query.isAvailable = options.isAvailable;
   }
-  
+
   return this.find(query)
     .sort({ date: 1, startTime: 1 })
     .populate('appointmentId', 'studentName studentId topic status');
 };
 
-appointmentSlotSchema.statics.generateSlotsForDate = async function(facultyId, date, availability) {
+appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, date, availability) {
   const slots = [];
   const targetDate = new Date(date);
   const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
-  
+
   const dayAvailability = availability.find(a => a.day === dayName && a.isActive);
-  
+
   if (!dayAvailability || !dayAvailability.timeSlots) {
     return slots;
   }
-  
+
   for (const timeSlot of dayAvailability.timeSlots) {
     if (!timeSlot.isAvailable) continue;
-    
+
     const startTime = new Date(`2000-01-01T${timeSlot.start}`);
     const endTime = new Date(`2000-01-01T${timeSlot.end}`);
-    const slotDuration = dayAvailability.slotDuration || 15;
-    
+
+    // Get global slot duration setting
+    const SystemSettings = mongoose.model('SystemSettings');
+    let slotDuration = 15; // Default
+
+    try {
+      const setting = await SystemSettings.findOne({ key: 'slotDuration' });
+      if (setting && setting.value) {
+        slotDuration = parseInt(setting.value);
+      }
+    } catch (err) {
+      console.error('Error fetching slot duration setting:', err);
+    }
+
     while (startTime < endTime) {
       const slotStart = startTime.toTimeString().slice(0, 5);
-      startTime.setMinutes(startTime.getMinutes() + slotDuration);
-      const slotEnd = startTime.toTimeString().slice(0, 5);
-      
-      if (slotEnd > timeSlot.end) break;
-      
+
+      // Calculate potential end time
+      const potentialEndTime = new Date(startTime.getTime() + slotDuration * 60000);
+      const slotEnd = potentialEndTime.toTimeString().slice(0, 5);
+
+      // Check if this slot exceeds the availability window
+      // We convert back to string to compare with timeSlot.end which is "HH:MM"
+      if (slotEnd > timeSlot.end && slotEnd !== "00:00") {
+        break;
+      }
+
+      // Update startTime for next iteration
+      startTime.setTime(potentialEndTime.getTime());
+
       // Check if slot already exists
       const existingSlot = await this.findOne({
         facultyId,
@@ -202,7 +223,7 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function(facultyId, d
         startTime: slotStart,
         endTime: slotEnd
       });
-      
+
       if (!existingSlot) {
         slots.push({
           facultyId,
@@ -216,7 +237,7 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function(facultyId, d
       }
     }
   }
-  
+
   return slots;
 };
 

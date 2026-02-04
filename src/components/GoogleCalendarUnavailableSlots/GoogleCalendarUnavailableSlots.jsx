@@ -4,7 +4,7 @@ import apiService from '../../services/apiService';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './GoogleCalendarUnavailableSlots.module.css';
 
-const GoogleCalendarEvents = () => {
+const GoogleCalendarEvents = ({ compact = false }) => {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -178,6 +178,52 @@ const GoogleCalendarEvents = () => {
             Google Calendar'a Bağlan
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // Compact view for grid layout
+  if (compact) {
+    return (
+      <div className={styles.compactContainer}>
+        {isLoading ? (
+          <div className={styles.compactLoading}>
+            <div className={styles.loadingSpinner}></div>
+          </div>
+        ) : events.length > 0 ? (
+          <div className={styles.compactEventsList}>
+            {events.slice(0, 5).map((day, dayIndex) => (
+              day.events.length > 0 && (
+                <div key={dayIndex} className={styles.compactDay}>
+                  <div className={styles.compactDayHeader}>
+                    <span className={styles.compactDayName}>{day.dayName}</span>
+                    <span className={styles.compactDate}>
+                      {day.date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                  <div className={styles.compactEvents}>
+                    {day.events.slice(0, 3).map((event, eventIndex) => (
+                      <div key={eventIndex} className={styles.compactEvent}>
+                        <span className={styles.compactEventTime}>{event.start} - {event.end}</span>
+                        <span className={styles.compactEventTitle} title={event.title}>
+                          {event.title.length > 20 ? `${event.title.substring(0, 20)}...` : event.title}
+                        </span>
+                      </div>
+                    ))}
+                    {day.events.length > 3 && (
+                      <span className={styles.compactMore}>+{day.events.length - 3} daha</span>
+                    )}
+                  </div>
+                </div>
+              )
+            ))}
+            {events.filter(d => d.events.length > 0).length === 0 && (
+              <p className={styles.compactEmpty}>Etkinlik yok</p>
+            )}
+          </div>
+        ) : (
+          <p className={styles.compactEmpty}>Etkinlik yok</p>
+        )}
       </div>
     );
   }

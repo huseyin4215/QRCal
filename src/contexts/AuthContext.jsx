@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     // Check if user is already logged in
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
+
     if (token) {
       apiService.setToken(token);
       loadCurrentUser();
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   const loadCurrentUser = async () => {
     try {
       const response = await apiService.getCurrentUser();
-      
+
       if (response.success) {
         setUser(response.data);
       } else {
@@ -58,9 +58,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     apiService.setToken(token);
-    
+
     // Set redirect path based on role and first login status
-    if (userData.isFirstLogin) {
+    // Only faculty and admin need to change password on first login
+    if (userData.isFirstLogin && (userData.role === 'faculty' || userData.role === 'admin')) {
       setRedirectTo('/change-password');
     } else {
       switch (userData.role) {
@@ -89,16 +90,16 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('qrcal_user_profile');
-      
+
       // Tüm localStorage'ı temizle
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith('qrcal_') || key.startsWith('auth_')) {
           localStorage.removeItem(key);
         }
       });
-      
+
       apiService.clearToken();
-      
+
       // Login sayfasına yönlendir
       window.location.href = '/login';
     }

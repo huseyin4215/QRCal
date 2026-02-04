@@ -336,6 +336,120 @@
   height: 1rem;
 }
 
+/* Compact View Styles */
+.compactContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 300px;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.compactContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.compactContainer::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.compactContainer::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.compactContainer::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.compactLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.compactEventsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.compactDay {
+  padding: 0.5rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+}
+
+.compactDayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.compactDayName {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: #374151;
+}
+
+.compactDate {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.compactEvents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.compactEvent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.375rem;
+  background: white;
+  border-radius: 0.375rem;
+  border-left: 2px solid #10b981;
+}
+
+.compactEventTime {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.compactEventTitle {
+  font-size: 0.6875rem;
+  color: #475569;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compactMore {
+  font-size: 0.6875rem;
+  color: #64748b;
+  font-style: italic;
+  padding-left: 0.375rem;
+}
+
+.compactEmpty {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  padding: 1rem 0;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .header {
@@ -362,5 +476,9 @@
   
   .slotItem {
     padding: 0.5rem;
+  }
+
+  .compactContainer {
+    max-height: 400px;
   }
 }

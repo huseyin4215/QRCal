@@ -1,7 +1,8 @@
-import { PencilIcon, TrashIcon, UserIcon, CheckBadgeIcon, XCircleIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, UserIcon, CheckBadgeIcon, XCircleIcon, EyeIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { formatUserName } from '../../utils/formatUserName';
 import styles from './FacultyList.module.css';
 
-export default function FacultyList({ users, onEdit, onDelete, onViewStudent, getRoleBadge, getStatusBadge }) {
+export default function FacultyList({ users, onEdit, onDelete, onViewStudent, onViewAppointmentHistory, getRoleBadge, getStatusBadge }) {
   const getInitials = (name) => {
     return name
       .split(' ')
@@ -49,7 +50,7 @@ export default function FacultyList({ users, onEdit, onDelete, onViewStudent, ge
                       </span>
                     </div>
                     <div className={styles.userDetails}>
-                      <div className={styles.userName}>{user.name}</div>
+                      <div className={styles.userName}>{formatUserName(user)}</div>
                       <div className={styles.userEmail}>{user.email}</div>
                     </div>
                   </div>
@@ -94,8 +95,15 @@ export default function FacultyList({ users, onEdit, onDelete, onViewStudent, ge
                 </td>
                 <td className={styles.tableCell}>
                   <div className={styles.actions}>
+                    <button
+                      onClick={() => onViewAppointmentHistory && onViewAppointmentHistory(user)}
+                      className={`${styles.actionButton} ${styles.historyButton}`}
+                      title="Randevu Geçmişi"
+                    >
+                      <ClockIcon className={styles.actionIcon} />
+                    </button>
                     {user.role === 'student' ? (
-                      // Öğrenciler için bilgi butonu ve devre dışı delete butonu
+                      // Öğrenciler için bilgi butonu ve delete butonu
                       <>
                         <button
                           onClick={() => onViewStudent && onViewStudent(user)}
@@ -105,9 +113,9 @@ export default function FacultyList({ users, onEdit, onDelete, onViewStudent, ge
                           <EyeIcon className={styles.actionIcon} />
                         </button>
                         <button
-                          disabled
-                          className={`${styles.actionButton} ${styles.deleteButton} opacity-50 cursor-not-allowed`}
-                          title="Öğrenciler silinemez"
+                          onClick={() => onDelete && onDelete(user._id)}
+                          className={`${styles.actionButton} ${styles.deleteButton}`}
+                          title="Sil"
                         >
                           <TrashIcon className={styles.actionIcon} />
                         </button>
@@ -123,7 +131,7 @@ export default function FacultyList({ users, onEdit, onDelete, onViewStudent, ge
                           <PencilIcon className={styles.actionIcon} />
                         </button>
                         <button
-                          onClick={() => onDelete(user._id)}
+                          onClick={() => onDelete && onDelete(user._id)}
                           className={`${styles.actionButton} ${styles.deleteButton}`}
                           title="Sil"
                         >
@@ -152,7 +160,7 @@ export default function FacultyList({ users, onEdit, onDelete, onViewStudent, ge
                   </span>
                 </div>
                 <div className={styles.userDetails}>
-                  <div className={styles.userName}>{user.name}</div>
+                  <div className={styles.userName}>{formatUserName(user)}</div>
                   <div className={styles.userEmail}>{user.email}</div>
                 </div>
               </div>
@@ -199,6 +207,15 @@ export default function FacultyList({ users, onEdit, onDelete, onViewStudent, ge
             
             {/* Card Actions */}
             <div className={styles.cardMainActions}>
+              <button
+                onClick={() => onViewAppointmentHistory && onViewAppointmentHistory(user)}
+                className={`${styles.cardActionButton} ${styles.history}`}
+                title="Randevu Geçmişi"
+              >
+                <ClockIcon className={styles.actionIcon} />
+                <span>Randevu Geçmişi</span>
+              </button>
+              
               {user.role === 'student' ? (
                 <button
                   onClick={() => onViewStudent(user)}
@@ -220,13 +237,12 @@ export default function FacultyList({ users, onEdit, onDelete, onViewStudent, ge
               )}
               
               <button
-                onClick={() => onDelete(user)}
-                disabled={user.role === 'student'}
+                onClick={() => onDelete && onDelete(user._id)}
                 className={`${styles.cardActionButton} ${styles.delete}`}
-                title={user.role === 'student' ? 'Öğrenciler silinemez' : 'Sil'}
+                title="Sil"
               >
                 <TrashIcon className={styles.actionIcon} />
-                <span>{user.role === 'student' ? 'Silinemez' : 'Sil'}</span>
+                <span>Sil</span>
               </button>
             </div>
           </div>

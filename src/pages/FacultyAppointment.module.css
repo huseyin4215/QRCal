@@ -212,6 +212,21 @@
   transform: none;
 }
 
+.timeSlotButton.pastSlot {
+  background: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+  opacity: 0.6;
+  position: relative;
+}
+
+.timeSlotButton.pastSlot:hover {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  transform: none;
+}
+
 /* Form Input Styles */
 .formInput {
   width: 100%;

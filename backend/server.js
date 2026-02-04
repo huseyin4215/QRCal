@@ -3,13 +3,15 @@ import { config } from 'dotenv';
 // Load environment variables FIRST, before any other imports
 config({ path: './.env' });
 
-// Debug environment variables
-console.log('=== Environment Variables Debug ===');
-console.log('Current working directory:', process.cwd());
-console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
-console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'present' : 'missing');
-console.log('GOOGLE_REDIRECT_URI:', process.env.GOOGLE_REDIRECT_URI);
-console.log('================================');
+// Debug environment variables (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('=== Environment Variables Debug ===');
+  console.log('Current working directory:', process.cwd());
+  console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
+  console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'present' : 'missing');
+  console.log('GOOGLE_REDIRECT_URI:', process.env.GOOGLE_REDIRECT_URI);
+  console.log('================================');
+}
 
 import express from 'express';
 import cors from 'cors';
@@ -28,9 +30,15 @@ import studentRoutes from './routes/students.js';
 import googleRoutes from './routes/googleAuth.js';
 import geofenceRoutes from './routes/geofence.js';
 import notificationRoutes from './routes/notifications.js';
+import departmentRoutes from './routes/departments.js';
+import settingsRoutes from './routes/settings.js';
+import topicRoutes from './routes/topics.js';
+import emailActionRoutes from './routes/email-actions.js';
 
 // Import appointment scheduler
 import appointmentScheduler from './services/appointmentScheduler.js';
+import migrateTopics from './migrations/migrateTopics.js';
+import { initCronJobs } from './services/cronService.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -56,23 +64,33 @@ app.use(helmet({
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
-      'http://localhost:8081', // Ana frontend port
-      'http://localhost:5173', 
-      'http://localhost:8082', 
-      'http://localhost:3000', 
+      // Development
+      'http://localhost:8081',
+      'http://localhost:5173',
+      'http://localhost:8082',
+      'http://localhost:3000',
+      'http://localhost:5000', // Backend self-origin for email action forms
       'http://127.0.0.1:8081',
       'http://127.0.0.1:5173',
+      'http://127.0.0.1:5000', // Backend self-origin for email action forms
       'http://192.168.0.103:8081',
       'http://192.168.0.103:5173',
       'http://192.168.0.103:8082',
       'http://192.168.0.103:3000',
+      // Google APIs
       'https://accounts.google.com',
-      'https://www.googleapis.com'
-    ];
-    
+      'https://www.googleapis.com',
+      // Production
+      'https://qrnnect.com',
+      'http://qrnnect.com',
+      'https://www.qrnnect.com',
+      // Production backend self-origin for email action forms
+      process.env.BACKEND_URL
+    ].filter(Boolean);
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -82,12 +100,12 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'X-Requested-With', 
-    'Origin', 
-    'Accept', 
-    'Access-Control-Request-Method', 
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Origin',
+    'Accept',
+    'Access-Control-Request-Method',
     'Access-Control-Request-Headers',
     'X-Client-Data',
     'Sec-Fetch-Mode',
@@ -95,7 +113,7 @@ app.use(cors({
     'Sec-Fetch-Dest'
   ],
   exposedHeaders: [
-    'Access-Control-Allow-Origin', 
+    'Access-Control-Allow-Origin',
     'Access-Control-Allow-Credentials',
     'Access-Control-Allow-Methods',
     'Access-Control-Allow-Headers'
@@ -106,22 +124,31 @@ app.use(cors({
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
   const allowedOrigins = [
-    'http://localhost:8081', // Ana frontend port
-    'http://localhost:5173', 
-    'http://localhost:8082', 
-    'http://localhost:3000', 
+    // Development
+    'http://localhost:8081',
+    'http://localhost:5173',
+    'http://localhost:8082',
+    'http://localhost:3000',
+    'http://localhost:5000', // Backend self-origin for email action forms
     'http://127.0.0.1:8081',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5000', // Backend self-origin for email action forms
     'http://192.168.0.103:8081',
     'http://192.168.0.103:5173',
     'http://192.168.0.103:8082',
-    'http://192.168.0.103:3000'
-  ];
-  
+    'http://192.168.0.103:3000',
+    // Production
+    'https://qrnnect.com',
+    'http://qrnnect.com',
+    'https://www.qrnnect.com',
+    // Production backend self-origin
+    process.env.BACKEND_URL
+  ].filter(Boolean);
+
   if (allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   }
-  
+
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Client-Data, Sec-Fetch-Mode, Sec-Fetch-Site, Sec-Fetch-Dest');
@@ -137,13 +164,20 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/qrcal', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => {
-  console.log('✅ MongoDB connected successfully');
-})
-.catch((error) => {
-  console.error('❌ MongoDB connection error:', error);
-  process.exit(1);
-});
+  .then(async () => {
+    console.log('✅ MongoDB connected successfully');
+
+    // Run migrations
+    try {
+      await migrateTopics();
+    } catch (error) {
+      console.error('⚠️  Migration error (non-fatal):', error.message);
+    }
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error);
+    process.exit(1);
+  });
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -165,6 +199,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/google', googleRoutes);
 app.use('/api/geofence', geofenceRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/topics', topicRoutes);
+app.use('/api/email-actions', emailActionRoutes); // Public email action routes
 
 // Error handling middleware
 app.use(errorHandler);
@@ -182,7 +220,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:8081'}`);
   console.log(`🔗 API URL: http://localhost:${PORT}/api`);
-  
+
   // Start appointment scheduler
   try {
     appointmentScheduler.start();

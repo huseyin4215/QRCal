@@ -12,6 +12,7 @@ import FacultyDashboard from './pages/FacultyDashboard';
 import FacultyAppointment from './pages/FacultyAppointment';
 import FacultyList from './pages/FacultyList';
 import AdminDashboard from './pages/AdminDashboard';
+import AppointmentHistory from './pages/AppointmentHistory';
 import QrCodePage from './pages/QrCodePage';
 import Debug from './pages/Debug';
 import GoogleAuthCallback from './pages/GoogleAuthCallback';
@@ -223,9 +224,19 @@ function AppContent() {
             element={<FacultyAppointment />}
           />
           <Route
-            path="/debug"
-            element={<Debug />}
+            path="/appointment-history/:userId"
+            element={
+              <ProtectedRoute>
+                <AppointmentHistory />
+              </ProtectedRoute>
+            }
           />
+          {import.meta.env.DEV && (
+            <Route
+              path="/debug"
+              element={<Debug />}
+            />
+          )}
           <Route
             path="/auth-success"
             element={<GoogleAuthCallback />}

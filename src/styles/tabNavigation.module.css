@@ -94,7 +94,7 @@
   transform: translateX(-50%);
   width: 20px;
   height: 3px;
-  background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
   border-radius: 2px;
   animation: slideIn 0.3s ease-out;
 }
@@ -104,6 +104,7 @@
     width: 0;
     opacity: 0;
   }
+
   to {
     width: 20px;
     opacity: 1;
@@ -117,11 +118,11 @@
     padding: 6px;
     border-radius: 12px;
   }
-  
+
   .tabContainer {
     gap: 3px;
   }
-  
+
   .tabButton {
     padding: 10px 16px;
     font-size: 13px;
@@ -136,14 +137,14 @@
     border-radius: 10px;
     overflow: hidden;
   }
-  
+
   .tabContainer {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto auto;
     gap: 4px;
   }
-  
+
   .tabButton {
     padding: 10px 8px;
     font-size: 11px;
@@ -153,28 +154,19 @@
     justify-content: center;
     min-height: 60px;
   }
-  
+
   .tabIcon {
     width: 18px;
     height: 18px;
   }
-  
+
   .tabText {
     font-size: 10px;
     line-height: 1.2;
     text-align: center;
   }
-  
-  /* 5th button spans full width on bottom */
-  .tabButton:nth-child(5) {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    min-height: 50px;
-  }
-  
-  .tabButton:nth-child(5) .tabText {
-    font-size: 11px;
-  }
+
+
 }
 
 @media (max-width: 640px) {
@@ -183,38 +175,30 @@
     border-radius: 8px;
     padding: 4px;
   }
-  
+
   .tabContainer {
     grid-template-columns: 1fr 1fr;
     gap: 3px;
   }
-  
+
   .tabButton {
     padding: 8px 6px;
     font-size: 10px;
     gap: 3px;
     min-height: 55px;
   }
-  
+
   .tabIcon {
     width: 16px;
     height: 16px;
   }
-  
+
   .tabText {
     font-size: 9px;
     line-height: 1.1;
   }
-  
-  .tabButton:nth-child(5) {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    min-height: 45px;
-  }
-  
-  .tabButton:nth-child(5) .tabText {
-    font-size: 10px;
-  }
+
+
 }
 
 @media (max-width: 480px) {
@@ -222,36 +206,30 @@
     margin: 6px 0;
     padding: 3px;
   }
-  
+
   .tabContainer {
     gap: 2px;
   }
-  
+
   .tabButton {
     padding: 6px 4px;
     font-size: 9px;
     gap: 2px;
     min-height: 50px;
   }
-  
+
   .tabText {
     font-size: 8px;
     line-height: 1;
   }
-  
+
   .tabIcon {
     width: 14px;
     height: 14px;
   }
-  
-  .tabButton:nth-child(5) {
-    min-height: 40px;
-  }
-  
-  .tabButton:nth-child(5) .tabText {
-    font-size: 9px;
-  }
-  
+
+
+
   .activeIndicator {
     bottom: -2px;
     width: 14px;
@@ -265,7 +243,7 @@
     background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  
+
   .tabButton.active {
     background: rgba(255, 255, 255, 0.12);
     color: #f9fafb;
@@ -306,4 +284,4 @@
 
 .tabButton:focus:not(:focus-visible) {
   outline: none;
-} 
+}

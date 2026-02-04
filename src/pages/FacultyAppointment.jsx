@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CalendarIcon, ClockIcon, UserIcon, AcademicCapIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ClockIcon, UserIcon, AcademicCapIcon, EnvelopeIcon, GlobeAltIcon, MapPinIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 import locationService from '../services/locationService';
 import styles from './FacultyAppointment.module.css';
@@ -11,7 +11,7 @@ const FacultyAppointment = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [selectedDuration, setSelectedDuration] = useState(15); // 15 dakika varsayılan
+  const [selectedDuration, setSelectedDuration] = useState(15); // Default 15, will be fetched from DB
   const [userProfile, setUserProfile] = useState(null);
   const [formData, setFormData] = useState({
     studentName: '',
@@ -28,21 +28,33 @@ const FacultyAppointment = () => {
   const [locationAccuracy, setLocationAccuracy] = useState(null);
   const [geofenceVerified, setGeofenceVerified] = useState(false);
   const [locationPayload, setLocationPayload] = useState(null);
+  const [topics, setTopics] = useState([]);
 
-  const topics = [
-    { value: 'Staj görüşmesi', label: 'Staj görüşmesi' },
-    { value: 'Ders destek talebi', label: 'Ders destek talebi' },
-    { value: 'Bitirme projesi danışmanlığı', label: 'Bitirme projesi danışmanlığı' },
-    { value: 'Kariyer gelişimi/mentorluk', label: 'Kariyer gelişimi/mentorluk' },
-    { value: 'Akademik danışmanlık', label: 'Akademik danışmanlık' },
-    { value: 'Ders değerlendirme görüşmesi', label: 'Ders değerlendirme görüşmesi' }
-  ];
+  // Fetch slot duration and topics on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        // Fetch slot duration
+        const durationResponse = await apiService.getSetting('slotDuration');
+        if (durationResponse.success && durationResponse.data && durationResponse.data.value) {
+          setSelectedDuration(durationResponse.data.value);
+        }
 
-  const durationOptions = [
-    { value: 10, label: '10 dakika' },
-    { value: 15, label: '15 dakika' },
-    { value: 20, label: '20 dakika' }
-  ];
+        // Fetch topics from database
+        const topicsResponse = await apiService.get('/topics');
+        if (topicsResponse.success && topicsResponse.data) {
+          setTopics(topicsResponse.data.map(t => ({ 
+            value: t._id, 
+            label: t.name,
+            isAdvisorOnly: t.isAdvisorOnly || false
+          })));
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     loadFacultyData();
@@ -64,7 +76,7 @@ const FacultyAppointment = () => {
         const user = JSON.parse(storedUser);
         console.log('FacultyAppointment: User from localStorage:', user);
         setUserProfile(user);
-        
+
         // Auto-fill form data if user is logged in
         if (user.role === 'student') {
           console.log('FacultyAppointment: Auto-filling form for student:', {
@@ -88,7 +100,7 @@ const FacultyAppointment = () => {
           console.log('FacultyAppointment: User from API:', response);
           if (response.success && response.data) {
             setUserProfile(response.data);
-            
+
             // Auto-fill form data if user is logged in
             if (response.data.role === 'student') {
               console.log('FacultyAppointment: Auto-filling form for student from API:', {
@@ -119,11 +131,11 @@ const FacultyAppointment = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       console.log('Loading faculty data for slug:', slug);
       const facultyData = await apiService.getFacultyBySlug(slug);
       console.log('Faculty data loaded:', facultyData);
-      
+
       if (facultyData.success) {
         setFaculty(facultyData.data);
         // Bugünün tarihini varsayılan olarak ayarla
@@ -149,7 +161,7 @@ const FacultyAppointment = () => {
       setError('');
       const response = await apiService.getFacultySlots(slug, selectedDate);
       console.log('Available slots response:', response);
-      
+
       if (response.success) {
         setAvailableSlots(response.data.slots || []);
       } else {
@@ -166,10 +178,7 @@ const FacultyAppointment = () => {
     setError('');
   };
 
-  const handleDurationChange = (duration) => {
-    setSelectedDuration(duration);
-    setSelectedSlot(null); // Slot seçimini sıfırla
-  };
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -184,6 +193,30 @@ const FacultyAppointment = () => {
     const startDate = new Date(2000, 0, 1, hours, minutes);
     const endDate = new Date(startDate.getTime() + duration * 60000);
     return endDate.toTimeString().slice(0, 5);
+  };
+
+  // Check if a slot time is in the past (for today's date)
+  const isSlotPast = (slotStartTime, date) => {
+    const today = new Date().toISOString().split('T')[0];
+    if (date !== today) {
+      return false; // Not today, so not past
+    }
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    const [slotHour, slotMinute] = slotStartTime.split(':').map(Number);
+    
+    // Compare hours and minutes
+    if (slotHour < currentHour) {
+      return true; // Past hour
+    }
+    if (slotHour === currentHour && slotMinute < currentMinute) {
+      return true; // Same hour but past minute
+    }
+    
+    return false; // Future or current time
   };
 
   const handleVerifyLocation = async () => {
@@ -214,35 +247,47 @@ const FacultyAppointment = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedSlot) {
       setError('Lütfen bir saat seçin.');
       return;
     }
 
-    if (!formData.studentName || !formData.studentId || !formData.studentEmail || !formData.topic) {
+    if (!formData.studentName || !formData.studentId || !formData.studentEmail || !formData.topic || !formData.description) {
       setError('Lütfen tüm zorunlu alanları doldurun.');
       return;
     }
 
-    // Enforce manual geofence verification before submit
-    if (!geofenceVerified || !locationPayload) {
-      setError('Lütfen önce "Konumumu Doğrula" butonu ile konumunuzu doğrulayın.');
-      return;
+    // Check if selected topic is advisor-only
+    const selectedTopic = topics.find(t => t.value === formData.topic);
+    let advisorOnlyWarning = false;
+    
+    if (selectedTopic && selectedTopic.isAdvisorOnly && userProfile) {
+      // Check if the student's advisor is the same as the faculty
+      if (userProfile.advisorId !== faculty._id) {
+        advisorOnlyWarning = true;
+        // Show warning but allow submission
+        setError('Uyarı: Bu konu danışmanınıza özeldir. Randevu talebi gönderilecek ancak öğretim üyesi bu uyarıyı görecektir.');
+      }
     }
+
+    // Location verification is now OPTIONAL
+    // If user verified location, use it; otherwise proceed without location
 
     try {
       setSubmitting(true);
-      setError('');
+      if (!advisorOnlyWarning) {
+        setError('');
+      }
 
       const endTime = calculateEndTime(selectedSlot.startTime, selectedDuration);
 
-      // Eğer geofence doğrulaması başarılı olduysa, konum doğruluğunu esnet
-      let adjustedLocationPayload = locationPayload;
+      // Konum doğrulaması isteğe bağlıdır
+      let adjustedLocationPayload = null;
       if (geofenceVerified && locationPayload) {
         adjustedLocationPayload = {
           ...locationPayload,
-          accuracy: Math.min(locationPayload.accuracy || 500, 50), // Maksimum 50m olarak sınırla
+          accuracy: Math.min(locationPayload.accuracy || 500, 50),
           latitude: locationPayload.latitude,
           longitude: locationPayload.longitude
         };
@@ -260,17 +305,18 @@ const FacultyAppointment = () => {
         startTime: selectedSlot.startTime,
         endTime: endTime,
         duration: selectedDuration,
-        // Include verified location payload
-        location: adjustedLocationPayload
+        advisorOnlyWarning: advisorOnlyWarning,
+        // Include location only if verified (optional)
+        ...(adjustedLocationPayload && { location: adjustedLocationPayload })
       };
 
       console.log('Submitting appointment data:', appointmentData);
 
       const result = await apiService.createAppointment(appointmentData);
-      
+
       if (result.success) {
         setSuccess('Randevu talebiniz başarıyla gönderildi! Öğretim elemanı onayladıktan sonra size e-posta ile bilgilendirme yapılacaktır.');
-        
+
         // Formu temizle
         setFormData({
           studentName: userProfile?.name || '',
@@ -280,13 +326,13 @@ const FacultyAppointment = () => {
           description: ''
         });
         setSelectedSlot(null);
-        
+
         // Slotları yeniden yükle
         loadAvailableSlots();
       } else {
         setError(result.message || 'Randevu talebi gönderilirken hata oluştu.');
       }
-      
+
     } catch (error) {
       setError(error.message || 'Randevu talebi gönderilirken hata oluştu. Lütfen konum izni verip alan içinde olduğunuzdan emin olun.');
       console.error('Appointment submission error:', error);
@@ -298,14 +344,14 @@ const FacultyAppointment = () => {
   const getNextWeekDates = () => {
     const dates = [];
     const today = new Date();
-    
+
     // Start from today (i = 0) instead of tomorrow
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push(date.toISOString().split('T')[0]);
     }
-    
+
     return dates;
   };
 
@@ -346,26 +392,21 @@ const FacultyAppointment = () => {
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900">{faculty.name}</h1>
               <p className="text-gray-600">{faculty.title} - {faculty.department}</p>
-              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+              <div className="flex items-center flex-wrap gap-4 mt-2 text-sm text-gray-500">
                 {faculty.office && (
                   <div className="flex items-center">
-                    <UserIcon className="w-4 h-4 mr-1" />
+                    <BuildingOfficeIcon className="w-4 h-4 mr-1" />
+                    <span className="font-medium mr-1">Ofis:</span>
                     {faculty.office}
                   </div>
                 )}
-                {faculty.phone && (
-                  <div className="flex items-center">
-                    <PhoneIcon className="w-4 h-4 mr-1" />
-                    {faculty.phone}
-                  </div>
-                )}
+                {/* Phone number hidden for students */}
                 {faculty.email && (
                   <div className="flex items-center">
                     <EnvelopeIcon className="w-4 h-4 mr-1" />
                     {faculty.email}
                   </div>
                 )}
-                {/* Website removed */}
               </div>
             </div>
           </div>
@@ -391,7 +432,7 @@ const FacultyAppointment = () => {
                   const dayNumber = dateObj.getDate();
                   const isSelected = selectedDate === date;
                   const isToday = date === new Date().toISOString().split('T')[0];
-                  
+
                   return (
                     <button
                       key={date}
@@ -406,23 +447,7 @@ const FacultyAppointment = () => {
               </div>
             </div>
 
-            {/* Süre Seçimi */}
-            <div className="mb-6">
-              <label className={styles.formLabel}>
-                Randevu Süresi
-              </label>
-              <div className={styles.durationGrid}>
-                {durationOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => handleDurationChange(option.value)}
-                    className={`${styles.durationButton} ${selectedDuration === option.value ? styles.selected : ''}`}
-                  >
-                    <div>{option.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Randevu süresi sabit 15 dakika */}
 
             {/* Müsait Saatler */}
             <div>
@@ -433,20 +458,23 @@ const FacultyAppointment = () => {
                 <div className={styles.timeSlotsGrid}>
                   {availableSlots.map((slot, index) => {
                     const endTime = calculateEndTime(slot.startTime, selectedDuration);
-                    const isSlotAvailable = slot.available && slot.status === 'available';
-                    
+                    const isSlotPastTime = isSlotPast(slot.startTime, selectedDate);
+                    const isSlotAvailable = slot.available && slot.status === 'available' && !isSlotPastTime;
+
                     return (
                       <button
                         key={index}
                         onClick={() => isSlotAvailable ? handleSlotSelect(slot) : null}
                         disabled={!isSlotAvailable}
-                        className={`${styles.timeSlotButton} ${selectedSlot === slot ? styles.selected : ''}`}
+                        className={`${styles.timeSlotButton} ${selectedSlot === slot ? styles.selected : ''} ${isSlotPastTime ? styles.pastSlot : ''}`}
                       >
                         <div>
                           {slot.startTime} - {endTime}
                         </div>
                         {!isSlotAvailable && (
-                          <div className="text-xs text-gray-400">Dolu</div>
+                          <div className="text-xs text-gray-400">
+                            {isSlotPastTime ? 'Geçmiş' : 'Dolu'}
+                          </div>
                         )}
                       </button>
                     );
@@ -497,11 +525,10 @@ const FacultyAppointment = () => {
 
             {/* Geofence status info */}
             {geofenceStatus !== 'idle' && (
-              <div className={`${styles.infoBox} ${
-                geofenceStatus === 'allowed' ? styles.infoBoxSuccess : 
-                geofenceStatus === 'checking' ? styles.infoBoxInfo : 
-                styles.infoBoxWarning
-              }`}>
+              <div className={`${styles.infoBox} ${geofenceStatus === 'allowed' ? styles.infoBoxSuccess :
+                geofenceStatus === 'checking' ? styles.infoBoxInfo :
+                  styles.infoBoxWarning
+                }`}>
                 <p>
                   {geofenceStatus === 'checking' && 'Konum doğrulaması yapılıyor...'}
                   {geofenceStatus === 'allowed' && `Konum doğrulandı${locationAccuracy ? ` (±${Math.round(locationAccuracy)}m)` : ''}. Randevu oluşturulabilir.`}
@@ -624,12 +651,13 @@ const FacultyAppointment = () => {
 
               <div>
                 <label className={styles.formLabel}>
-                  Açıklama
+                  Açıklama <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleInputChange}
+                  required
                   rows="3"
                   className={styles.formTextarea}
                   placeholder="Görüşme konusu hakkında ek bilgi verebilirsiniz..."
@@ -651,16 +679,17 @@ const FacultyAppointment = () => {
                 <button
                   type="button"
                   onClick={handleVerifyLocation}
-                  disabled={submitting}
-                  className={`${styles.verifyButton} ${submitting ? styles.disabled : ''}`}
+                  disabled={true}
+                  className={`${styles.verifyButton} ${styles.disabled}`}
+                  style={{ opacity: 0.5, cursor: 'not-allowed' }}
                 >
                   <MapPinIcon className={styles.buttonIcon} />
-                  {geofenceStatus === 'checking' ? 'Konum Doğrulanıyor...' : 'Konumumu Doğrula'}
+                  Konumumu Doğrula
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting || !geofenceVerified}
-                  className={`${styles.submitButton} ${(submitting || !geofenceVerified) ? styles.disabled : ''}`}
+                  disabled={submitting}
+                  className={`${styles.submitButton} ${submitting ? styles.disabled : ''}`}
                 >
                   {submitting ? 'Gönderiliyor...' : 'Randevu Talebi Gönder'}
                 </button>

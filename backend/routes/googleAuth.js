@@ -39,36 +39,12 @@ function createOAuth2Client() {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback';
   
-  console.log('Creating OAuth2Client with:', {
-    clientId: clientId,
-    clientSecret: clientSecret ? 'present' : 'missing',
-    redirectUri: redirectUri
-  });
-  
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
-// Log OAuth2Client configuration on startup
-console.log('=== Google OAuth2Client Configuration ===');
-console.log('Client ID:', process.env.GOOGLE_CLIENT_ID || 'your-google-client-id');
-console.log('Client Secret:', process.env.GOOGLE_CLIENT_SECRET ? 'present' : 'missing');
-console.log('Redirect URI:', process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback');
-
-// Test OAuth2Client creation for logging
-console.log('Testing OAuth2Client creation...');
-const testOAuth2Client = createOAuth2Client();
-console.log('OAuth2Client test result - Client Secret:', testOAuth2Client._clientSecret ? 'present' : 'missing');
-
-// Validate OAuth2Client configuration
-if (!process.env.GOOGLE_CLIENT_SECRET) {
+// Validate OAuth2Client configuration (only log errors in production)
+if (!process.env.GOOGLE_CLIENT_SECRET && process.env.NODE_ENV === 'production') {
   console.error('⚠️  WARNING: GOOGLE_CLIENT_SECRET is missing! Google OAuth will not work properly.');
-  console.error('Please create a .env file in the backend directory with the following content:');
-  console.error(`
-# Google OAuth Configuration
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=GOCSPX-your-actual-client-secret-here
-GOOGLE_REDIRECT_URI=http://localhost:5000/api/google/callback
-  `);
 }
 
 // @desc    Get Google OAuth URL
@@ -348,43 +324,6 @@ router.get('/callback', asyncHandler(async (req, res) => {
   }
 }));
 
-// @desc    Test Google OAuth configuration
-// @route   GET /api/google/test-config
-// @access  Public
-router.get('/test-config', asyncHandler(async (req, res) => {
-  console.log('=== Testing Google OAuth Configuration ===');
-  
-  // Get OAuth2Client instance for testing
-  const oauth2Client = createOAuth2Client();
-  
-  const config = {
-    environment: {
-      clientId: process.env.GOOGLE_CLIENT_ID || 'your-google-client-id',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'present' : 'missing',
-      redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback',
-      jwtSecret: process.env.JWT_SECRET ? 'present' : 'missing'
-    },
-    oauth2Client: {
-      clientId: oauth2Client._clientId,
-      redirectUri: oauth2Client._redirectUri,
-      clientSecret: oauth2Client._clientSecret ? 'present' : 'missing'
-    },
-    validation: {
-      hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-      hasOAuth2ClientSecret: !!oauth2Client._clientSecret,
-      isConfigured: !!(process.env.GOOGLE_CLIENT_SECRET && oauth2Client._clientSecret)
-    }
-  };
-  
-  console.log('Configuration:', config);
-  
-  res.json({
-    success: true,
-    data: config,
-    message: 'Google OAuth configuration test completed',
-    status: config.validation.isConfigured ? 'ready' : 'not_configured'
-  });
-}));
 
 // @desc    Get user's Google Calendar events
 // @route   GET /api/google/calendar/events

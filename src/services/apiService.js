@@ -10,19 +10,14 @@ class ApiService {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
-    
+
     // Always get the latest token from localStorage
     const currentToken = localStorage.getItem('token') || this.token;
-    
-    console.log('ApiService - Current token:', currentToken);
-    
+
     if (currentToken) {
       headers['Authorization'] = `Bearer ${currentToken}`;
-      console.log('ApiService - Authorization header set:', headers['Authorization']);
-    } else {
-      console.log('ApiService - No token found');
     }
-    
+
     return headers;
   }
 
@@ -46,25 +41,19 @@ class ApiService {
       delete config.headers['Content-Type'];
     }
 
-    console.log(`API Request: ${options.method || 'GET'} ${url}`);
-    console.log('API Headers:', config.headers);
-
     try {
       const response = await fetch(url, config);
-      
-      console.log(`API Response Status: ${response.status}`);
-      
+
       if (response.status === 401) {
-        console.log('API: 401 Unauthorized - clearing token and redirecting');
         // Token expired or invalid, clear token and redirect to login
         this.clearToken();
         localStorage.removeItem('user');
-        
+
         // Only redirect if we're not already on the login page
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
-        
+
         // Throw an error instead of returning undefined
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Geçersiz e-posta veya şifre');
@@ -107,7 +96,6 @@ class ApiService {
         return { success: true, data: text };
       }
 
-      console.log('API Success Response:', data);
       return data;
     } catch (error) {
       console.error('API request failed:', error);
@@ -196,11 +184,11 @@ class ApiService {
       if (timeMin) params.append('timeMin', timeMin);
       if (timeMax) params.append('timeMax', timeMax);
       if (maxResults) params.append('maxResults', maxResults);
-      
+
       return await this.request(`/google/calendar/events?${params.toString()}`);
     } catch (error) {
       console.error('Google Calendar Events Error:', error);
-      
+
       // Check for various forms of invalid_grant or auth expired errors
       const isAuthExpired = (
         error.message.includes('Google Calendar access expired') ||
@@ -209,28 +197,28 @@ class ApiService {
         (error.response && error.response.status === 401) ||
         (error.status === 401)
       );
-      
+
       if (isAuthExpired) {
         console.log('Google Calendar access expired, redirecting to reconnect...');
-        
+
         // Show user-friendly message
         if (window.confirm('Google Calendar bağlantınızın süresi dolmuş. Yeniden bağlanmak ister misiniz?')) {
           window.location.href = '/google-connect';
         }
-        
-        return { 
-          success: false, 
-          data: [], 
+
+        return {
+          success: false,
+          data: [],
           message: 'Google Calendar access expired',
           requiresReauth: true
         };
       }
-      
+
       // For other errors, show a generic message
       console.error('Google Calendar API Error:', error);
-      return { 
-        success: false, 
-        data: [], 
+      return {
+        success: false,
+        data: [],
         message: 'Google Calendar verilerine erişilemiyor',
         error: error.message
       };
@@ -284,6 +272,20 @@ class ApiService {
     });
   }
 
+  async requestEmailChange(newEmail) {
+    return this.request('/students/email/request-change', {
+      method: 'POST',
+      body: JSON.stringify({ newEmail })
+    });
+  }
+
+  async verifyEmailChange(verificationCode) {
+    return this.request('/students/email/verify-change', {
+      method: 'POST',
+      body: JSON.stringify({ verificationCode })
+    });
+  }
+
   async getFacultyAvailability() {
     return this.request('/faculty/availability');
   }
@@ -321,9 +323,9 @@ class ApiService {
       studentEmail,
       cancellationReason
     };
-    
+
     console.log('cancelAppointment request body:', requestBody);
-    
+
     return this.request(`/appointments/${appointmentId}/cancel`, {
       method: 'PUT',
       body: JSON.stringify(requestBody)
@@ -334,6 +336,13 @@ class ApiService {
     return this.request(`/faculty/appointments/${appointmentId}`, {
       method: 'PUT',
       body: JSON.stringify(updateData)
+    });
+  }
+
+  async cancelFacultyAppointment(appointmentId, cancellationReason = '') {
+    return this.request(`/faculty/appointments/${appointmentId}/cancel`, {
+      method: 'PUT',
+      body: JSON.stringify({ cancellationReason })
     });
   }
 
@@ -436,7 +445,11 @@ class ApiService {
   }
 
   async getUserById(userId) {
-    return this.request(`/admin/users/${userId}`);
+    return this.request(`/users/${userId}`);
+  }
+
+  async getUserByEmail(email) {
+    return this.request(`/users/email/${encodeURIComponent(email)}`);
   }
 
   async updateUser(userId, userData) {
@@ -458,6 +471,13 @@ class ApiService {
 
   async getAppointmentById(appointmentId) {
     return this.request(`/admin/appointments/${appointmentId}`);
+  }
+
+  async cancelAdminAppointment(appointmentId, cancellationReason = '') {
+    return this.request(`/admin/appointments/${appointmentId}/cancel`, {
+      method: 'PUT',
+      body: JSON.stringify({ cancellationReason })
+    });
   }
 
   async getSystemStats() {
@@ -516,11 +536,37 @@ class ApiService {
     });
   }
 
-  // Create faculty member
-  async createFaculty(facultyData) {
-    return this.request('/admin/users/faculty', {
+  // Department methods
+  async getDepartments() {
+    return this.request('/departments');
+  }
+
+  async addDepartment(name) {
+    return this.request('/departments', {
       method: 'POST',
-      body: JSON.stringify(facultyData)
+      body: JSON.stringify({ name })
+    });
+  }
+
+  async deleteDepartment(departmentId) {
+    return this.request(`/departments/${departmentId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // System Settings methods
+  async getSystemSettings() {
+    return this.request('/settings');
+  }
+
+  async getSetting(key) {
+    return this.request(`/settings/${key}`);
+  }
+
+  async updateSetting(key, value) {
+    return this.request(`/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value })
     });
   }
 

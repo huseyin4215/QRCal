@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  UserGroupIcon, 
-  CalendarIcon, 
-  QrCodeIcon, 
-  ChartBarIcon, 
-  CogIcon, 
+import { useNavigate } from 'react-router-dom';
+import {
+  UserGroupIcon,
+  CalendarIcon,
+  QrCodeIcon,
+  ChartBarIcon,
+  CogIcon,
   PlusIcon,
   PencilIcon,
   TrashIcon,
@@ -18,7 +19,12 @@ import {
   BellIcon,
   UserIcon,
   AcademicCapIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon,
+  ArrowDownTrayIcon,
+  DocumentTextIcon,
+  ExclamationCircleIcon,
+  NoSymbolIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import styles from './AdminDashboard.module.css';
 import apiService from '../services/apiService';
@@ -33,23 +39,36 @@ import StudentDetailsModal from '../components/StudentDetailsModal/StudentDetail
 import ProfileModal from '../components/ProfileModal/ProfileModal';
 import PasswordModal from '../components/PasswordModal/PasswordModal';
 import AppointmentList from '../components/AppointmentList/AppointmentList';
+import settingsStyles from '../styles/settings.module.css';
+import statsStyles from '../styles/stats.module.css';
 import AppointmentDetails from '../components/AppointmentDetails/AppointmentDetails';
 import AvailabilityModal from '../components/AvailabilityModal/AvailabilityModal';
 import GoogleCalendarEvents from '../components/GoogleCalendarUnavailableSlots/GoogleCalendarUnavailableSlots';
 import AdminGeofenceManager from '../components/AdminGeofenceManager/AdminGeofenceManager';
 import TabNavigation from '../components/TabNavigation';
+import RejectModal from '../components/RejectModal/RejectModal';
+import CancelModal from '../components/CancelModal/CancelModal';
+import StatisticsCards from '../components/StatisticsCards/StatisticsCards';
+import ConflictWarningModal from '../components/ConflictWarningModal/ConflictWarningModal';
+import ConfirmModal from '../components/ConfirmModal/ConfirmModal';
+import { exportAppointmentsToPDF } from '../utils/pdfExport';
+import { formatUserName } from '../utils/formatUserName';
 import sectionThemes from '../styles/sectionThemes.module.css';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [systemAppointments, setSystemAppointments] = useState([]); // Tüm sistem randevuları
   const [adminAppointments, setAdminAppointments] = useState([]); // Sadece admin'e gelen randevular
+  const [facultySearchQuery, setFacultySearchQuery] = useState(''); // Öğretim üyeleri arama
+  const [studentSearchQuery, setStudentSearchQuery] = useState(''); // Öğrenciler arama
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('users');
   const [appointmentTab, setAppointmentTab] = useState('system'); // 'system' veya 'admin'
+  const [facultyStatsTimeFilter, setFacultyStatsTimeFilter] = useState('all'); // all, month, 3months, 6months, year
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [showStudentDetailsModal, setShowStudentDetailsModal] = useState(false);
@@ -68,6 +87,15 @@ const AdminDashboard = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [firstLoginData, setFirstLoginData] = useState({
+    title: '',
+    department: ''
+  });
+  const [firstLoginLoading, setFirstLoginLoading] = useState(false);
+  const [firstLoginError, setFirstLoginError] = useState('');
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -81,6 +109,7 @@ const AdminDashboard = () => {
   });
   const [availability, setAvailability] = useState([]);
   const [slotDuration, setSlotDuration] = useState(15);
+  const [appointmentTimeout, setAppointmentTimeout] = useState(24); // Default 24 hours
   const [profileLoading, setProfileLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -93,17 +122,62 @@ const AdminDashboard = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' veya 'table'
-  
+
   // Google Calendar integration states
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showGoogleSetup, setShowGoogleSetup] = useState(false);
+
+  // Google Calendar conflict modal states
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictData, setConflictData] = useState(null);
+  const [conflictDismissedAt, setConflictDismissedAt] = useState(null);
+  
+  // Load acknowledged conflicts from localStorage
+  const getAcknowledgedConflicts = () => {
+    try {
+      const stored = localStorage.getItem(`acknowledgedConflicts_${user?._id || user?.id}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error loading acknowledged conflicts:', error);
+      return [];
+    }
+  };
+  
+  // Save acknowledged conflicts to localStorage
+  const saveAcknowledgedConflicts = (conflicts) => {
+    try {
+      localStorage.setItem(`acknowledgedConflicts_${user?._id || user?.id}`, JSON.stringify(conflicts));
+    } catch (error) {
+      console.error('Error saving acknowledged conflicts:', error);
+    }
+  };
 
   // Real-time notification states
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [lastAppointmentCount, setLastAppointmentCount] = useState(0);
+
+  // Reject Modal State
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingAppointment, setRejectingAppointment] = useState(null);
+  const [rejectLoading, setRejectLoading] = useState(false);
+
+  // Cancel Modal State (for approved appointments - admin as faculty)
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingAppointment, setCancellingAppointment] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
+  // Department State
+  const [departments, setDepartments] = useState([]);
+  const [newDepartmentName, setNewDepartmentName] = useState('');
+  const [departmentLoading, setDepartmentLoading] = useState(false);
+
+  // Topic Management States
+  const [topics, setTopics] = useState([]);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [editingTopicId, setEditingTopicId] = useState(null);
 
   // Load notifications from localStorage
   const loadNotificationsFromStorage = () => {
@@ -129,17 +203,34 @@ const AdminDashboard = () => {
       console.error('Error saving notifications to storage:', error);
     }
   };
-  
+
   // Refs for real-time updates
   const notificationIntervalRef = useRef(null);
   const appointmentCheckIntervalRef = useRef(null);
 
   useEffect(() => {
     if (user) {
-      loadDashboardData();
-      loadFacultyData();
-      loadNotificationsFromStorage(); // Load notifications from localStorage
-      startRealTimeUpdates();
+      // Check if admin needs to complete first login setup
+      if (user.role === 'admin' && (user.isFirstLogin || !user.title || !user.department)) {
+        // Load departments first for the first login modal
+        const loadDepartmentsForFirstLogin = async () => {
+          try {
+            const departmentsResponse = await apiService.getDepartments();
+            if (departmentsResponse.success) {
+              setDepartments(departmentsResponse.data || []);
+            }
+          } catch (error) {
+            console.error('Failed to load departments for first login:', error);
+          }
+        };
+        loadDepartmentsForFirstLogin();
+        setShowFirstLoginModal(true);
+      } else {
+        loadDashboardData();
+        loadFacultyData();
+        loadNotificationsFromStorage(); // Load notifications from localStorage
+        startRealTimeUpdates();
+      }
     }
 
     return () => {
@@ -179,7 +270,7 @@ const AdminDashboard = () => {
   const startRealTimeUpdates = () => {
     // Check for new appointments every 10 seconds
     appointmentCheckIntervalRef.current = setInterval(checkForNewAppointments, 10000);
-    
+
     // Check for notifications every 30 seconds
     notificationIntervalRef.current = setInterval(checkForNotifications, 30000);
   };
@@ -209,24 +300,24 @@ const AdminDashboard = () => {
       const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
       const ownAppointments = allAppointments.filter(isOwnAppointment);
       const otherAppointments = allAppointments.filter(a => !isOwnAppointment(a));
-      
+
       // Sort appointments by creation date (newest first)
       const sortedAllAppointments = [...allAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       const sortedAdminAppointments = [...ownAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      
+
       // Check if there are new appointments
       const currentTotalCount = allAppointments.length;
       if (currentTotalCount > lastAppointmentCount && lastAppointmentCount > 0) {
         const newCount = currentTotalCount - lastAppointmentCount;
         showNewAppointmentNotification(newCount);
       }
-      
+
       // Update state with sorted appointments
       setAppointments(sortedAllAppointments);
       setSystemAppointments(otherAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       setAdminAppointments(sortedAdminAppointments);
       setLastAppointmentCount(currentTotalCount);
-      
+
     } catch (error) {
       console.error('Real-time appointment check failed:', error);
     }
@@ -247,7 +338,7 @@ const AdminDashboard = () => {
     }
   };
 
-    // Show new appointment notification
+  // Show new appointment notification
   const showNewAppointmentNotification = (count) => {
     const notification = {
       id: Date.now(),
@@ -284,7 +375,7 @@ const AdminDashboard = () => {
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
       saveNotificationsToStorage(notifications.map(n => ({ ...n, read: true })));
-      
+
       // Also call API to mark as read on server
       await apiService.markAllNotificationsAsRead();
     } catch (error) {
@@ -316,6 +407,11 @@ const AdminDashboard = () => {
     setShowStudentDetailsModal(true);
   };
 
+  // Handle view appointment history
+  const handleViewAppointmentHistory = (user) => {
+    navigate(`/appointment-history/${user._id}`);
+  };
+
   // Handle close student details modal
   const handleCloseStudentDetails = () => {
     setShowStudentDetailsModal(false);
@@ -335,30 +431,55 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       console.log('AdminDashboard: Loading dashboard data...');
-      
+
       // Request notification permission
       await requestNotificationPermission();
-      
+
       // Paralel olarak verileri yükle
-      const [usersResponse, appointmentsResponse, statsResponse] = await Promise.all([
+      const [usersResponse, appointmentsResponse, statsResponse, departmentsResponse, topicsResponse] = await Promise.all([
         apiService.getAllUsers(),
         apiService.getAllAppointments(),
-        apiService.getSystemStats()
+        apiService.getSystemStats(),
+        apiService.getDepartments(),
+        apiService.get('/topics')
       ]);
-      
+
       console.log('AdminDashboard: Users response:', usersResponse);
       console.log('AdminDashboard: Appointments response:', appointmentsResponse);
       console.log('AdminDashboard: Stats response:', statsResponse);
-      
+      console.log('AdminDashboard: Departments response:', departmentsResponse);
+      console.log('AdminDashboard: Topics response:', topicsResponse);
+
+      // Set departments
+      if (departmentsResponse.success) {
+        setDepartments(departmentsResponse.data || []);
+      }
+
+      // Set topics
+      if (topicsResponse.success) {
+        setTopics(topicsResponse.data || []);
+      }
+
+      // Fetch slot duration setting
+      try {
+        const slotDurationResponse = await apiService.getSetting('slotDuration');
+        if (slotDurationResponse.success && slotDurationResponse.data && slotDurationResponse.data.value) {
+          setSlotDuration(slotDurationResponse.data.value);
+        }
+      } catch (error) {
+        console.error('Failed to fetch slot duration:', error);
+        // Keep default 15 if fetch fails
+      }
+
       // API response yapısını düzgün şekilde işle
       const allUsers = usersResponse.data?.users || [];
       const allAppointments = appointmentsResponse.data?.appointments || appointmentsResponse.data || [];
       const allStats = statsResponse.data || {};
-      
+
       setUsers(allUsers);
-      
+
       // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
       const sortedAllAppointments = [...allAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       const ownAppointments = allAppointments.filter(isOwnAppointment);
@@ -367,9 +488,9 @@ const AdminDashboard = () => {
       setSystemAppointments(otherAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       setAdminAppointments(ownAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
       setLastAppointmentCount(sortedAllAppointments.length);
-      
+
       setStats(allStats);
-      
+
       // Check Google Calendar connection status
       try {
         const googleStatusResponse = await apiService.getGoogleCalendarStatus();
@@ -407,11 +528,11 @@ const AdminDashboard = () => {
       } catch (error) {
         console.error('Failed to load profile data:', error);
       }
-      
-      console.log('Dashboard data loaded:', { 
-        allUsers, 
-        totalAppointments: sortedAllAppointments.length, 
-        allStats, 
+
+      console.log('Dashboard data loaded:', {
+        allUsers,
+        totalAppointments: sortedAllAppointments.length,
+        allStats,
         ownAppointmentsCount: ownAppointments.length,
         systemAppointmentsCount: otherAppointments.length
       });
@@ -448,25 +569,27 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    // Öğrenciyi bul
-    const userToDelete = users.find(user => user._id === userId);
+  const handleDeleteUser = (userId) => {
+    const user = users.find(u => u._id === userId);
+    setUserToDelete(user);
+    setShowDeleteConfirmModal(true);
+  };
 
-    if (userToDelete && userToDelete.role === 'student') {
-      alert('Öğrenciler admin tarafından silinemez.');
-      return;
-    }
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
 
-    if (window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
-      try {
-        await apiService.deleteUser(userId);
-        // Kullanıcı listesini yenile
-        const updatedUsers = users.filter(user => user._id !== userId);
-        setUsers(updatedUsers);
-      } catch (error) {
-        console.error('User delete error:', error);
-        alert('Kullanıcı silinirken hata oluştu');
-      }
+    try {
+      await apiService.deleteUser(userToDelete._id);
+      // Kullanıcı listesini yenile
+      const updatedUsers = users.filter(user => user._id !== userToDelete._id);
+      setUsers(updatedUsers);
+      setShowDeleteConfirmModal(false);
+      setUserToDelete(null);
+    } catch (error) {
+      console.error('User delete error:', error);
+      alert('Kullanıcı silinirken hata oluştu');
+      setShowDeleteConfirmModal(false);
+      setUserToDelete(null);
     }
   };
 
@@ -491,13 +614,13 @@ const AdminDashboard = () => {
       };
 
       const response = await apiService.createFaculty(facultyData);
-      
+
       console.log('Faculty creation response:', response);
-      
+
       if (response.success) {
         console.log('Temp password from response:', response.data.tempPassword);
         setFacultySuccess(`Öğretim üyesi başarıyla oluşturuldu!\n\nGeçici şifre: ${response.data.tempPassword}\n\nÖğretim üyesi ilk girişte bu şifreyi kullanarak giriş yapmalı ve şifresini değiştirmelidir.`);
-        
+
         // Form'u temizle
         setNewFaculty({
           name: '',
@@ -507,10 +630,10 @@ const AdminDashboard = () => {
           phone: '',
           office: ''
         });
-        
+
         // Kullanıcı listesini yenile
         loadDashboardData();
-        
+
         // Modal'ı 5 saniye sonra kapat
         setTimeout(() => {
           setShowAddUserModal(false);
@@ -619,25 +742,9 @@ const AdminDashboard = () => {
         }
       }
 
-      console.log('Initiating Google OAuth flow...');
-      
-      // Test configuration first
-      try {
-        const configResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/google/test-config`);
-        const configData = await configResponse.json();
-        console.log('Google OAuth config test:', configData);
-        
-        if (!configData.success || configData.data.clientSecret === 'missing') {
-          alert('Google OAuth yapılandırması eksik! Lütfen backend log\'larını kontrol edin.');
-          return;
-        }
-      } catch (configError) {
-        console.error('Config test failed:', configError);
-      }
-      
       // Use OAuth 2.0 flow instead of Google Sign-In for Calendar access
       const response = await apiService.getGoogleAuthUrl();
-      
+
       if (response.success) {
         console.log('Google OAuth URL received:', response.data.authUrl);
         // Add userId to the OAuth URL for account linking
@@ -659,7 +766,7 @@ const AdminDashboard = () => {
     try {
       setGoogleLoading(true);
       const response = await apiService.disconnectGoogleCalendar();
-      
+
       if (response.success) {
         setGoogleConnected(false);
         alert('Google Calendar bağlantısı kesildi');
@@ -677,35 +784,35 @@ const AdminDashboard = () => {
       console.log('Google Calendar not connected, skipping events load');
       return;
     }
-    
+
     try {
       console.log('Loading Google Calendar events...');
       const startDate = new Date();
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + 7); // Next 7 days
-      
+
       const result = await apiService.getGoogleCalendarEvents(
         startDate.toISOString(),
         endDate.toISOString(),
         50
       );
-      
+
       if (result.success) {
         // Process calendar events and update availability
         const events = result.data || [];
         console.log('Google Calendar events loaded:', events.length, 'events');
-        
+
         // Process events and update availability
         if (events.length > 0) {
           await processGoogleCalendarEvents(events);
         }
-        
+
         return events;
       } else {
         console.error('Failed to load Google Calendar events:', result.message);
         // If the error indicates connection issues, update the status
         if (result.message && (
-          result.message.includes('not connected') || 
+          result.message.includes('not connected') ||
           result.message.includes('expired') ||
           result.message.includes('access expired')
         )) {
@@ -717,7 +824,7 @@ const AdminDashboard = () => {
       console.error('Error loading Google Calendar events:', error);
       // If Google Calendar is not connected, set connected to false
       if (error.message && (
-        error.message.includes('not connected') || 
+        error.message.includes('not connected') ||
         error.message.includes('expired') ||
         error.message.includes('access expired')
       )) {
@@ -731,66 +838,142 @@ const AdminDashboard = () => {
     try {
       // Group events by day
       const eventsByDay = {};
-      
+      const conflicts = [];
+
       events.forEach(event => {
         const startDate = new Date(event.start.dateTime || event.start.date);
         const dayName = startDate.toLocaleDateString('en-US', { weekday: 'long' });
-        
+
         if (!eventsByDay[dayName]) {
           eventsByDay[dayName] = [];
         }
         eventsByDay[dayName].push(event);
       });
 
-      // Update availability based on events
-      const updatedAvailability = availability.map(day => {
+      // Ensure a 7-day baseline even if current availability is empty
+      const baseline = (availability && availability.length > 0) ? availability : initializeAvailability();
+
+      // Update availability based on Google Calendar events
+      const updatedAvailability = baseline.map(day => {
         const dayEvents = eventsByDay[day.day] || [];
-        
+
         if (dayEvents.length > 0) {
-          // Mark day as active and create time slots based on events
-          const timeSlots = dayEvents.map(event => {
-            const start = new Date(event.start.dateTime || event.start.date);
-            const end = new Date(event.end.dateTime || event.end.date);
-            
+          // Mark time slots as unavailable if there are events
+          const updatedTimeSlots = day.timeSlots.map(slot => {
+            const slotStart = new Date(`2000-01-01T${slot.start}`);
+            const slotEnd = new Date(`2000-01-01T${slot.end}`);
+
+            // Check if any event overlaps with this time slot
+            // Filter out system-created appointments (summary starts with "Randevu:")
+            const conflictingEvents = dayEvents.filter(event => {
+              // Skip system-created appointments
+              if (event.summary && event.summary.startsWith('Randevu:')) {
+                return false;
+              }
+              
+              const eventStart = new Date(event.start.dateTime || event.start.date);
+              const eventEnd = new Date(event.end.dateTime || event.end.date);
+
+              const eventStartTime = new Date(`2000-01-01T${eventStart.toTimeString().slice(0, 5)}`);
+              const eventEndTime = new Date(`2000-01-01T${eventEnd.toTimeString().slice(0, 5)}`);
+
+              return (slotStart < eventEndTime && slotEnd > eventStartTime);
+            });
+
+            // If there's a conflict and slot was previously available, add to conflicts list
+            if (conflictingEvents.length > 0 && slot.isAvailable !== false) {
+              const dayNameTR = {
+                'Monday': 'Pazartesi', 'Tuesday': 'Salı', 'Wednesday': 'Çarşamba',
+                'Thursday': 'Perşembe', 'Friday': 'Cuma', 'Saturday': 'Cumartesi', 'Sunday': 'Pazar'
+              };
+              const acknowledgedConflicts = getAcknowledgedConflicts();
+              
+              conflictingEvents.forEach(event => {
+                const eventStart = new Date(event.start.dateTime || event.start.date);
+                const eventEnd = new Date(event.end.dateTime || event.end.date);
+                
+                // Create a unique conflict identifier
+                const conflictId = `${day.day}_${slot.start}_${slot.end}_${event.summary || event.id || ''}`;
+                
+                // Skip if this conflict was already acknowledged
+                if (acknowledgedConflicts.includes(conflictId)) {
+                  return;
+                }
+                
+                conflicts.push({
+                  id: conflictId,
+                  day: dayNameTR[day.day] || day.day,
+                  slot: `${slot.start} - ${slot.end}`,
+                  eventName: event.summary || 'Google Calendar Etkinliği',
+                  eventTime: `${eventStart.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${eventEnd.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`
+                });
+              });
+            }
+
             return {
-              start: start.toLocaleTimeString('tr-TR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              }),
-              end: end.toLocaleTimeString('tr-TR', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              }),
-              isAvailable: false, // Events make time slots unavailable
-              eventId: event.id,
-              eventTitle: event.summary
+              ...slot,
+              isAvailable: conflictingEvents.length === 0 ? slot.isAvailable : false
             };
           });
-          
+
           return {
             ...day,
-            isActive: true,
-            timeSlots
+            timeSlots: updatedTimeSlots
           };
         }
-        
+
         return day;
       });
-      
-      setAvailability(updatedAvailability);
-      
-      // Save updated availability to backend
-      await apiService.updateAdminAvailability({
-        availability: updatedAvailability
-      });
-      
-      console.log('Google Calendar events processed and availability updated');
-      alert('Google Calendar\'dan müsaitlik durumu başarıyla yüklendi!');
-      
+
+      // If there are conflicts, show warning modal (only if not recently dismissed)
+      if (conflicts.length > 0) {
+        const now = Date.now();
+        const dismissedAt = conflictDismissedAt;
+        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in ms
+        
+        // Show modal if never dismissed or dismissed more than 5 minutes ago
+        if (!dismissedAt || (now - dismissedAt) > fiveMinutes) {
+          setConflictData(conflicts);
+          setShowConflictModal(true);
+        }
+      }
+
+      console.log('Google Calendar events processed, conflicts found:', conflicts.length);
     } catch (error) {
       console.error('Error processing Google Calendar events:', error);
-      alert('Google Calendar olayları işlenirken hata oluştu: ' + error.message);
     }
+  };
+
+  // Handle conflict modal dismiss (just close, don't update anything)
+  const handleConflictDismiss = () => {
+    setShowConflictModal(false);
+    setConflictDismissedAt(Date.now()); // Remember when dismissed to avoid spam
+  };
+
+  // Handle acknowledging conflicts (mark as acknowledged, don't show again)
+  const handleConflictAcknowledge = () => {
+    if (!conflictData || conflictData.length === 0) return;
+    
+    const acknowledgedConflicts = getAcknowledgedConflicts();
+    const newAcknowledgedConflicts = [...acknowledgedConflicts];
+    
+    // Add all current conflicts to acknowledged list
+    conflictData.forEach(conflict => {
+      if (conflict.id && !newAcknowledgedConflicts.includes(conflict.id)) {
+        newAcknowledgedConflicts.push(conflict.id);
+      }
+    });
+    
+    saveAcknowledgedConflicts(newAcknowledgedConflicts);
+    setShowConflictModal(false);
+    setConflictDismissedAt(Date.now());
+  };
+
+  // Handle going to availability settings to fix conflicts
+  const handleGoToAvailability = () => {
+    setShowConflictModal(false);
+    setActiveTab('availability');
+    openAvailabilityModal();
   };
 
   const handleUpdateProfile = async (e) => {
@@ -801,14 +984,14 @@ const AdminDashboard = () => {
 
     try {
       const response = await apiService.updateFacultyProfile(profileData);
-      
+
       if (response.success) {
         setProfileSuccess('Profil başarıyla güncellendi!');
-        
+
         // Update local user data
         const updatedUser = { ...user, ...profileData };
         localStorage.setItem('user', JSON.stringify(updatedUser));
-        
+
         // Close modal after 2 seconds
         setTimeout(() => {
           setShowProfileModal(false);
@@ -822,6 +1005,54 @@ const AdminDashboard = () => {
     } finally {
       setProfileLoading(false);
     }
+  };
+
+  const handleFirstLoginSubmit = async (e) => {
+    e.preventDefault();
+    setFirstLoginLoading(true);
+    setFirstLoginError('');
+
+    if (!firstLoginData.title || !firstLoginData.department) {
+      setFirstLoginError('Lütfen tüm alanları doldurun');
+      setFirstLoginLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiService.updateFacultyProfile({
+        title: firstLoginData.title,
+        department: firstLoginData.department
+      });
+
+      if (response.success) {
+        // Update local user data
+        const updatedUser = { ...user, title: firstLoginData.title, department: firstLoginData.department };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Close first login modal and open password change modal
+        setShowFirstLoginModal(false);
+        setShowPasswordModal(true);
+        
+        // Load dashboard data after profile update
+        loadDashboardData();
+        loadFacultyData();
+        loadNotificationsFromStorage();
+        startRealTimeUpdates();
+      }
+    } catch (error) {
+      console.error('First login setup error:', error);
+      setFirstLoginError(error.message || 'Profil güncellenirken hata oluştu');
+    } finally {
+      setFirstLoginLoading(false);
+    }
+  };
+
+  const handleFirstLoginInputChange = (e) => {
+    const { name, value } = e.target;
+    setFirstLoginData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleChangePassword = async (e) => {
@@ -844,14 +1075,19 @@ const AdminDashboard = () => {
 
     try {
       const response = await apiService.changePassword(passwordData.currentPassword, passwordData.newPassword);
-      
+
       if (response.success) {
         setPasswordSuccess('Şifre başarıyla değiştirildi!');
-        
-        // Close modal after 2 seconds
+
+        // Update user data to mark first login as complete
+        const updatedUser = { ...user, isFirstLogin: false };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+
+        // Close modal after 2 seconds and reload
         setTimeout(() => {
           setShowPasswordModal(false);
           setPasswordSuccess('');
+          window.location.reload(); // Refresh to update header and remove first login modal
         }, 2000);
       }
     } catch (error) {
@@ -937,7 +1173,7 @@ const AdminDashboard = () => {
   const handleAppointmentAction = async (appointmentId, action, reason = null) => {
     try {
       let response;
-      
+
       if (action === 'approved') {
         response = await apiService.approveAppointment(appointmentId);
       } else if (action === 'rejected') {
@@ -952,22 +1188,22 @@ const AdminDashboard = () => {
       } else {
         response = await apiService.updateAppointment(appointmentId, { status: action });
       }
-      
+
       if (response.success) {
         // Reload appointments and re-separate lists
         const allAppointmentsResponse = await apiService.getAllAppointments();
         const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
         const ownAppointments = allAppointments.filter(isOwnAppointment);
         const otherAppointments = allAppointments.filter(a => !isOwnAppointment(a));
-        
+
         const sortedAllAppointments = [...allAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const sortedOwn = [...ownAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         const sortedOthers = [...otherAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
+
         setAppointments(sortedAllAppointments);
         setSystemAppointments(sortedOthers);
         setAdminAppointments(sortedOwn);
-        
+
         // Show success notification
         const actionText = action === 'approved' ? 'onaylandı' : action === 'rejected' ? 'reddedildi' : 'iptal edildi';
         showActionNotification(`Randevu başarıyla ${actionText}!`);
@@ -988,18 +1224,18 @@ const AdminDashboard = () => {
             apiService.getAllAppointments(),
             apiService.getFacultyAppointments()
           ]);
-          
+
           const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
           const adminAppts = facultyAppointmentsResponse.data?.appointments || facultyAppointmentsResponse.data || [];
-          
+
           // Sort appointments by creation date (newest first)
           const sortedAllAppointments = allAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           const sortedAdminAppointments = adminAppts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          
+
           setAppointments(sortedAllAppointments);
           setSystemAppointments(sortedAllAppointments);
           setAdminAppointments(sortedAdminAppointments);
-          
+
           // Show success notification
           showActionNotification('Randevu başarıyla iptal edildi!');
         }
@@ -1017,16 +1253,79 @@ const AdminDashboard = () => {
   };
 
   const handleRejectAppointment = (appointmentId, reason) => {
-    if (window.confirm('Bu randevuyu reddetmek istediğinizden emin misiniz?')) {
-      if (reason) {
-        handleAppointmentAction(appointmentId, 'rejected', reason);
-      } else {
-        const rejectReason = prompt('Red nedeni:');
-        if (rejectReason) {
-          handleAppointmentAction(appointmentId, 'rejected', rejectReason);
-        }
-      }
+    // If reason is provided directly, use it
+    if (reason) {
+      handleAppointmentAction(appointmentId, 'rejected', reason);
+      return;
     }
+    // Otherwise, show the reject modal
+    const allAppts = [...systemAppointments, ...adminAppointments];
+    const appointment = allAppts.find(a => a._id === appointmentId);
+    setRejectingAppointment(appointment);
+    setShowRejectModal(true);
+  };
+
+  const handleRejectConfirm = async (reason) => {
+    if (!rejectingAppointment) return;
+
+    setRejectLoading(true);
+    await handleAppointmentAction(rejectingAppointment._id, 'rejected', reason);
+    setRejectLoading(false);
+    setShowRejectModal(false);
+    setRejectingAppointment(null);
+  };
+
+  // Handle cancel approved appointment (admin as faculty - own appointments)
+  const handleCancelApprovedAppointment = (appointmentId) => {
+    const appointment = adminAppointments.find(a => a._id === appointmentId);
+    if (appointment && appointment.status === 'approved') {
+      // Check if appointment is in the future (date + time)
+      const now = new Date();
+      const dateObj = new Date(appointment.date);
+      const year = dateObj.getFullYear();
+      const month = dateObj.getMonth();
+      const day = dateObj.getDate();
+      const [hours, minutes] = appointment.startTime.split(':').map(Number);
+      const appointmentDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+
+      if (appointmentDateTime <= now) {
+        alert('Geçmiş randevular iptal edilemez.');
+        return;
+      }
+
+      setCancellingAppointment(appointment);
+      setShowCancelModal(true);
+    }
+  };
+
+  const handleCancelConfirm = async (reason) => {
+    if (!cancellingAppointment) return;
+
+    setCancelLoading(true);
+    try {
+      const response = await apiService.cancelAdminAppointment(cancellingAppointment._id, reason);
+      if (response.success) {
+        // Refresh appointments
+        const allAppointmentsResponse = await apiService.getAllAppointments();
+        const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
+
+        const ownAppointments = allAppointments.filter(isOwnAppointment);
+        const otherAppointments = allAppointments.filter(a => !isOwnAppointment(a));
+
+        setAppointments(allAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        setSystemAppointments(otherAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        setAdminAppointments(ownAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+
+        // Show success notification
+        showActionNotification('Onaylanmış randevu başarıyla iptal edildi ve öğrenciye bildirim gönderildi!');
+      }
+    } catch (error) {
+      console.error('Cancel appointment error:', error);
+      alert('Randevu iptal edilirken hata oluştu: ' + error.message);
+    }
+    setCancelLoading(false);
+    setShowCancelModal(false);
+    setCancellingAppointment(null);
   };
 
   const handleAppointmentDetails = (appointment) => {
@@ -1055,9 +1354,9 @@ const AdminDashboard = () => {
       active: { text: 'Aktif', color: 'bg-green-100 text-green-800' },
       inactive: { text: 'Pasif', color: 'bg-gray-100 text-gray-800' }
     };
-    
+
     const config = statusConfig[status] || { text: status, color: 'bg-gray-100 text-gray-800' };
-    
+
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
         {config.text}
@@ -1213,7 +1512,7 @@ const AdminDashboard = () => {
 
   // Helper: check if slot should be available (considering date/time)
   // NEW AVAILABILITY SYSTEM - Simple and Clear Rules
-  
+
   // Count confirmed appointments for a specific time slot
   const getConfirmedAppointmentCount = (slot, dayName) => {
     if (!appointments || appointments.length === 0) return 0;
@@ -1221,10 +1520,10 @@ const AdminDashboard = () => {
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.appointmentDate);
       const appointmentDayName = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
-      
+
       return appointmentDayName === dayName &&
-             appointment.startTime === slot.start &&
-             appointment.status === 'confirmed';
+        appointment.startTime === slot.start &&
+        appointment.status === 'confirmed';
     }).length;
   };
 
@@ -1234,7 +1533,7 @@ const AdminDashboard = () => {
     const slotStartMinute = parseInt(slot.start.split(':')[1]);
     const slotEndHour = parseInt(slot.end.split(':')[0]);
     const slotEndMinute = parseInt(slot.end.split(':')[1]);
-    
+
     const slotDurationMinutes = (slotEndHour * 60 + slotEndMinute) - (slotStartHour * 60 + slotStartMinute);
     return Math.floor(slotDurationMinutes / slotDuration);
   };
@@ -1349,10 +1648,10 @@ const AdminDashboard = () => {
       timestamp: new Date(),
       read: false
     };
-    
+
     setNotifications(prev => [notification, ...prev]);
     setUnreadCount(prev => prev + 1);
-    
+
     // Auto-remove notification after 3 seconds
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== notification.id));
@@ -1362,7 +1661,7 @@ const AdminDashboard = () => {
 
   // Mark notification as read
   const markNotificationAsRead = (notificationId) => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
@@ -1382,32 +1681,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Function to show a test notification
-  const showTestNotification = () => {
-    const notification = {
-      id: Date.now(),
-      type: 'test',
-      title: 'Test Bildirimi',
-      message: 'Bu bir test bildirimidir. Sistem çalışıyor!',
-      timestamp: new Date(),
-      read: false
-    };
-    setNotifications(prev => [notification, ...prev]);
-    setUnreadCount(prev => prev + 1);
-
-    if (Notification.permission === 'granted') {
-      new Notification('Test Bildirimi', {
-        body: 'Bu bir test bildirimidir. Sistem çalışıyor!',
-        icon: '/favicon.ico',
-        tag: 'test-notification'
-      });
-    }
-
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    }, 5000);
-  };
 
   if (loading) {
     return (
@@ -1418,15 +1691,14 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 flex flex-col ${
-      activeTab === 'users' ? sectionThemes.themeUsers :
+    <div className={`min-h-screen bg-gray-50 flex flex-col ${activeTab === 'users' ? sectionThemes.themeUsers :
       activeTab === 'appointments' ? sectionThemes.themeAppointments :
-      activeTab === 'availability' ? sectionThemes.themeAvailability :
-      activeTab === 'geofence' ? sectionThemes.themeGeofence :
-      activeTab === 'stats' ? sectionThemes.themeStats : ''
-    }`}>
+        activeTab === 'availability' ? sectionThemes.themeAvailability :
+          activeTab === 'geofence' ? sectionThemes.themeGeofence :
+            activeTab === 'stats' ? sectionThemes.themeStats : ''
+      }`}>
       {/* Modern Header */}
-            <Header
+      <Header
         user={user}
         onProfile={openProfileModal}
         onPassword={openPasswordModal}
@@ -1482,9 +1754,9 @@ const AdminDashboard = () => {
         </div>
       </Header>
 
-      
 
-      <div className="dashboard-main max-w-7xl mx-auto py-8">
+
+      <div className="dashboard-main max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Stats Cards */}
         <div className="stats-container">
           <div>
@@ -1549,6 +1821,11 @@ const AdminDashboard = () => {
                 id: 'stats',
                 label: 'İstatistikler',
                 icon: <ChartBarIcon className="w-5 h-5" />
+              },
+              {
+                id: 'settings',
+                label: 'Ayarlar',
+                icon: <CogIcon className="w-5 h-5" />
               }
             ]}
             activeTab={activeTab}
@@ -1557,25 +1834,113 @@ const AdminDashboard = () => {
 
           <div className="p-6">
             {activeTab === 'users' && (
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Kullanıcı Yönetimi</h3>
-                  <button
-                    onClick={() => setShowAddUserModal(true)}
-                    className="btn-primary"
-                  >
-                    <PlusIcon className="w-4 h-4 mr-2" />
-                    Öğretim Üyesi Ekle
-                  </button>
+              <div className="space-y-8">
+                {/* Öğretim Üyeleri Bölümü */}
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">Öğretim Üyeleri</h3>
+                      <p className="text-sm text-gray-500">Öğretim üyelerini ve yöneticileri yönetin</p>
+                    </div>
+                    <button
+                      onClick={() => setShowAddUserModal(true)}
+                      className="btn-primary whitespace-nowrap"
+                    >
+                      <PlusIcon className="w-4 h-4 mr-2" />
+                      Öğretim Üyesi Ekle
+                    </button>
+                  </div>
+                  
+                  {/* Arama Kutusu */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        value={facultySearchQuery}
+                        onChange={(e) => setFacultySearchQuery(e.target.value)}
+                        placeholder="İsim, e-posta veya bölüm ile ara..."
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <FacultyList
+                    users={users.filter(user => {
+                      const isFacultyOrAdmin = user.role === 'faculty' || user.role === 'admin';
+                      if (!isFacultyOrAdmin) return false;
+                      
+                      if (!facultySearchQuery.trim()) return true;
+                      
+                      const query = facultySearchQuery.toLowerCase();
+                      return (
+                        (user.name && user.name.toLowerCase().includes(query)) ||
+                        (user.email && user.email.toLowerCase().includes(query)) ||
+                        (user.department && user.department.toLowerCase().includes(query)) ||
+                        (user.title && user.title.toLowerCase().includes(query)) ||
+                        (user.phone && user.phone.includes(query))
+                      );
+                    })}
+                    onEdit={handleEditUser}
+                    onDelete={handleDeleteUser}
+                    onViewStudent={handleViewStudent}
+                    onViewAppointmentHistory={handleViewAppointmentHistory}
+                    getRoleBadge={getRoleBadge}
+                    getStatusBadge={getStatusBadge}
+                  />
                 </div>
-                <FacultyList
-                  users={users}
-                  onEdit={handleEditUser}
-                  onDelete={handleDeleteUser}
-                  onViewStudent={handleViewStudent}
-                  getRoleBadge={getRoleBadge}
-                  getStatusBadge={getStatusBadge}
-                />
+
+                {/* Öğrenciler Bölümü */}
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-1">Öğrenciler</h3>
+                      <p className="text-sm text-gray-500">Kayıtlı öğrencileri görüntüleyin</p>
+                    </div>
+                  </div>
+                  
+                  {/* Arama Kutusu */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        value={studentSearchQuery}
+                        onChange={(e) => setStudentSearchQuery(e.target.value)}
+                        placeholder="İsim, e-posta, öğrenci numarası veya bölüm ile ara..."
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <FacultyList
+                    users={users.filter(user => {
+                      const isStudent = user.role === 'student';
+                      if (!isStudent) return false;
+                      
+                      if (!studentSearchQuery.trim()) return true;
+                      
+                      const query = studentSearchQuery.toLowerCase();
+                      return (
+                        (user.name && user.name.toLowerCase().includes(query)) ||
+                        (user.email && user.email.toLowerCase().includes(query)) ||
+                        (user.studentNumber && user.studentNumber.toString().includes(query)) ||
+                        (user.department && user.department.toLowerCase().includes(query)) ||
+                        (user.phone && user.phone.includes(query))
+                      );
+                    })}
+                    onEdit={handleEditUser}
+                    onDelete={handleDeleteUser}
+                    onViewStudent={handleViewStudent}
+                    onViewAppointmentHistory={handleViewAppointmentHistory}
+                    getRoleBadge={getRoleBadge}
+                    getStatusBadge={getStatusBadge}
+                  />
+                </div>
               </div>
             )}
 
@@ -1631,6 +1996,7 @@ const AdminDashboard = () => {
                       onDetails={handleAppointmentDetails}
                       showCancel={false}
                       showActions={false} // Sistem randevularında hiçbir aksiyon butonu gösterme
+                      showHistoryButton={true}
                     />
                   </div>
                 )}
@@ -1650,9 +2016,11 @@ const AdminDashboard = () => {
                       formatTime={formatTime}
                       onApprove={handleApproveAppointment}
                       onReject={handleRejectAppointment}
+                      onCancelApproved={handleCancelApprovedAppointment}
                       onDetails={handleAppointmentDetails}
                       showCancel={false}
                       showActions={true}
+                      showHistoryButton={true}
                     />
                   </div>
                 )}
@@ -1680,21 +2048,19 @@ const AdminDashboard = () => {
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setViewMode('grid')}
-                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                        viewMode === 'grid' 
-                          ? 'bg-white text-blue-600 shadow-sm' 
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${viewMode === 'grid'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
                     >
                       Kart Görünümü
                     </button>
                     <button
                       onClick={() => setViewMode('table')}
-                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                        viewMode === 'table' 
-                          ? 'bg-white text-blue-600 shadow-sm' 
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${viewMode === 'table'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
                     >
                       Tablo Görünümü
                     </button>
@@ -1739,20 +2105,20 @@ const AdminDashboard = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
+                  <div className="w-full bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+                    <table className="w-full table-fixed divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[15%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                             Gün
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[10%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                             Durum
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[55%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                             Zaman Aralıkları
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[20%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Müsait Aralık
                           </th>
                         </tr>
@@ -1760,19 +2126,18 @@ const AdminDashboard = () => {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {availability.map((day, index) => (
                           <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
                               {getDayDisplayName(day.day)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                day.isActive 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
+                            <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${day.isActive
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                                }`}>
                                 {day.isActive ? 'Aktif' : 'Pasif'}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-900">
+                            <td className="px-6 py-4 text-sm text-gray-900 border-r border-gray-200">
                               {day.isActive && day.timeSlots && day.timeSlots.length > 0 ? (
                                 <div className="space-y-1">
                                   {day.timeSlots.map((slot, slotIndex) => {
@@ -1820,6 +2185,7 @@ const AdminDashboard = () => {
 
 
 
+            {/* Google Calendar Unavailable Slots Section - show under availability */}
             {activeTab === 'availability' && googleConnected && (
               <div className="mt-8">
                 {googleLoading && (
@@ -1838,7 +2204,7 @@ const AdminDashboard = () => {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">Konum Yönetimi (Geofence)</h3>
                 <p className="text-gray-600 mb-4">
-                  Öğrencilerin randevu alabileceği konumları (geofence) yönetin. 
+                  Öğrencilerin randevu alabileceği konumları (geofence) yönetin.
                   Bu sayede sadece belirli alanlarda bulunan öğrenciler randevu alabilir.
                 </p>
                 <AdminGeofenceManager />
@@ -1846,95 +2212,589 @@ const AdminDashboard = () => {
             )}
 
             {activeTab === 'stats' && (
-              <div className={styles.statsSection}>
-                <h3 className={styles.sectionTitle}>
-                  <ChartBarIcon className={styles.sectionTitleIcon} />
-                  Sistem İstatistikleri
-                </h3>
-                <div className={styles.statsGrid}>
-                  {/* User Distribution Card */}
-                  <div className={`${styles.statsCard} ${styles.userStatsCard}`}>
-                    <div className={styles.cardHeader}>
-                      <h4 className={styles.cardTitle}>
-                        <UserGroupIcon className={styles.cardIcon} />
-                        Kullanıcı Dağılımı
-                      </h4>
-                    </div>
-                    <div className={styles.statsList}>
-                      <div className={`${styles.statItem} ${styles.adminStat}`}>
-                        <div className={styles.statLabel}>
-                          <ShieldCheckIcon className={styles.statIcon} />
-                          Yöneticiler
-                        </div>
-                        <div className={styles.statValue}>
-                          <span className={styles.adminBadge}>{users.filter(u => u.role === 'admin').length}</span>
-                        </div>
-                      </div>
-                      <div className={`${styles.statItem} ${styles.facultyStat}`}>
-                        <div className={styles.statLabel}>
-                          <AcademicCapIcon className={styles.statIcon} />
-                          Öğretim Üyeleri
-                        </div>
-                        <div className={styles.statValue}>
-                          <span className={styles.facultyBadge}>{users.filter(u => u.role === 'faculty').length}</span>
-                        </div>
-                      </div>
-                      <div className={`${styles.statItem} ${styles.studentStat}`}>
-                        <div className={styles.statLabel}>
-                          <UserIcon className={styles.statIcon} />
-                          Öğrenciler
-                        </div>
-                        <div className={styles.statValue}>
-                          <span className={styles.studentBadge}>{users.filter(u => u.role === 'student').length}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div className={statsStyles.statsContainer}>
+                {/* Overall Statistics */}
+                <div style={{ marginBottom: '32px' }}>
+                  <StatisticsCards
+                    appointments={appointments}
+                    title="Genel Randevu İstatistikleri"
+                    onExportPDF={() => exportAppointmentsToPDF(appointments, 'Tüm Sistem Randevuları', topics)}
+                  />
+                </div>
 
-                  {/* Appointment Status Card */}
-                  <div className={`${styles.statsCard} ${styles.appointmentStatsCard}`}>
-                    <div className={styles.cardHeader}>
-                      <h4 className={styles.cardTitle}>
-                        <CalendarIcon className={styles.cardIcon} />
-                        Randevu Durumu
-                      </h4>
-                    </div>
-                    <div className={styles.statsList}>
-                      <div className={`${styles.statItem} ${styles.pendingStat}`}>
-                        <div className={styles.statLabel}>
-                          <ClockIcon className={styles.statIcon} />
-                          Bekleyen
-                        </div>
-                        <div className={styles.statValue}>
-                          <span className={styles.pendingBadge}>{appointments.filter(a => a.status === 'pending').length}</span>
-                        </div>
-                      </div>
-                      <div className={`${styles.statItem} ${styles.approvedStat}`}>
-                        <div className={styles.statLabel}>
-                          <CheckCircleIcon className={styles.statIcon} />
-                          Onaylanan
-                        </div>
-                        <div className={styles.statValue}>
-                          <span className={styles.approvedBadge}>{appointments.filter(a => a.status === 'approved').length}</span>
-                        </div>
-                      </div>
-                      <div className={`${styles.statItem} ${styles.rejectedStat}`}>
-                        <div className={styles.statLabel}>
-                          <XCircleIcon className={styles.statIcon} />
-                          Reddedilen
-                        </div>
-                        <div className={styles.statValue}>
-                          <span className={styles.rejectedBadge}>{appointments.filter(a => a.status === 'rejected').length}</span>
-                        </div>
-                      </div>
-                    </div>
+                <div className={statsStyles.header}>
+                  <h3 className={statsStyles.title}>
+                    <ChartBarIcon className={statsStyles.icon} />
+                    Öğretim Üyesi İstatistikleri
+                  </h3>
+                  <div className={statsStyles.filterContainer}>
+                    <label className={statsStyles.filterLabel}>Zaman Aralığı:</label>
+                    <select
+                      value={facultyStatsTimeFilter}
+                      onChange={(e) => setFacultyStatsTimeFilter(e.target.value)}
+                      className={statsStyles.filterSelect}
+                    >
+                      <option value="month">Bu Ay</option>
+                      <option value="3months">3 Ay</option>
+                      <option value="6months">6 Ay</option>
+                      <option value="year">1 Yıl</option>
+                      <option value="all">Tüm Zamanlar</option>
+                    </select>
                   </div>
                 </div>
+
+                <div className={statsStyles.cardsGrid}>
+                  {users.filter(u => u.role === 'faculty' || u.role === 'admin').map((faculty) => {
+                    // Filter by faculty
+                    // Format faculty name with title for comparison
+                    const facultyNameWithTitle = faculty.title ? `${faculty.title} ${faculty.name}` : faculty.name;
+                    let facultyAppts = appointments.filter(a =>
+                      a.facultyId === faculty._id ||
+                      (a.facultyId && typeof a.facultyId === 'object' && a.facultyId._id === faculty._id) ||
+                      a.facultyName === faculty.name ||
+                      a.facultyName === facultyNameWithTitle
+                    );
+
+                    // Apply time filter
+                    const now = new Date();
+                    let filterLabel = 'Tüm Zamanlar';
+                    if (facultyStatsTimeFilter !== 'all') {
+                      let daysToFilter = 30;
+                      if (facultyStatsTimeFilter === 'month') {
+                        daysToFilter = 30;
+                        filterLabel = 'Son 30 Gün';
+                      } else if (facultyStatsTimeFilter === '3months') {
+                        daysToFilter = 90;
+                        filterLabel = 'Son 3 Ay';
+                      } else if (facultyStatsTimeFilter === '6months') {
+                        daysToFilter = 180;
+                        filterLabel = 'Son 6 Ay';
+                      } else if (facultyStatsTimeFilter === 'year') {
+                        daysToFilter = 365;
+                        filterLabel = 'Son 1 Yıl';
+                      }
+                      const filterDate = new Date(now.getTime() - daysToFilter * 24 * 60 * 60 * 1000);
+                      facultyAppts = facultyAppts.filter(a => new Date(a.createdAt || a.date) >= filterDate);
+                    }
+
+                    const stats = {
+                      total: facultyAppts.length,
+                      approved: facultyAppts.filter(a => a.status === 'approved').length,
+                      rejected: facultyAppts.filter(a => a.status === 'rejected').length,
+                      pending: facultyAppts.filter(a => a.status === 'pending').length,
+                      noResponse: facultyAppts.filter(a => a.status === 'no_response').length,
+                      cancelled: facultyAppts.filter(a => a.status === 'cancelled').length
+                    };
+
+                    // Calculate percentages
+                    const getPercent = (val) => stats.total > 0 ? Math.round((val / stats.total) * 100) : 0;
+
+                    return (
+                      <div key={faculty._id} className={statsStyles.card}>
+                        <div className={statsStyles.cardHeader}>
+                          {faculty.picture ? (
+                            <img
+                              src={faculty.picture}
+                              alt={faculty.name}
+                              className={statsStyles.avatar}
+                              style={{ objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div className={statsStyles.avatar}>
+                              {faculty.name ? faculty.name.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                          )}
+                          <div className={statsStyles.facultyInfo}>
+                            <h4 className={statsStyles.facultyName}>
+                              {faculty.title ? `${faculty.title} ${faculty.name}` : faculty.name}
+                            </h4>
+                            <p className={statsStyles.facultyDept}>{faculty.department || 'Bölüm Yok'}</p>
+                          </div>
+                        </div>
+
+                        <div className={statsStyles.filterBadge}>
+                          {filterLabel}
+                        </div>
+
+                        <div className={statsStyles.statsList}>
+                          <div className={statsStyles.statItem}>
+                            <span className={statsStyles.statLabel}>Toplam Randevu</span>
+                            <span className={statsStyles.statValue}>{stats.total}</span>
+                          </div>
+                          <div className={statsStyles.statItem}>
+                            <span className={`${statsStyles.statLabel} ${statsStyles.approved}`}>
+                              <CheckCircleIcon className={statsStyles.iconSmall} /> Onaylanan
+                            </span>
+                            <span className={`${statsStyles.statValue} ${statsStyles.approved}`}>
+                              {stats.approved} <span className={statsStyles.percent}>(%{getPercent(stats.approved)})</span>
+                            </span>
+                          </div>
+                          <div className={statsStyles.statItem}>
+                            <span className={`${statsStyles.statLabel} ${statsStyles.rejected}`}>
+                              <XCircleIcon className={statsStyles.iconSmall} /> Reddedilen
+                            </span>
+                            <span className={`${statsStyles.statValue} ${statsStyles.rejected}`}>
+                              {stats.rejected} <span className={statsStyles.percent}>(%{getPercent(stats.rejected)})</span>
+                            </span>
+                          </div>
+                          <div className={statsStyles.statItem}>
+                            <span className={`${statsStyles.statLabel} ${statsStyles.pending}`}>
+                              <ClockIcon className={statsStyles.iconSmall} /> Beklemede
+                            </span>
+                            <span className={`${statsStyles.statValue} ${statsStyles.pending}`}>
+                              {stats.pending} <span className={statsStyles.percent}>(%{getPercent(stats.pending)})</span>
+                            </span>
+                          </div>
+                          <div className={statsStyles.statItem}>
+                            <span className={`${statsStyles.statLabel} ${statsStyles.noResponse}`}>
+                              <ExclamationCircleIcon className={statsStyles.iconSmall} /> Cevaplanmadı
+                            </span>
+                            <span className={`${statsStyles.statValue} ${statsStyles.noResponse}`}>
+                              {stats.noResponse} <span className={statsStyles.percent}>(%{getPercent(stats.noResponse)})</span>
+                            </span>
+                          </div>
+                          <div className={statsStyles.statItem}>
+                            <span className={`${statsStyles.statLabel} ${statsStyles.cancelled}`}>
+                              <NoSymbolIcon className={statsStyles.iconSmall} /> İptal Edilen
+                            </span>
+                            <span className={`${statsStyles.statValue} ${statsStyles.cancelled}`}>
+                              {stats.cancelled} <span className={statsStyles.percent}>(%{getPercent(stats.cancelled)})</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={statsStyles.cardActions}>
+                          <button
+                            onClick={() => handleViewAppointmentHistory(faculty)}
+                            className={statsStyles.historyButton}
+                          >
+                            <ClockIcon className="w-4 h-4" />
+                            Randevu Geçmişi
+                          </button>
+                          <button
+                            onClick={() => exportAppointmentsToPDF(facultyAppts, `${formatUserName(faculty)} - Randevu Raporu (${filterLabel})`, topics)}
+                            disabled={stats.total === 0}
+                            className={statsStyles.pdfButton}
+                            style={stats.total === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                          >
+                            <ArrowDownTrayIcon className="w-4 h-4" />
+                            PDF İndir
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {users.filter(u => u.role === 'faculty').length === 0 && (
+                    <div className={statsStyles.emptyState}>
+                      Henüz sistemde kayıtlı öğretim üyesi bulunmamaktadır.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {users.filter(u => u.role === 'faculty').length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <AcademicCapIcon className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                Henüz öğretim üyesi bulunmamaktadır.
               </div>
             )}
           </div>
         </div>
+
+
+        {activeTab === 'settings' && (
+          <div className={settingsStyles.settingsContainer}>
+            {/* Slot Duration Settings */}
+            <div className={settingsStyles.settingsCard}>
+              <div className={settingsStyles.cardHeader}>
+                <h4 className={settingsStyles.cardTitle}>
+                  <ClockIcon className={settingsStyles.cardIcon} />
+                  Randevu Ayarları
+                </h4>
+              </div>
+              <div className={settingsStyles.settingRow}>
+                <label className={settingsStyles.settingLabel}>
+                  Varsayılan Randevu Süresi
+                </label>
+                <div className={settingsStyles.settingControl}>
+                  <select
+                    value={slotDuration}
+                    onChange={(e) => setSlotDuration(parseInt(e.target.value))}
+                    className={settingsStyles.select}
+                  >
+                    <option value={10}>10 dakika</option>
+                    <option value={15}>15 dakika</option>
+                    <option value={20}>20 dakika</option>
+                    <option value={30}>30 dakika</option>
+                    <option value={45}>45 dakika</option>
+                    <option value={60}>60 dakika</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await apiService.updateSetting('slotDuration', slotDuration);
+                        if (response.success) {
+                          alert('Randevu süresi ayarı kaydedildi: ' + slotDuration + ' dakika');
+                        }
+                      } catch (error) {
+                        alert('Ayar kaydedilirken hata oluştu: ' + error.message);
+                      }
+                    }}
+                    className={settingsStyles.saveButton}
+                  >
+                    Kaydet
+                  </button>
+                </div>
+              </div>
+
+              {/* Appointment Timeout Setting */}
+              <div className={settingsStyles.settingRow} style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #f3f4f6' }}>
+                <label className={settingsStyles.settingLabel}>
+                  Maksimum Bekleme Süresi
+                  <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', fontWeight: 'normal', marginTop: '4px' }}>
+                    Öğretim üyesi bu süre içinde cevap vermezse randevu otomatik olarak "Cevaplanmadı" durumuna düşer.
+                  </span>
+                </label>
+                <div className={settingsStyles.settingControl}>
+                  <select
+                    value={appointmentTimeout}
+                    onChange={(e) => setAppointmentTimeout(parseInt(e.target.value))}
+                    className={settingsStyles.select}
+                  >
+                    <option value={12}>12 Saat</option>
+                    <option value={24}>24 Saat (1 Gün)</option>
+                    <option value={48}>48 Saat (2 Gün)</option>
+                    <option value={72}>72 Saat (3 Gün)</option>
+                    <option value={168}>1 Hafta</option>
+                  </select>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await apiService.updateSetting('appointmentTimeoutHours', appointmentTimeout);
+                        if (response.success) {
+                          alert('Maksimum bekleme süresi ayarı kaydedildi: ' + appointmentTimeout + ' saat');
+                        }
+                      } catch (error) {
+                        alert('Ayar kaydedilirken hata oluştu: ' + error.message);
+                      }
+                    }}
+                    className={settingsStyles.saveButton}
+                  >
+                    Kaydet
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Department Management */}
+            <div className={settingsStyles.settingsCard}>
+              <div className={settingsStyles.cardHeader}>
+                <h4 className={settingsStyles.cardTitle}>
+                  <AcademicCapIcon className={settingsStyles.cardIcon} />
+                  Bölüm Yönetimi
+                </h4>
+              </div>
+
+              {/* Add New Department */}
+              <div className={settingsStyles.addDepartmentRow}>
+                <input
+                  type="text"
+                  value={newDepartmentName}
+                  onChange={(e) => setNewDepartmentName(e.target.value)}
+                  placeholder="Yeni bölüm adı..."
+                  className={settingsStyles.departmentInput}
+                />
+                <button
+                  onClick={async () => {
+                    if (!newDepartmentName.trim()) {
+                      alert('Bölüm adı gereklidir');
+                      return;
+                    }
+                    setDepartmentLoading(true);
+                    try {
+                      const response = await apiService.addDepartment(newDepartmentName.trim());
+                      if (response.success) {
+                        setDepartments([...departments, response.data]);
+                        setNewDepartmentName('');
+                        alert('Bölüm başarıyla eklendi');
+                      }
+                    } catch (error) {
+                      alert(error.message || 'Bölüm eklenirken hata oluştu');
+                    } finally {
+                      setDepartmentLoading(false);
+                    }
+                  }}
+                  disabled={departmentLoading || !newDepartmentName.trim()}
+                  className={settingsStyles.addButton}
+                >
+                  <PlusIcon className={settingsStyles.addButtonIcon} />
+                  Ekle
+                </button>
+              </div>
+
+              {/* Department List */}
+              <div className={settingsStyles.tableContainer}>
+                <table className={settingsStyles.table}>
+                  <thead className={settingsStyles.tableHeader}>
+                    <tr className={settingsStyles.tableHeaderRow}>
+                      <th className={settingsStyles.tableHeaderCell}>Bölüm Adı</th>
+                      <th className={settingsStyles.tableHeaderCell}>Öğretim Üyesi</th>
+                      <th className={settingsStyles.tableHeaderCell}>Öğrenci</th>
+                      <th className={settingsStyles.tableHeaderCell} style={{ textAlign: 'right' }}>İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody className={settingsStyles.tableBody}>
+                    {departments.map((dept) => (
+                      <tr key={dept._id} className={settingsStyles.tableRow}>
+                        <td className={settingsStyles.tableCell} data-label="Bölüm Adı">{dept.name}</td>
+                        <td className={settingsStyles.tableCellSecondary} data-label="Öğretim Üyesi">
+                          {users.filter(u => u.role === 'faculty' && u.department === dept.name).length}
+                        </td>
+                        <td className={settingsStyles.tableCellSecondary} data-label="Öğrenci">
+                          {users.filter(u => u.role === 'student' && u.department === dept.name).length}
+                        </td>
+                        <td className={settingsStyles.tableCellSecondary} data-label="İşlemler" style={{ textAlign: 'right' }}>
+                          <button
+                            onClick={async () => {
+                              if (window.confirm(`"${dept.name}" bölümünü silmek istediğinizden emin misiniz?`)) {
+                                try {
+                                  const response = await apiService.deleteDepartment(dept._id);
+                                  if (response.success) {
+                                    setDepartments(departments.filter(d => d._id !== dept._id));
+                                    alert('Bölüm başarıyla silindi');
+                                  }
+                                } catch (error) {
+                                  alert(error.message || 'Bölüm silinirken hata oluştu');
+                                }
+                              }
+                            }}
+                            className={settingsStyles.deleteButton}
+                          >
+                            <TrashIcon className={settingsStyles.deleteIcon} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {departments.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className={settingsStyles.emptyState}>
+                          Henüz kayıtlı bölüm bulunmamaktadır.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Topic Management */}
+            <div className={settingsStyles.settingsCard}>
+              <div className={settingsStyles.cardHeader}>
+                <h4 className={settingsStyles.cardTitle}>
+                  <DocumentTextIcon className={settingsStyles.cardIcon} />
+                  Görüşme Konuları Yönetimi
+                </h4>
+              </div>
+
+              {/* Add New Topic */}
+              <div className={settingsStyles.topicInputRow}>
+                <div className={settingsStyles.topicInputWrapper}>
+                  <input
+                    type="text"
+                    placeholder="Yeni konu adı..."
+                    className={settingsStyles.departmentInput}
+                    id="newTopicName"
+                  />
+                </div>
+                <label className={settingsStyles.topicCheckboxLabel}>
+                  <input
+                    type="checkbox"
+                    id="newTopicAdvisorOnly"
+                    className={settingsStyles.topicCheckbox}
+                  />
+                  Danışmana özel
+                </label>
+                <button
+                  onClick={async () => {
+                    const nameInput = document.getElementById('newTopicName');
+                    const advisorOnlyCheckbox = document.getElementById('newTopicAdvisorOnly');
+                    const name = nameInput.value.trim();
+                    const isAdvisorOnly = advisorOnlyCheckbox.checked;
+
+                    if (!name) {
+                      alert('Konu adı gereklidir');
+                      return;
+                    }
+
+                    setTopicsLoading(true);
+                    try {
+                      const response = await apiService.post('/topics', {
+                        name,
+                        isAdvisorOnly
+                      });
+
+                      if (response.success) {
+                        nameInput.value = '';
+                        advisorOnlyCheckbox.checked = false;
+                        // Refresh topics list
+                        const topicsResponse = await apiService.get('/topics');
+                        if (topicsResponse.success) {
+                          setTopics(topicsResponse.data);
+                        }
+                      }
+                    } catch (error) {
+                      alert(error.message || 'Konu eklenirken hata oluştu');
+                    } finally {
+                      setTopicsLoading(false);
+                    }
+                  }}
+                  disabled={topicsLoading}
+                  className={settingsStyles.addButton}
+                >
+                  <PlusIcon className={settingsStyles.addButtonIcon} />
+                  Ekle
+                </button>
+              </div>
+
+              {/* Topics List Table */}
+              <div className={settingsStyles.tableContainer}>
+                <table className={settingsStyles.table}>
+                  <thead className={settingsStyles.tableHeader}>
+                    <tr className={settingsStyles.tableHeaderRow}>
+                      <th className={settingsStyles.tableHeaderCell}>Konu Adı</th>
+                      <th className={settingsStyles.tableHeaderCell} style={{ textAlign: 'center', width: '140px' }}>Danışmana Özel</th>
+                      <th className={settingsStyles.tableHeaderCell} style={{ textAlign: 'center', width: '100px' }}>İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody className={settingsStyles.tableBody}>
+                    {topics.map((topic, index) => (
+                      <tr key={topic._id} className={settingsStyles.tableRow}>
+                        <td className={settingsStyles.tableCell} data-label="Konu Adı">
+                          {editingTopicId === topic._id ? (
+                            <input
+                              type="text"
+                              defaultValue={topic.name}
+                              id={`edit-name-${topic._id}`}
+                              className={settingsStyles.topicEditInput}
+                            />
+                          ) : (
+                            topic.name
+                          )}
+                        </td>
+                        <td className={settingsStyles.tableCellSecondary} data-label="Danışmana Özel" style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={topic.isAdvisorOnly || false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              try {
+                                const response = await apiService.put(`/topics/${topic._id}`, {
+                                  isAdvisorOnly: newValue
+                                });
+                                if (response.success) {
+                                  // Update local state
+                                  setTopics(topics.map(t =>
+                                    t._id === topic._id ? { ...t, isAdvisorOnly: newValue } : t
+                                  ));
+                                }
+                              } catch (error) {
+                                alert('Güncelleme hatası: ' + error.message);
+                                e.target.checked = !newValue; // Revert
+                              }
+                            }}
+                            disabled={editingTopicId === topic._id}
+                            className={settingsStyles.topicCheckbox}
+                            style={{
+                              cursor: editingTopicId === topic._id ? 'not-allowed' : 'pointer'
+                            }}
+                          />
+                        </td>
+                        <td className={settingsStyles.tableCellSecondary} data-label="İşlemler" style={{ textAlign: 'center' }}>
+                          {editingTopicId === topic._id ? (
+                            <div className={settingsStyles.editButtonGroup}>
+                              <button
+                                onClick={async () => {
+                                  const nameInput = document.getElementById(`edit-name-${topic._id}`);
+                                  const newName = nameInput.value.trim();
+
+                                  if (!newName) {
+                                    alert('Konu adı gereklidir');
+                                    return;
+                                  }
+
+                                  try {
+                                    const response = await apiService.put(`/topics/${topic._id}`, {
+                                      name: newName
+                                    });
+                                    if (response.success) {
+                                      setTopics(topics.map(t =>
+                                        t._id === topic._id ? { ...t, name: newName } : t
+                                      ));
+                                      setEditingTopicId(null);
+                                    }
+                                  } catch (error) {
+                                    alert('Güncelleme hatası: ' + error.message);
+                                  }
+                                }}
+                                className={settingsStyles.editSaveButton}
+                              >
+                                Kaydet
+                              </button>
+                              <button
+                                onClick={() => setEditingTopicId(null)}
+                                className={settingsStyles.editCancelButton}
+                              >
+                                İptal
+                              </button>
+                            </div>
+                          ) : (
+                            <div className={settingsStyles.actionButtonGroup}>
+                              <button
+                                onClick={() => setEditingTopicId(topic._id)}
+                                className={settingsStyles.editButton}
+                              >
+                                <PencilIcon className={settingsStyles.editIcon} />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`"${topic.name}" konusunu silmek istediğinizden emin misiniz?`)) {
+                                    try {
+                                      const response = await apiService.delete(`/topics/${topic._id}`);
+                                      if (response.success) {
+                                        setTopics(topics.filter(t => t._id !== topic._id));
+                                      }
+                                    } catch (error) {
+                                      alert('Silme hatası: ' + error.message);
+                                    }
+                                  }
+                                }}
+                                className={settingsStyles.deleteButton}
+                              >
+                                <TrashIcon className={settingsStyles.deleteIcon} />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {topics.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className={settingsStyles.emptyState}>
+                          Henüz kayıtlı görüşme konusu bulunmamaktadır.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+
 
       {/* Modern Modals */}
       <FacultyAddModal
@@ -1953,6 +2813,7 @@ const AdminDashboard = () => {
         success={facultySuccess}
         isEditMode={!!editingUser}
         editingUser={editingUser}
+        departments={departments}
       />
 
       <StudentDetailsModal
@@ -2017,14 +2878,112 @@ const AdminDashboard = () => {
           setShowAppointmentDetails(false);
           setSelectedAppointment(null);
         }}
+        showActions={selectedAppointment && isOwnAppointment(selectedAppointment)}
         onApprove={handleApproveAppointment}
         onReject={handleRejectAppointment}
         onCancel={handleCancelAppointment}
+        onCancelApproved={handleCancelApprovedAppointment}
         getStatusText={getStatusText}
         formatDate={formatDate}
         formatTime={formatTime}
+        currentUserId={null}
       />
-    </div>
+
+      {/* Reject Modal */}
+      <RejectModal
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setRejectingAppointment(null);
+        }}
+        onConfirm={handleRejectConfirm}
+        loading={rejectLoading}
+        appointmentInfo={rejectingAppointment}
+      />
+
+      {/* Cancel Modal (for approved appointments - admin as faculty) */}
+      <CancelModal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancellingAppointment(null);
+        }}
+        onConfirm={handleCancelConfirm}
+        loading={cancelLoading}
+        appointmentInfo={cancellingAppointment}
+      />
+
+      {/* Google Calendar Conflict Warning Modal */}
+      <ConflictWarningModal
+        isOpen={showConflictModal}
+        conflictData={conflictData}
+        onDismiss={handleConflictDismiss}
+        onAcknowledge={handleConflictAcknowledge}
+        onGoToAvailability={handleGoToAvailability}
+      />
+
+      {/* First Login Setup Modal */}
+      <ProfileModal
+        isOpen={showFirstLoginModal}
+        onClose={() => {}} // Prevent closing without completing setup
+        profileData={firstLoginData}
+        onInputChange={handleFirstLoginInputChange}
+        onSubmit={handleFirstLoginSubmit}
+        loading={firstLoginLoading}
+        error={firstLoginError}
+        success=""
+        disableClose={true}
+        title="İlk Giriş Ayarları"
+        fields={[
+          {
+            name: 'title',
+            label: 'Ünvan',
+            type: 'select',
+            required: true,
+            placeholder: 'Ünvan seçin',
+            options: [
+              { value: 'Prof. Dr.', label: 'Prof. Dr.' },
+              { value: 'Doç. Dr.', label: 'Doç. Dr.' },
+              { value: 'Dr. Öğr. Üyesi', label: 'Dr. Öğr. Üyesi' },
+              { value: 'Öğr. Gör. Dr.', label: 'Öğr. Gör. Dr.' },
+              { value: 'Öğr. Gör.', label: 'Öğr. Gör.' },
+              { value: 'Arş. Gör. Dr.', label: 'Arş. Gör. Dr.' },
+              { value: 'Arş. Gör.', label: 'Arş. Gör.' }
+            ]
+          },
+          {
+            name: 'department',
+            label: 'Bölüm',
+            type: 'select',
+            required: true,
+            placeholder: 'Bölüm seçin',
+            options: departments.map(dept => ({
+              value: dept.name,
+              label: dept.name
+            }))
+          }
+        ]}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteConfirmModal}
+        onClose={() => {
+          setShowDeleteConfirmModal(false);
+          setUserToDelete(null);
+        }}
+        onConfirm={confirmDeleteUser}
+        title="Kullanıcıyı Sil"
+        message={
+          userToDelete
+            ? `${formatUserName(userToDelete)} (${userToDelete.email}) adlı kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`
+            : 'Bu kullanıcıyı silmek istediğinizden emin misiniz?'
+        }
+        confirmText="Evet, Sil"
+        cancelText="İptal"
+        type="danger"
+      />
+    </div >
   );
 };
 

@@ -9,7 +9,7 @@ const router = express.Router();
 // @route   GET /api/users/faculty
 // @access  Public
 router.get('/faculty', asyncHandler(async (req, res) => {
-  const faculty = await User.find({ 
+  const faculty = await User.find({
     $or: [
       { role: 'faculty', isActive: true },
       { role: 'admin', isActive: true }
@@ -121,12 +121,12 @@ router.put('/faculty/availability', auth, asyncHandler(async (req, res) => {
     user.availability = availability;
   }
 
-  // Update slot duration
+  // Update slot duration - minimum 15 minutes, no maximum
   if (slotDuration) {
-    if (slotDuration < 10 || slotDuration > 20) {
+    if (slotDuration < 15) {
       return res.status(400).json({
         success: false,
-        message: 'Slot süresi 10-20 dakika arasında olmalıdır'
+        message: 'Slot süresi minimum 15 dakika olmalıdır'
       });
     }
     user.slotDuration = slotDuration;
@@ -173,6 +173,26 @@ router.put('/faculty/toggle-active', auth, asyncHandler(async (req, res) => {
   });
 }));
 
+// @desc    Get user by email
+// @route   GET /api/users/email/:email
+// @access  Private (Authenticated users)
+router.get('/email/:email', auth, asyncHandler(async (req, res) => {
+  const email = decodeURIComponent(req.params.email);
+  const user = await User.findOne({ email: email.toLowerCase() }).select('-password');
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Kullanıcı bulunamadı'
+    });
+  }
+
+  res.json({
+    success: true,
+    data: user
+  });
+}));
+
 // @desc    Get user statistics
 // @route   GET /api/users/stats
 // @access  Private
@@ -194,17 +214,17 @@ router.get('/stats', auth, asyncHandler(async (req, res) => {
   if (user.role === 'faculty') {
     // Faculty stats
     const totalAppointments = await Appointment.countDocuments({ facultyId: user._id });
-    const pendingAppointments = await Appointment.countDocuments({ 
-      facultyId: user._id, 
-      status: 'pending' 
+    const pendingAppointments = await Appointment.countDocuments({
+      facultyId: user._id,
+      status: 'pending'
     });
-    const approvedAppointments = await Appointment.countDocuments({ 
-      facultyId: user._id, 
-      status: 'approved' 
+    const approvedAppointments = await Appointment.countDocuments({
+      facultyId: user._id,
+      status: 'approved'
     });
-    const rejectedAppointments = await Appointment.countDocuments({ 
-      facultyId: user._id, 
-      status: 'rejected' 
+    const rejectedAppointments = await Appointment.countDocuments({
+      facultyId: user._id,
+      status: 'rejected'
     });
 
     stats = {
@@ -216,17 +236,17 @@ router.get('/stats', auth, asyncHandler(async (req, res) => {
   } else if (user.role === 'student') {
     // Student stats
     const totalAppointments = await Appointment.countDocuments({ studentEmail: user.email });
-    const pendingAppointments = await Appointment.countDocuments({ 
-      studentEmail: user.email, 
-      status: 'pending' 
+    const pendingAppointments = await Appointment.countDocuments({
+      studentEmail: user.email,
+      status: 'pending'
     });
-    const approvedAppointments = await Appointment.countDocuments({ 
-      studentEmail: user.email, 
-      status: 'approved' 
+    const approvedAppointments = await Appointment.countDocuments({
+      studentEmail: user.email,
+      status: 'approved'
     });
-    const rejectedAppointments = await Appointment.countDocuments({ 
-      studentEmail: user.email, 
-      status: 'rejected' 
+    const rejectedAppointments = await Appointment.countDocuments({
+      studentEmail: user.email,
+      status: 'rejected'
     });
 
     stats = {
@@ -240,6 +260,44 @@ router.get('/stats', auth, asyncHandler(async (req, res) => {
   res.json({
     success: true,
     data: stats
+  });
+}));
+
+// @desc    Get user by ID
+// @route   GET /api/users/:id
+// @access  Private (Users can view their own profile, admins can view any profile)
+// NOTE: This route must be last because it matches any :id, including 'email', 'stats', 'faculty', etc.
+router.get('/:id', auth, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const requestingUser = await User.findById(req.user.id);
+
+  if (!requestingUser) {
+    return res.status(404).json({
+      success: false,
+      message: 'Kullanıcı bulunamadı'
+    });
+  }
+
+  // Users can view their own profile, admins can view any profile
+  if (requestingUser.role !== 'admin' && requestingUser._id.toString() !== id) {
+    return res.status(403).json({
+      success: false,
+      message: 'Bu kullanıcının bilgilerini görüntüleme yetkiniz yok'
+    });
+  }
+
+  const user = await User.findById(id).select('-password');
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Kullanıcı bulunamadı'
+    });
+  }
+
+  res.json({
+    success: true,
+    data: user
   });
 }));
 

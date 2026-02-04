@@ -11,13 +11,14 @@ export default function FacultyAddModal({
   error,
   success,
   isEditMode = false,
-  editingUser = null
+  editingUser = null,
+  departments = []
 }) {
   if (!isOpen) return null;
 
-                         return (
-             <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-               <div className="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
         <div className="mt-3">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900">
@@ -72,9 +73,8 @@ export default function FacultyAddModal({
                 readOnly={isEditMode}
                 value={facultyData.email || ''}
                 onChange={onInputChange}
-                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
                 placeholder="ahmet.yilmaz@universite.edu.tr"
               />
             </div>
@@ -106,16 +106,26 @@ export default function FacultyAddModal({
               <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
                 Bölüm *
               </label>
-              <input
-                type="text"
+              <select
                 id="department"
                 name="department"
                 required
                 value={facultyData.department || ''}
                 onChange={onInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Örn: Bilgisayar Mühendisliği"
-              />
+              >
+                <option value="">Bölüm seçin</option>
+                {departments.map((dept) => (
+                  <option key={dept._id} value={dept.name}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+              {departments.length === 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Henüz bölüm eklenmemiş. Ayarlar sekmesinden bölüm ekleyebilirsiniz.
+                </p>
+              )}
             </div>
 
             <div>

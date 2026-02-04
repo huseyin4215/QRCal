@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
-import { 
-  AcademicCapIcon, 
-  BuildingOfficeIcon, 
-  PhoneIcon, 
+import {
+  AcademicCapIcon,
+  BuildingOfficeIcon,
   EnvelopeIcon,
   CalendarIcon,
   MagnifyingGlassIcon,
@@ -12,6 +11,8 @@ import {
   HomeIcon
 } from '@heroicons/react/24/outline';
 import Header from '../components/Header/Header';
+import ProfileModal from '../components/ProfileModal/ProfileModal';
+import PasswordModal from '../components/PasswordModal/PasswordModal';
 import headerStyles from '../components/Header/Header.module.css';
 import styles from './FacultyList.module.css';
 
@@ -25,18 +26,62 @@ const FacultyList = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
+  // Profile Modal States
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    studentNumber: '',
+    department: ''
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+
+  // Password Modal States
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
+  // Profile fields configuration
+  const profileFields = [
+    { name: 'name', label: 'Ad Soyad', type: 'text', required: true, placeholder: 'Ad Soyad' },
+    { name: 'email', label: 'E-posta', type: 'email', required: true, placeholder: 'E-posta adresi' },
+    { name: 'studentNumber', label: 'Öğrenci No', type: 'text', required: false, placeholder: 'Öğrenci numarası' },
+    { name: 'department', label: 'Bölüm', type: 'text', required: false, placeholder: 'Bölüm' }
+  ];
+
   useEffect(() => {
     loadFaculty();
   }, []);
+
+  useEffect(() => {
+    // Initialize profile data from user
+    if (user) {
+      setProfileData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        studentNumber: user.studentNumber || '',
+        department: user.department || ''
+      });
+    }
+  }, [user]);
 
   const loadFaculty = async () => {
     try {
       setLoading(true);
       const response = await apiService.getFacultyList();
-      
+
       if (response.success) {
+        // Show both faculty and admin users (admins can also be faculty members)
         setFaculty(response.data || []);
-        
+
         // Extract unique departments
         const uniqueDepartments = [...new Set((response.data || []).map(f => f.department))];
         setDepartments(uniqueDepartments);
@@ -54,8 +99,8 @@ const FacultyList = () => {
 
   const filteredFaculty = faculty.filter(f => {
     const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         f.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         f.department.toLowerCase().includes(searchTerm.toLowerCase());
+      f.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.department.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = !selectedDepartment || f.department === selectedDepartment;
     return matchesSearch && matchesDepartment;
   });
@@ -73,11 +118,92 @@ const FacultyList = () => {
   };
 
   const openProfileModal = () => {
+    setProfileError('');
+    setProfileSuccess('');
     setShowProfileModal(true);
   };
 
   const openPasswordModal = () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     setShowPasswordModal(true);
+  };
+
+  const handleProfileInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setProfileLoading(true);
+    setProfileError('');
+    setProfileSuccess('');
+
+    try {
+      const response = await apiService.updateStudentProfile(profileData);
+
+      if (response.success) {
+        setProfileSuccess('Profil başarıyla güncellendi!');
+
+        // Update local user data
+        const updatedUser = { ...user, ...profileData };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+
+        setTimeout(() => {
+          setShowProfileModal(false);
+          setProfileSuccess('');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      setProfileError(error.message || 'Profil güncellenirken hata oluştu');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordLoading(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Yeni şifreler eşleşmiyor');
+      setPasswordLoading(false);
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('Yeni şifre en az 6 karakter olmalıdır');
+      setPasswordLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiService.changePassword(passwordData.currentPassword, passwordData.newPassword);
+
+      if (response.success) {
+        setPasswordSuccess('Şifre başarıyla değiştirildi!');
+
+        setTimeout(() => {
+          setShowPasswordModal(false);
+          setPasswordSuccess('');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Password change error:', error);
+      setPasswordError(error.message || 'Şifre değiştirilirken hata oluştu');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   if (loading) {
@@ -205,15 +331,11 @@ const FacultyList = () => {
                     {facultyMember.office && (
                       <div className="flex items-center text-sm text-gray-500">
                         <BuildingOfficeIcon className="h-4 w-4 mr-2" />
+                        <span className="font-medium mr-1">Ofis:</span>
                         {facultyMember.office}
                       </div>
                     )}
-                    {facultyMember.phone && (
-                      <div className="flex items-center text-sm text-gray-500">
-                        <PhoneIcon className="h-4 w-4 mr-2" />
-                        {facultyMember.phone}
-                      </div>
-                    )}
+                    {/* Phone number hidden for students */}
                     <div className="flex items-center text-sm text-gray-500">
                       <EnvelopeIcon className="h-4 w-4 mr-2" />
                       {facultyMember.email}
@@ -247,6 +369,31 @@ const FacultyList = () => {
           </div>
         )}
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        profileData={profileData}
+        onInputChange={handleProfileInputChange}
+        onSubmit={handleUpdateProfile}
+        loading={profileLoading}
+        error={profileError}
+        success={profileSuccess}
+        fields={profileFields}
+      />
+
+      {/* Password Modal */}
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        passwordData={passwordData}
+        onInputChange={handlePasswordInputChange}
+        onSubmit={handleChangePassword}
+        loading={passwordLoading}
+        error={passwordError}
+        success={passwordSuccess}
+      />
     </div>
   );
 };

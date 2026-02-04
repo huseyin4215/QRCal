@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QuestionMarkCircleIcon, BookOpenIcon, PhoneIcon, EnvelopeIcon, ChatBubbleLeftRightIcon, LightBulbIcon } from '@heroicons/react/24/outline';
+import { QuestionMarkCircleIcon, BookOpenIcon, EnvelopeIcon, ChatBubbleLeftRightIcon, LightBulbIcon } from '@heroicons/react/24/outline';
 import '../styles/policy-pages.css';
 
 const Help = () => {
@@ -159,7 +159,7 @@ const Help = () => {
                 <div>
                   <h2 className="text-2xl font-semibold text-gray-900 mb-6">Başlangıç Rehberi</h2>
                   <p className="text-gray-700 mb-6">
-                    QR Calendar'ı kullanmaya başlamak için aşağıdaki adımları takip edin:
+                    Qnnect'i kullanmaya başlamak için aşağıdaki adımları takip edin:
                   </p>
                   
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -240,7 +240,7 @@ const Help = () => {
                     Size yardımcı olmak için buradayız. Aşağıdaki kanallardan birini kullanarak bizimle iletişime geçebilirsiniz:
                   </p>
                   
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid md:grid-cols-1 gap-6">
                     <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500">
                       <div className="flex items-center mb-3">
                         <EnvelopeIcon className="h-8 w-8 text-blue-600 mr-3" />
@@ -249,20 +249,8 @@ const Help = () => {
                       <p className="text-blue-800 mb-3">
                         Detaylı sorularınız için e-posta ile destek alın.
                       </p>
-                      <p className="text-blue-700 font-medium">support@qrcalendar.com</p>
+                      <p className="text-blue-700 font-medium">infoqrcal@gmail.com</p>
                       <p className="text-blue-600 text-sm">Yanıt süresi: 24 saat</p>
-                    </div>
-                    
-                    <div className="bg-green-50 p-6 rounded-lg border-l-4 border-green-500">
-                      <div className="flex items-center mb-3">
-                        <PhoneIcon className="h-8 w-8 text-green-600 mr-3" />
-                        <h3 className="text-xl font-semibold text-green-900">Telefon Desteği</h3>
-                      </div>
-                      <p className="text-green-800 mb-3">
-                        Acil durumlar için telefon ile destek alın.
-                      </p>
-                      <p className="text-green-700 font-medium">+90 (212) 555 0123</p>
-                      <p className="text-green-600 text-sm">Çalışma saatleri: 09:00-18:00</p>
                     </div>
                   </div>
                 </div>

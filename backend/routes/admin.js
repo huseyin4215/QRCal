@@ -1,7 +1,9 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
-import { sendTemporaryPasswordEmail } from '../services/emailService.js';
+import { sendTemporaryPasswordEmail, sendAppointmentCancellationEmail, sendAppointmentApprovalEmail } from '../services/emailService.js';
+import { google } from 'googleapis';
+import AppointmentSlot from '../models/AppointmentSlot.js';
 import Appointment from '../models/Appointment.js';
 import Notification from '../models/Notification.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
@@ -69,6 +71,26 @@ router.get('/users', asyncHandler(async (req, res) => {
 // @access  Private (Admin)
 router.get('/users/:id', asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select('-password');
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'Kullanıcı bulunamadı'
+    });
+  }
+
+  res.json({
+    success: true,
+    data: user
+  });
+}));
+
+// @desc    Get user by email
+// @route   GET /api/admin/users/email/:email
+// @access  Private (Admin)
+router.get('/users/email/:email', asyncHandler(async (req, res) => {
+  const email = decodeURIComponent(req.params.email);
+  const user = await User.findOne({ email: email.toLowerCase() }).select('-password');
 
   if (!user) {
     return res.status(404).json({
@@ -159,11 +181,11 @@ router.put('/availability', asyncHandler(async (req, res) => {
   }
 
   if (slotDuration) {
-    // Validate slot duration
-    if (slotDuration < 10 || slotDuration > 120) {
+    // Validate slot duration - minimum 15 minutes, no maximum
+    if (slotDuration < 15) {
       return res.status(400).json({
         success: false,
-        error: 'Slot süresi 10-120 dakika arasında olmalıdır'
+        error: 'Slot süresi minimum 15 dakika olmalıdır'
       });
     }
     user.slotDuration = slotDuration;
@@ -207,7 +229,7 @@ router.post('/users/faculty', asyncHandler(async (req, res) => {
 
   // Generate temporary password (more robust)
   const tempPassword = Math.random().toString(36).substring(2, 10);
-  
+
   console.log('Generated temp password:', tempPassword);
 
   // Generate slug if not provided
@@ -240,7 +262,7 @@ router.post('/users/faculty', asyncHandler(async (req, res) => {
   } catch (emailError) {
     console.error('Failed to send temporary password email:', emailError);
   }
-  
+
   console.log('Faculty saved with ID:', faculty._id);
   console.log('Faculty slug:', faculty.slug);
 
@@ -353,7 +375,7 @@ router.delete('/users/:id', asyncHandler(async (req, res) => {
   }
 
   // Check if user has appointments
-  const appointmentCount = await Appointment.countDocuments({ 
+  const appointmentCount = await Appointment.countDocuments({
     $or: [
       { facultyId: user._id },
       { studentEmail: user.email }
@@ -409,14 +431,14 @@ router.post('/users/:id/reset-password', asyncHandler(async (req, res) => {
 // @route   GET /api/admin/appointments
 // @access  Private (Admin)
 router.get('/appointments', asyncHandler(async (req, res) => {
-  const { 
-    page = 1, 
-    limit = 10, 
-    status, 
-    facultyId, 
-    startDate, 
+  const {
+    page = 1,
+    limit = 10,
+    status,
+    facultyId,
+    startDate,
     endDate,
-    search 
+    search
   } = req.query;
 
   const query = {};
@@ -521,7 +543,7 @@ router.put('/appointments/:id/status', asyncHandler(async (req, res) => {
   // Create notification for student about status change
   try {
     let notificationTitle, notificationMessage;
-    
+
     switch (status) {
       case 'approved':
         notificationTitle = 'Randevu Onaylandı';
@@ -561,6 +583,134 @@ router.put('/appointments/:id/status', asyncHandler(async (req, res) => {
     success: true,
     data: appointment,
     message: 'Randevu durumu başarıyla güncellendi'
+  });
+}));
+
+// @desc    Cancel approved appointment (admin's own appointments - admin is also faculty)
+// @route   PUT /api/admin/appointments/:id/cancel
+// @access  Private (Admin)
+router.put('/appointments/:id/cancel', [
+  body('cancellationReason').optional().trim().isLength({ max: 200 }).withMessage('İptal nedeni 200 karakterden uzun olamaz')
+], asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    });
+  }
+
+  const { cancellationReason } = req.body;
+
+  // Admin can only cancel their own appointments (admin as faculty)
+  const appointment = await Appointment.findOne({
+    _id: req.params.id,
+    facultyId: req.user.id,
+    status: { $in: ['pending', 'approved'] }
+  });
+
+  if (!appointment) {
+    return res.status(404).json({
+      success: false,
+      message: 'Randevu bulunamadı veya bu randevu size ait değil'
+    });
+  }
+
+  // Check if appointment date/time has passed
+  const now = new Date();
+  const appointmentDateTime = new Date(appointment.date);
+  const [hours, minutes] = appointment.startTime.split(':').map(Number);
+  appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+  if (appointmentDateTime <= now) {
+    return res.status(400).json({
+      success: false,
+      message: 'Geçmiş randevular iptal edilemez'
+    });
+  }
+
+  const wasApproved = appointment.status === 'approved';
+
+  // Update appointment status
+  appointment.status = 'cancelled';
+  appointment.cancelledBy = 'faculty';
+  appointment.cancelledAt = new Date();
+  appointment.cancellationReason = cancellationReason || null;
+  appointment.facultyNotified = true;
+
+  // Delete Google Calendar event if exists
+  if (wasApproved && appointment.googleCalendarEventId && req.user.googleAccessToken) {
+    try {
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+      );
+
+      oauth2Client.setCredentials({
+        access_token: req.user.googleAccessToken,
+        refresh_token: req.user.googleRefreshToken
+      });
+
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+      await calendar.events.delete({
+        calendarId: 'primary',
+        eventId: appointment.googleCalendarEventId
+      });
+
+      console.log('Google Calendar event deleted:', appointment.googleCalendarEventId);
+      appointment.googleCalendarEventId = null;
+      appointment.googleMeetLink = null;
+    } catch (calendarError) {
+      console.error('Failed to delete Google Calendar event:', calendarError);
+      // Continue even if calendar deletion fails
+    }
+  }
+
+  // Update slot status back to available
+  const slot = await AppointmentSlot.findOne({
+    facultyId: req.user.id,
+    date: appointment.date,
+    startTime: appointment.startTime
+  });
+
+  if (slot) {
+    slot.status = 'available';
+    slot.isBooked = false;
+    slot.isAvailable = true;
+    slot.appointmentId = null;
+    await slot.save();
+  }
+
+  await appointment.save();
+
+  // Send cancellation email to student if the appointment was approved
+  if (wasApproved) {
+    try {
+      await sendAppointmentCancellationEmail(
+        appointment.studentEmail,
+        appointment.studentName,
+        {
+          facultyName: appointment.facultyName || req.user.name,
+          topicName: appointment.topicName,
+          topic: appointment.topicName,
+          date: appointment.date,
+          startTime: appointment.startTime,
+          endTime: appointment.endTime
+        },
+        cancellationReason
+      );
+    } catch (emailError) {
+      console.error('Failed to send cancellation email:', emailError);
+      // Continue even if email fails
+    }
+  }
+
+  res.json({
+    success: true,
+    data: appointment,
+    message: wasApproved ? 'Onaylanmış randevu iptal edildi ve öğrenciye bildirim gönderildi' : 'Randevu iptal edildi'
   });
 }));
 
@@ -630,16 +780,16 @@ router.get('/stats', asyncHandler(async (req, res) => {
   const recentAppointments = await Appointment.find({
     createdAt: { $gte: new Date(new Date().setDate(new Date().getDate() - 7)) }
   })
-  .populate('facultyId', 'name title department')
-  .sort({ createdAt: -1 })
-  .limit(10);
+    .populate('facultyId', 'name title department')
+    .sort({ createdAt: -1 })
+    .limit(10);
 
   const recentUsers = await User.find({
     createdAt: { $gte: new Date(new Date().setDate(new Date().getDate() - 7)) }
   })
-  .select('name email role department createdAt')
-  .sort({ createdAt: -1 })
-  .limit(10);
+    .select('name email role department createdAt')
+    .sort({ createdAt: -1 })
+    .limit(10);
 
   res.json({
     success: true,
@@ -830,7 +980,7 @@ router.post('/qr-code', asyncHandler(async (req, res) => {
 
   // Generate QR code URL
   const qrCodeUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/appointment/${user.slug}`;
-  
+
   // Update user's QR code URL
   user.qrCodeUrl = qrCodeUrl;
   await user.save();
@@ -850,7 +1000,7 @@ router.post('/qr-code', asyncHandler(async (req, res) => {
 router.post('/appointments/check-expired', asyncHandler(async (req, res) => {
   try {
     const processedCount = await appointmentScheduler.checkManual();
-    
+
     res.json({
       success: true,
       data: {
@@ -873,7 +1023,7 @@ router.post('/appointments/check-expired', asyncHandler(async (req, res) => {
 router.post('/appointments/:id/check-expired', asyncHandler(async (req, res) => {
   try {
     const processed = await appointmentScheduler.checkSpecific(req.params.id);
-    
+
     if (processed) {
       res.json({
         success: true,

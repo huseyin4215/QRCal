@@ -1,8 +1,48 @@
 import { XMarkIcon, CalendarIcon, ClockIcon, UserIcon, EnvelopeIcon, AcademicCapIcon, DocumentTextIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
+import apiService from '../../services/apiService';
+import { formatFacultyName, formatStudentName } from '../../utils/formatUserName';
 import styles from './AppointmentDetails.module.css';
 
-export default function AppointmentDetails({ appointment, isOpen, onClose, onApprove, onReject, onCancel, getStatusText, formatDate, formatTime }) {
+export default function AppointmentDetails({ appointment, isOpen, onClose, onApprove, onReject, onCancel, onCancelApproved, getStatusText, formatDate, formatTime, showActions = true, currentUserId = null }) {
+  const navigate = useNavigate();
+  
   if (!isOpen || !appointment) return null;
+
+  const handleViewHistory = async () => {
+    // Always navigate to student's appointment history
+    let userId = null;
+    
+    // If currentUserId is provided (e.g., from StudentDashboard), use it (student's own history)
+    if (currentUserId) {
+      userId = currentUserId;
+    } else {
+      // Otherwise, find the student's ID from the appointment
+      // Try student object first
+      if (appointment.student?._id) {
+        userId = appointment.student._id;
+      } else if (appointment.student) {
+        userId = appointment.student;
+      }
+      
+      // If we have studentEmail but no userId, fetch user by email
+      if (!userId && appointment.studentEmail) {
+        try {
+          const response = await apiService.getUserByEmail(appointment.studentEmail);
+          if (response.success && response.data) {
+            userId = response.data._id;
+          }
+        } catch (error) {
+          console.error('Failed to fetch user by email:', error);
+        }
+      }
+    }
+    
+    if (userId) {
+      navigate(`/appointment-history/${userId}`);
+      onClose();
+    }
+  };
 
   // Varsayılan getStatusText fonksiyonu
   const defaultGetStatusText = (status) => {
@@ -61,6 +101,23 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
     }
   };
 
+  const handleCancelApproved = () => {
+    if (onCancelApproved) {
+      onCancelApproved(appointment._id);
+      onClose();
+    }
+  };
+
+  // Check if approved appointment can be cancelled (future date)
+  const canCancelApproved = () => {
+    if (appointment.status !== 'approved') return false;
+    const now = new Date();
+    const appointmentDate = new Date(appointment.date);
+    const [hours, minutes] = appointment.startTime.split(':').map(Number);
+    appointmentDate.setHours(hours, minutes, 0, 0);
+    return appointmentDate > now;
+  };
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -79,6 +136,13 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
             </span>
           </div>
 
+          {/* Advisor Only Warning */}
+          {appointment.advisorOnlyWarning && (
+            <div className={styles.warningBox}>
+              <strong>⚠️ Uyarı:</strong> Bu konu öğrencinin danışmanına özeldir. Öğrenci size bu konuda randevu talep etmiştir.
+            </div>
+          )}
+
           {/* Student Information */}
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>
@@ -88,7 +152,7 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
             <div className={styles.infoGrid}>
               <div className={styles.infoItem}>
                 <span className={styles.label}>Ad Soyad:</span>
-                <span className={styles.value}>{appointment.studentName}</span>
+                <span className={styles.value}>{formatStudentName(appointment)}</span>
               </div>
               <div className={styles.infoItem}>
                 <span className={styles.label}>Öğrenci No:</span>
@@ -132,7 +196,7 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
             <div className={styles.infoGrid}>
               <div className={styles.infoItem}>
                 <span className={styles.label}>Konu:</span>
-                <span className={styles.value}>{appointment.topic}</span>
+                <span className={styles.value}>{appointment.topicName || appointment.topic?.name || 'Görüşme Talebi'}</span>
               </div>
               {appointment.description && (
                 <div className={styles.infoItem}>
@@ -153,7 +217,7 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
               <div className={styles.infoGrid}>
                 <div className={styles.infoItem}>
                   <span className={styles.label}>Ad Soyad:</span>
-                  <span className={styles.value}>{appointment.facultyName}</span>
+                  <span className={styles.value}>{formatFacultyName(appointment)}</span>
                 </div>
                 {appointment.facultyDepartment && (
                   <div className={styles.infoItem}>
@@ -177,28 +241,41 @@ export default function AppointmentDetails({ appointment, isOpen, onClose, onApp
         </div>
 
         {/* Actions */}
-        <div className={styles.actions}>
-          {appointment.status === 'pending' && (
-            <>
-              {onApprove && (
-                <button onClick={handleApprove} className={`${styles.actionButton} ${styles.approveButton}`}>
-                  <CheckCircleIcon className="w-4 h-4 mr-2" />
-                  Onayla
-                </button>
-              )}
-              {onReject && (
-                <button onClick={handleReject} className={`${styles.actionButton} ${styles.rejectButton}`}>
-                  <XMarkIcon className="w-4 h-4 mr-2" />
-                  Reddet
-                </button>
-              )}
-              {/* İptal butonu istenmiyor */}
-            </>
-          )}
-          <button onClick={onClose} className={`${styles.actionButton} ${styles.closeActionButton}`}>
-            Kapat
-          </button>
-        </div>
+        {showActions && (
+          <div className={styles.actions}>
+            {appointment.status === 'pending' && (
+              <>
+                {onApprove && (
+                  <button onClick={handleApprove} className={`${styles.actionButton} ${styles.approveButton}`}>
+                    <CheckCircleIcon className="w-4 h-4 mr-2" />
+                    Onayla
+                  </button>
+                )}
+                {onReject && (
+                  <button onClick={handleReject} className={`${styles.actionButton} ${styles.rejectButton}`}>
+                    <XMarkIcon className="w-4 h-4 mr-2" />
+                    Reddet
+                  </button>
+                )}
+              </>
+            )}
+            {appointment.status === 'approved' && onCancelApproved && canCancelApproved() && (
+              <button onClick={handleCancelApproved} className={`${styles.actionButton} ${styles.cancelApprovedButton}`}>
+                <XMarkIcon className="w-4 h-4 mr-2" />
+                Randevuyu İptal Et
+              </button>
+            )}
+            {(appointment.student?._id || appointment.student || appointment.studentEmail) && (
+              <button onClick={handleViewHistory} className={`${styles.actionButton} ${styles.historyButton}`}>
+                <ClockIcon className="w-4 h-4 mr-2" />
+                Öğrenci Randevu Geçmişi
+              </button>
+            )}
+            <button onClick={onClose} className={`${styles.actionButton} ${styles.closeActionButton}`}>
+              Kapat
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

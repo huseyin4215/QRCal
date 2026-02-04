@@ -9,44 +9,120 @@
 
 .tableWrapper {
   overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar Styles */
+.tableWrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tableWrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+  border-radius: 10px;
+  border: 2px solid #f1f5f9;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+}
+
+/* Firefox Scrollbar */
+.tableWrapper {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+/* Mobile Scrollbar Styles */
+@media (max-width: 768px) {
+  .mobileCardContainer::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .mobileCardContainer::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+  }
+
+  .mobileCardContainer::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+    border-radius: 10px;
+  }
+
+  .mobileCardContainer::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  }
+
+  .mobileCardContainer {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
 }
 
 /* Mobile Card Layout */
 .mobileCardContainer {
   display: none;
-  padding: 0.5rem;
-  gap: 0.75rem;
+  padding: 0.75rem;
+  gap: 1rem;
 }
 
 .userCard {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  padding: 0.875rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-  margin-bottom: 0.75rem;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.userCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .userCard:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+  border-color: #d1d5db;
+}
+
+.userCard:hover::before {
+  opacity: 1;
 }
 
 .cardHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1.5px solid #f3f4f6;
+  gap: 0.75rem;
 }
 
 .cardUserInfo {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.875rem;
   flex: 1;
+  min-width: 0;
 }
 
 .cardActions {
@@ -56,15 +132,28 @@
 
 .cardDetails {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
 }
 
 .cardDetailItem {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.cardDetailItem:hover {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-color: #d1d5db;
+  transform: translateX(2px);
 }
 
 .cardDetailLabel {
@@ -73,82 +162,134 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .cardDetailValue {
   display: flex;
   align-items: center;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .cardMainActions {
   display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  padding-top: 0.75rem;
-  border-top: 1px solid #f3f4f6;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-top: 1rem;
+  border-top: 1.5px solid #f3f4f6;
 }
 
 .cardActionButton {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1.25rem;
+  border: none;
+  border-radius: 0.75rem;
   background: white;
   color: #374151;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  flex: 1;
-  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.cardActionButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.cardActionButton:hover::before {
+  left: 100%;
 }
 
 .cardActionButton:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cardActionButton:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .cardActionButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .cardActionButton.edit {
-  border-color: #3b82f6;
-  color: #3b82f6;
-}
-
-.cardActionButton.edit:hover {
-  background: #eff6ff;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
   border-color: #2563eb;
 }
 
-.cardActionButton.view {
-  border-color: #10b981;
-  color: #10b981;
+.cardActionButton.edit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #1d4ed8;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
 }
 
-.cardActionButton.view:hover {
-  background: #f0fdf4;
+.cardActionButton.view {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
   border-color: #059669;
 }
 
+.cardActionButton.view:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-color: #047857;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
 .cardActionButton.delete {
-  border-color: #ef4444;
-  color: #ef4444;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border-color: #dc2626;
 }
 
 .cardActionButton.delete:hover:not(:disabled) {
-  background: #fef2f2;
-  border-color: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-color: #b91c1c;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
+
+.cardActionButton.history {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border-color: #7c3aed;
+}
+
+.cardActionButton.history:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border-color: #6d28d9;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
 }
 
 /* Mobile Responsive - Show Cards */
 @media (max-width: 768px) {
+  .container {
+    max-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 1rem;
+  }
+
   .tableWrapper {
     display: none;
   }
@@ -156,168 +297,298 @@
   .mobileCardContainer {
     display: flex;
     flex-direction: column;
-    padding: 0.25rem;
+    padding: 0.75rem;
+    gap: 1rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
   }
   
   .userCard {
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
+    padding: 1.25rem;
+    margin-bottom: 0;
+    border-radius: 1.25rem;
+    flex-shrink: 0;
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
   }
   
   .cardHeader {
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1.5px solid #f3f4f6;
+    flex-wrap: wrap;
   }
   
   .cardUserInfo {
-    gap: 0.5rem;
+    gap: 0.875rem;
+    min-width: 0;
+  }
+  
+  .avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+    font-size: 1rem;
+    border-radius: 0.875rem;
+    flex-shrink: 0;
+  }
+  
+  .avatarText {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .userName {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.4;
+  }
+  
+  .userEmail {
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.3;
   }
   
   .cardDetails {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
   }
   
   .cardDetailItem {
-    gap: 0.125rem;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
   
   .cardDetailLabel {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  
+  .cardDetailValue {
+    justify-content: flex-end;
   }
   
   .cardMainActions {
     flex-direction: column;
-    gap: 0.375rem;
-    padding-top: 0.5rem;
+    gap: 0.625rem;
+    padding-top: 1rem;
+    border-top: 1.5px solid #f3f4f6;
   }
   
   .cardActionButton {
     flex: none;
-    padding: 0.5rem;
-    font-size: 0.7rem;
-    gap: 0.25rem;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.875rem;
+    gap: 0.625rem;
+    width: 100%;
+    border-radius: 0.75rem;
   }
 }
 
 @media (max-width: 640px) {
+  .container {
+    max-height: calc(100vh - 180px);
+    border-radius: 0.875rem;
+  }
+
   .mobileCardContainer {
-    padding: 0.125rem;
+    padding: 0.625rem;
+    gap: 0.875rem;
+    max-height: calc(100vh - 180px);
   }
   
   .userCard {
-    padding: 0.625rem;
-    border-radius: 0.5rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0;
   }
   
-  .cardActionButton {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.65rem;
+  .cardHeader {
+    margin-bottom: 1rem;
+    padding-bottom: 0.875rem;
+  }
+  
+  .cardUserInfo {
+    gap: 0.75rem;
+  }
+  
+  .avatar {
+    width: 3rem;
+    height: 3rem;
+    font-size: 0.9375rem;
+    border-radius: 0.75rem;
+  }
+  
+  .avatarText {
+    font-size: 0.9375rem;
+  }
+  
+  .userName {
+    color: #0f172a;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+  
+  .userEmail {
+    font-size: 0.8125rem;
+    color: #64748b;
+  }
+  
+  .cardDetails {
+    gap: 0.625rem;
+    margin-bottom: 1rem;
+  }
+  
+  .cardDetailItem {
+    padding: 0.75rem 0.875rem;
+    gap: 0.625rem;
   }
   
   .cardDetailLabel {
-    font-size: 0.65rem;
+    font-size: 0.6875rem;
+  }
+  
+  .cardDetailValue {
+    font-size: 0.8125rem;
+  }
+  
+  .cardMainActions {
+    gap: 0.5rem;
+    padding-top: 0.875rem;
+  }
+  
+  .cardActionButton {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
   }
 }
 
 @media (max-width: 400px) {
+  .container {
+    max-height: calc(100vh - 160px);
+    border-radius: 0.75rem;
+  }
+
   .mobileCardContainer {
-    padding: 0;
+    padding: 0.5rem;
+    gap: 0.75rem;
+    max-height: calc(100vh - 160px);
   }
   
   .userCard {
-    padding: 0.5rem;
-    margin-bottom: 0.375rem;
-    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 0;
+    border-radius: 1rem;
   }
   
   .cardHeader {
-    flex-direction: column;
+    flex-direction: row;
     align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 0.375rem;
-    padding-bottom: 0.375rem;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.875rem;
   }
   
   .cardUserInfo {
     width: 100%;
-    gap: 0.375rem;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
   }
   
   .avatar {
-    width: 1.75rem;
-    height: 1.75rem;
-    font-size: 0.6rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 0.9375rem;
+    flex-shrink: 0;
   }
   
   .userName {
-    font-size: 0.8rem;
-    line-height: 1.1;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    font-weight: 700;
+    color: #0f172a;
   }
   
   .userEmail {
-    font-size: 0.7rem;
-    color: #6b7280;
+    font-size: 0.8125rem;
+    color: #64748b;
   }
   
   .cardDetails {
     grid-template-columns: 1fr;
-    gap: 0.375rem;
-    margin-bottom: 0.375rem;
+    gap: 0.625rem;
+    margin-bottom: 1rem;
   }
   
   .cardDetailItem {
-    gap: 0.125rem;
-    padding: 0.25rem;
-    background: #f9fafb;
-    border-radius: 0.25rem;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+    border-radius: 0.625rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
   
   .cardDetailLabel {
-    font-size: 0.6rem;
+    font-size: 0.6875rem;
+    white-space: nowrap;
   }
   
   .cardDetailValue {
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
+    justify-content: flex-end;
   }
   
   .statusBadge,
   .googleBadge {
-    padding: 0.125rem 0.25rem;
-    font-size: 0.55rem;
-    border-radius: 0.25rem;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.6875rem;
+    border-radius: 0.5rem;
   }
   
   .statusIcon,
   .googleIcon {
-    width: 0.625rem;
-    height: 0.625rem;
+    width: 0.875rem;
+    height: 0.875rem;
   }
   
   .departmentText {
-    font-size: 0.7rem;
+    font-size: 0.8125rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 100%;
+    font-weight: 600;
   }
   
   .cardMainActions {
-    gap: 0.25rem;
-    padding-top: 0.375rem;
+    gap: 0.5rem;
+    padding-top: 0.875rem;
   }
   
   .cardActionButton {
-    padding: 0.375rem 0.25rem;
-    font-size: 0.6rem;
-    gap: 0.125rem;
-    border-radius: 0.25rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
   }
   
   .actionIcon {
-    width: 0.75rem;
-    height: 0.75rem;
+    width: 1rem;
+    height: 1rem;
   }
 }
 
@@ -417,19 +688,23 @@
 }
 
 .avatarAdmin {
-  background: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
 
 .avatarFaculty {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 .avatarStudent {
-  background: #059669;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
 }
 
 .avatarDefault {
-  background: #6b7280;
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
 }
 
 .avatarText {
@@ -444,10 +719,18 @@
 
 .userName {
   font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: 700;
+  color: #ffffff;
   margin-bottom: 2px;
   line-height: 1.4;
+}
+
+/* Mobile: userName should be black for readability */
+@media (max-width: 768px) {
+  .userName {
+    color: #0f172a !important;
+    font-weight: 700;
+  }
 }
 
 .userEmail {
@@ -480,27 +763,31 @@
 }
 
 .statusActive {
-  background: #dcfce7;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
   color: #166534;
-  border-color: #bbf7d0;
+  border-color: #86efac;
+  font-weight: 600;
 }
 
 .statusInactive {
-  background: #f1f5f9;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
   color: #475569;
-  border-color: #e2e8f0;
+  border-color: #cbd5e1;
+  font-weight: 600;
 }
 
 .googleConnected {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #bbf7d0;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-color: #93c5fd;
+  font-weight: 600;
 }
 
 .googleNotConnected {
-  background: #f1f5f9;
-  color: #475569;
-  border-color: #e2e8f0;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #64748b;
+  border-color: #cbd5e1;
+  font-weight: 600;
 }
 
 .statusIcon,
@@ -549,6 +836,26 @@
   color: #059669;
   border-color: #10b981;
   background: #ecfdf5;
+}
+
+.historyButton {
+  color: #64748b;
+}
+
+.historyButton:hover {
+  color: #8b5cf6;
+  border-color: #a78bfa;
+  background: #faf5ff;
+}
+
+.historyButton {
+  color: #64748b;
+}
+
+.historyButton:hover {
+  color: #8b5cf6;
+  border-color: #a78bfa;
+  background: #faf5ff;
 }
 
 .actionIcon {
@@ -601,6 +908,12 @@
   
   .userName {
     font-size: 13px;
+    color: #0f172a !important;
+  }
+  
+  /* Desktop table view: userName should be white */
+  .tableWrapper .userName {
+    color: #ffffff !important;
   }
   
   .userEmail {
@@ -662,7 +975,14 @@
   }
   
   .userName {
-    color: #f1f5f9;
+    color: #ffffff;
+  }
+  
+  /* Mobile override - always black */
+  @media (max-width: 768px) {
+    .userName {
+      color: #0f172a !important;
+    }
   }
   
   .userEmail {
@@ -700,6 +1020,12 @@
     color: #6ee7b7;
     border-color: #10b981;
     background: #064e3b;
+  }
+
+  .historyButton:hover {
+    color: #c4b5fd;
+    border-color: #a78bfa;
+    background: #4c1d95;
   }
   
   .statusActive {

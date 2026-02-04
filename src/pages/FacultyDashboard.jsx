@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { 
-  CalendarIcon, 
-  ClockIcon, 
-  UserIcon, 
-  EnvelopeIcon, 
-  PhoneIcon, 
+import {
+  CalendarIcon,
+  ClockIcon,
+  UserIcon,
+  EnvelopeIcon,
+  PhoneIcon,
   GlobeAltIcon,
   PlusIcon,
   PencilIcon,
@@ -22,8 +22,9 @@ import {
   DocumentArrowDownIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
-import { 
-  AcademicCapIcon
+import {
+  AcademicCapIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 
@@ -38,6 +39,13 @@ import PasswordModal from '../components/PasswordModal/PasswordModal';
 import AvailabilityModal from '../components/AvailabilityModal/AvailabilityModal';
 import GoogleCalendarEvents from '../components/GoogleCalendarUnavailableSlots/GoogleCalendarUnavailableSlots';
 import TabNavigation from '../components/TabNavigation';
+import RejectModal from '../components/RejectModal/RejectModal';
+import CancelModal from '../components/CancelModal/CancelModal';
+import StatisticsCards from '../components/StatisticsCards/StatisticsCards';
+import ConflictWarningModal from '../components/ConflictWarningModal/ConflictWarningModal';
+import AppointmentHistory from './AppointmentHistory';
+import { exportAppointmentsToPDF } from '../utils/pdfExport';
+import { formatUserName } from '../utils/formatUserName';
 
 const FacultyDashboard = () => {
   const { user, login } = useAuth();
@@ -56,6 +64,16 @@ const FacultyDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Reject Modal State
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingAppointment, setRejectingAppointment] = useState(null);
+  const [rejectLoading, setRejectLoading] = useState(false);
+
+  // Cancel Modal State (for approved appointments)
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingAppointment, setCancellingAppointment] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   // Load notifications from localStorage
   const loadNotificationsFromStorage = () => {
@@ -82,7 +100,7 @@ const FacultyDashboard = () => {
     }
   };
   const [showGoogleSetup, setShowGoogleSetup] = useState(false);
-  
+
   // Profile management states
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -91,8 +109,11 @@ const FacultyDashboard = () => {
     email: '',
     phone: '',
     office: '',
-    website: ''
+    website: '',
+    title: '',
+    department: ''
   });
+  const [departments, setDepartments] = useState([]);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -104,18 +125,43 @@ const FacultyDashboard = () => {
   const [profileSuccess, setProfileSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
-  
+
   // Availability management states
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState('');
   const [availabilitySuccess, setAvailabilitySuccess] = useState('');
-  
+
   // Google Calendar modal states
   const [viewMode, setViewMode] = useState('grid'); // Add this state for view mode
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Google Calendar conflict modal states
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [conflictData, setConflictData] = useState(null);
+  const [conflictDismissedAt, setConflictDismissedAt] = useState(null);
+  
+  // Load acknowledged conflicts from localStorage
+  const getAcknowledgedConflicts = () => {
+    try {
+      const stored = localStorage.getItem(`acknowledgedConflicts_${user?._id || user?.id}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Error loading acknowledged conflicts:', error);
+      return [];
+    }
+  };
+  
+  // Save acknowledged conflicts to localStorage
+  const saveAcknowledgedConflicts = (conflicts) => {
+    try {
+      localStorage.setItem(`acknowledgedConflicts_${user?._id || user?.id}`, JSON.stringify(conflicts));
+    } catch (error) {
+      console.error('Error saving acknowledged conflicts:', error);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -172,7 +218,7 @@ const FacultyDashboard = () => {
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
       saveNotificationsToStorage(notifications.map(n => ({ ...n, read: true })));
-      
+
       // Also call API to mark as read on server
       await apiService.markAllNotificationsAsRead();
     } catch (e) {
@@ -223,7 +269,7 @@ const FacultyDashboard = () => {
 
   // Helper: check if slot should be available (considering date/time)
   // NEW AVAILABILITY SYSTEM - Simple and Clear Rules
-  
+
   // Count confirmed appointments for a specific time slot
   const getConfirmedAppointmentCount = (slot, dayName) => {
     if (!appointments || appointments.length === 0) return 0;
@@ -231,10 +277,10 @@ const FacultyDashboard = () => {
     return appointments.filter(appointment => {
       const appointmentDate = new Date(appointment.appointmentDate);
       const appointmentDayName = appointmentDate.toLocaleDateString('en-US', { weekday: 'long' });
-      
+
       return appointmentDayName === dayName &&
-             appointment.startTime === slot.start &&
-             appointment.status === 'confirmed';
+        appointment.startTime === slot.start &&
+        appointment.status === 'confirmed';
     }).length;
   };
 
@@ -244,7 +290,7 @@ const FacultyDashboard = () => {
     const slotStartMinute = parseInt(slot.start.split(':')[1]);
     const slotEndHour = parseInt(slot.end.split(':')[0]);
     const slotEndMinute = parseInt(slot.end.split(':')[1]);
-    
+
     const slotDurationMinutes = (slotEndHour * 60 + slotEndMinute) - (slotStartHour * 60 + slotStartMinute);
     return Math.floor(slotDurationMinutes / slotDuration);
   };
@@ -354,11 +400,11 @@ const FacultyDashboard = () => {
     } else if (token && (googleConnectedParam === 'true' || !googleConnected)) {
       // Handle direct token (e.g., from old flow or other redirects)
       console.log('Google OAuth callback successful');
-      
+
       // Store token
       localStorage.setItem('token', token);
       apiService.setToken(token);
-      
+
       // Update user context
       if (user) {
         // Update user with Google connection status
@@ -366,16 +412,16 @@ const FacultyDashboard = () => {
         localStorage.setItem('user', JSON.stringify(updatedUser));
         login(token, updatedUser);
       }
-      
+
       // Set Google connected state
       setGoogleConnected(true);
-      
+
       // Load Google Calendar events
       loadGoogleCalendarEvents();
-      
+
       // Clear URL parameters and ensure we land once
       navigate('/faculty-dashboard', { replace: true });
-      
+
       // Show success message
       alert('Google Calendar başarıyla bağlandı!');
     }
@@ -385,7 +431,7 @@ const FacultyDashboard = () => {
   const handleOAuthCallback = async (code) => {
     try {
       console.log('Processing OAuth callback with code:', code);
-      
+
       // Call backend to exchange code for tokens
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/google/callback?code=${code}`, {
         method: 'GET',
@@ -400,46 +446,46 @@ const FacultyDashboard = () => {
 
       if (data.success && data.token) {
         console.log('OAuth callback successful');
-        
+
         // Store token
         localStorage.setItem('token', data.token);
         apiService.setToken(data.token);
-        
+
         // Update user context
         if (data.user) {
           const updatedUser = { ...data.user, googleConnected: true };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           login(data.token, updatedUser);
         }
-        
+
         // Set Google connected state
         setGoogleConnected(true);
-        
+
         // Load Google Calendar events
         loadGoogleCalendarEvents();
-        
+
         // Clear URL parameters
         navigate('/faculty-dashboard', { replace: true });
-        
+
         // Show success message
         alert('Google Calendar başarıyla bağlandı!');
       } else {
         // Handle specific error cases
         let errorMessage = data.message || 'Token alınamadı';
-        
+
         if (data.details) {
           console.error('OAuth error details:', data.details);
           errorMessage += '\n\nDetaylar:\n' + data.details;
         }
-        
+
         throw new Error(errorMessage);
       }
     } catch (error) {
       console.error('OAuth callback error:', error);
-      
+
       // Show detailed error message
       let errorMessage = 'Google Calendar bağlantısı başarısız: ' + error.message;
-      
+
       if (error.message.includes('invalid_request')) {
         errorMessage = `
 Google Calendar bağlantısı başarısız!
@@ -458,7 +504,7 @@ Muhtemel nedenler:
 Hata detayı: ${error.message}
         `;
       }
-      
+
       alert(errorMessage);
       navigate('/faculty-dashboard', { replace: true });
     }
@@ -476,7 +522,7 @@ Hata detayı: ${error.message}
     const checkGoogleConnection = async () => {
       try {
         console.log('Checking Google Calendar connection...');
-        
+
         // Check if user has Google tokens by trying to get current user data
         const userResponse = await apiService.getCurrentUser();
         if (userResponse.success && userResponse.data) {
@@ -486,7 +532,7 @@ Hata detayı: ${error.message}
             googleId: userData.googleId,
             hasAccessToken: !!userData.googleAccessToken
           });
-          
+
           if (userData.googleAccessToken || userData.googleId) {
             console.log('Google Calendar connected for user:', userData.email);
             setGoogleConnected(true);
@@ -517,13 +563,25 @@ Hata detayı: ${error.message}
     }
   };
 
-  const openProfileModal = () => {
+  const openProfileModal = async () => {
+    // Fetch departments list
+    try {
+      const deptResponse = await apiService.getDepartments();
+      if (deptResponse.success && deptResponse.data) {
+        setDepartments(deptResponse.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch departments:', error);
+    }
+
     setProfileData({
       name: user?.name || '',
       email: user?.email || '',
       phone: user?.phone || '',
       office: user?.office || '',
-      website: user?.website || ''
+      website: user?.website || '',
+      title: user?.title || '',
+      department: user?.department || ''
     });
     setShowProfileModal(true);
     setProfileError('');
@@ -565,14 +623,14 @@ Hata detayı: ${error.message}
 
     try {
       const response = await apiService.updateFacultyProfile(profileData);
-      
+
       if (response.success) {
         setProfileSuccess('Profil başarıyla güncellendi!');
-        
+
         // Update local user data
         const updatedUser = { ...user, ...profileData };
         localStorage.setItem('user', JSON.stringify(updatedUser));
-        
+
         // Close modal after 2 seconds
         setTimeout(() => {
           setShowProfileModal(false);
@@ -608,10 +666,10 @@ Hata detayı: ${error.message}
 
     try {
       const response = await apiService.changePassword(passwordData.currentPassword, passwordData.newPassword);
-      
+
       if (response.success) {
         setPasswordSuccess('Şifre başarıyla değiştirildi!');
-        
+
         // Close modal after 2 seconds
         setTimeout(() => {
           setShowPasswordModal(false);
@@ -653,41 +711,6 @@ Hata detayı: ${error.message}
     setAvailabilitySuccess('');
   };
 
-  // Test function to debug availability saving
-  const testSaveAvailability = async () => {
-    const testAvailability = [
-      {
-        day: 'Monday',
-        isActive: true,
-        timeSlots: [
-          {
-            start: '09:00',
-            end: '10:00',
-            isAvailable: true
-          }
-        ]
-      }
-    ];
-
-    console.log('Testing with availability data:', testAvailability);
-
-    try {
-      const response = await apiService.updateFacultyAvailability({
-        availability: testAvailability
-      });
-      
-      console.log('Test save response:', response);
-      
-      if (response.success) {
-        alert('Test availability saved successfully!');
-        // Reload availability data to see if it's now in the database
-        loadAvailabilityData();
-      }
-    } catch (error) {
-      console.error('Test save error:', error);
-      alert('Test save failed: ' + error.message);
-    }
-  };
 
   const handleSaveAvailability = async () => {
     setAvailabilityLoading(true);
@@ -751,14 +774,14 @@ Hata detayı: ${error.message}
       console.log('Request data JSON:', JSON.stringify(requestData, null, 2));
 
       const response = await apiService.updateFacultyAvailability(requestData);
-      
+
       console.log('Availability save response:', response);
       console.log('Response success:', response.success);
       console.log('Response data:', response.data);
-      
+
       if (response.success) {
         setAvailabilitySuccess('Müsaitlik durumu başarıyla kaydedildi!');
-        
+
         // Reload availability data to verify it was saved
         setTimeout(() => {
           loadAvailabilityData();
@@ -789,11 +812,11 @@ Hata detayı: ${error.message}
 
     try {
       const response = await apiService.loadAvailabilityFromGoogleCalendar();
-      
+
       if (response.success) {
         setAvailability(response.data.availability);
         setAvailabilitySuccess('Google Calendar\'dan müsaitlik başarıyla yüklendi');
-        
+
         // Reload availability data to reflect changes
         setTimeout(() => {
           loadAvailabilityData();
@@ -812,10 +835,10 @@ Hata detayı: ${error.message}
       console.log('=== LOADING AVAILABILITY DATA ===');
       const availabilityResponse = await apiService.getFacultyAvailability();
       console.log('API Response:', availabilityResponse);
-      
+
       const defaultAvailability = initializeAvailability();
       console.log('Default availability template:', defaultAvailability);
-      
+
       let serverAvailability = [];
 
       if (
@@ -830,13 +853,13 @@ Hata detayı: ${error.message}
       }
 
       // Merge server data into default 7-day template to ensure all days are shown
-      const dayOrder = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       const merged = defaultAvailability.map(defDay => {
         const match = serverAvailability.find(d => d.day === defDay.day);
         const result = match ? { ...defDay, ...match } : defDay;
         console.log(`Day ${defDay.day}: ${match ? 'found match' : 'using default'}`, result);
         return result;
-      }).sort((a,b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+      }).sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
 
       setAvailability(merged);
       setSlotDuration(availabilityResponse.data.slotDuration || 30);
@@ -864,7 +887,7 @@ Hata detayı: ${error.message}
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Load appointments
       const appointmentsResponse = await apiService.getFacultyAppointments();
       const appointmentsData = appointmentsResponse.data?.appointments || appointmentsResponse.data || [];
@@ -872,7 +895,7 @@ Hata detayı: ${error.message}
       // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
       const sortedAppointments = [...appointmentsData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setAppointments(sortedAppointments);
-      
+
       // Load profile data
       const profileResponse = await apiService.getCurrentUser();
       const profileData = profileResponse.data;
@@ -925,7 +948,7 @@ Hata detayı: ${error.message}
   const handleAppointmentAction = async (appointmentId, action, rejectionReason = null) => {
     try {
       let response;
-      
+
       if (action === 'approved') {
         response = await apiService.approveAppointment(appointmentId);
       } else if (action === 'rejected') {
@@ -935,7 +958,7 @@ Hata detayı: ${error.message}
       } else {
         response = await apiService.updateAppointment(appointmentId, { status: action });
       }
-      
+
       if (response.success) {
         // Reload appointments
         const updatedResponse = await apiService.getFacultyAppointments();
@@ -959,9 +982,9 @@ Hata detayı: ${error.message}
       cancelled: { text: 'İptal Edildi', color: 'bg-gray-100 text-gray-800' },
       no_response: { text: 'Cevaplamadı', color: 'bg-orange-100 text-orange-800' }
     };
-    
+
     const config = statusConfig[status] || { text: status, color: 'bg-gray-100 text-gray-800' };
-    
+
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
         {config.text}
@@ -997,7 +1020,7 @@ Hata detayı: ${error.message}
     }
   };
 
-    const getStatusText = (status) => {
+  const getStatusText = (status) => {
     switch (status) {
       case 'pending':
         return 'Beklemede';
@@ -1057,11 +1080,82 @@ Hata detayı: ${error.message}
   };
 
   const handleRejectAppointment = (appointmentId, reason) => {
+    // If reason is provided directly, use it
     if (reason) {
-      if (window.confirm('Bu randevuyu reddetmek istediğinizden emin misiniz?')) {
-        handleAppointmentAction(appointmentId, 'rejected', reason);
-      }
+      handleAppointmentAction(appointmentId, 'rejected', reason);
+      return;
     }
+    // Otherwise, show the reject modal
+    const appointment = appointments.find(a => a._id === appointmentId);
+    setRejectingAppointment(appointment);
+    setShowRejectModal(true);
+  };
+
+  const handleRejectConfirm = async (reason) => {
+    if (!rejectingAppointment) return;
+
+    setRejectLoading(true);
+    await handleAppointmentAction(rejectingAppointment._id, 'rejected', reason);
+    setRejectLoading(false);
+    setShowRejectModal(false);
+    setRejectingAppointment(null);
+  };
+
+  // Handle cancel approved appointment
+  const handleCancelApprovedAppointment = (appointmentId) => {
+    const appointment = appointments.find(a => a._id === appointmentId);
+    if (appointment && appointment.status === 'approved') {
+      // Check if appointment is in the future (date + time)
+      const now = new Date();
+      const dateObj = new Date(appointment.date);
+      const year = dateObj.getFullYear();
+      const month = dateObj.getMonth();
+      const day = dateObj.getDate();
+      const [hours, minutes] = appointment.startTime.split(':').map(Number);
+      const appointmentDateTime = new Date(year, month, day, hours, minutes, 0, 0);
+
+      if (appointmentDateTime <= now) {
+        alert('Geçmiş randevular iptal edilemez.');
+        return;
+      }
+
+      setCancellingAppointment(appointment);
+      setShowCancelModal(true);
+    }
+  };
+
+  const handleCancelConfirm = async (reason) => {
+    if (!cancellingAppointment) return;
+
+    setCancelLoading(true);
+    try {
+      const response = await apiService.cancelFacultyAppointment(cancellingAppointment._id, reason);
+      if (response.success) {
+        // Refresh appointments
+        const appointmentsResponse = await apiService.getFacultyAppointments();
+        if (appointmentsResponse.success) {
+          const sortedAppointments = (appointmentsResponse.data?.appointments || appointmentsResponse.data || [])
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setAppointments(sortedAppointments);
+        }
+        // Show success notification
+        const newNotification = {
+          id: Date.now(),
+          title: 'Randevu İptal Edildi',
+          message: 'Onaylanmış randevu başarıyla iptal edildi ve öğrenciye bildirim gönderildi.',
+          type: 'success',
+          time: new Date().toISOString(),
+          read: false
+        };
+        setNotifications(prev => [newNotification, ...prev]);
+      }
+    } catch (error) {
+      console.error('Cancel appointment error:', error);
+      alert('Randevu iptal edilirken hata oluştu: ' + error.message);
+    }
+    setCancelLoading(false);
+    setShowCancelModal(false);
+    setCancellingAppointment(null);
   };
 
   const handleViewDetails = (appointment) => {
@@ -1095,25 +1189,9 @@ Hata detayı: ${error.message}
         }
       }
 
-      console.log('Initiating Google OAuth flow...');
-      
-      // Test configuration first
-      try {
-        const configResponse = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/google/test-config`);
-        const configData = await configResponse.json();
-        console.log('Google OAuth config test:', configData);
-        
-        if (!configData.success || configData.data.clientSecret === 'missing') {
-          alert('Google OAuth yapılandırması eksik! Lütfen backend log\'larını kontrol edin.');
-          return;
-        }
-      } catch (configError) {
-        console.error('Config test failed:', configError);
-      }
-      
       // Use OAuth 2.0 flow instead of Google Sign-In for Calendar access
       const response = await apiService.getGoogleAuthUrl();
-      
+
       if (response.success) {
         console.log('Google OAuth URL received:', response.data.authUrl);
         // Add userId to the OAuth URL for account linking
@@ -1138,7 +1216,7 @@ Hata detayı: ${error.message}
 
     try {
       const result = await apiService.disconnectGoogleCalendar();
-      
+
       if (result.success) {
         setGoogleConnected(false);
         loadDashboardData();
@@ -1158,36 +1236,36 @@ Hata detayı: ${error.message}
       console.log('Google Calendar not connected, skipping events load');
       return;
     }
-    
+
     try {
       setGoogleLoading(true);
       console.log('Loading Google Calendar events...');
       const startDate = new Date();
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + 7); // Next 7 days
-      
+
       const result = await apiService.getGoogleCalendarEvents(
         startDate.toISOString(),
         endDate.toISOString(),
         50
       );
-      
+
       if (result.success) {
         // Process calendar events and update availability
         const events = result.data || [];
         console.log('Google Calendar events loaded:', events.length, 'events');
-        
+
         // Process events and update availability
         if (events.length > 0) {
           await processGoogleCalendarEvents(events);
         }
-        
+
         return events;
       } else {
         console.error('Failed to load Google Calendar events:', result.message);
         // If the error indicates connection issues, update the status
         if (result.message && (
-          result.message.includes('not connected') || 
+          result.message.includes('not connected') ||
           result.message.includes('expired') ||
           result.message.includes('access expired')
         )) {
@@ -1199,7 +1277,7 @@ Hata detayı: ${error.message}
       console.error('Error loading Google Calendar events:', error);
       // If Google Calendar is not connected, set connected to false
       if (error.message && (
-        error.message.includes('not connected') || 
+        error.message.includes('not connected') ||
         error.message.includes('expired') ||
         error.message.includes('access expired')
       )) {
@@ -1215,11 +1293,12 @@ Hata detayı: ${error.message}
     try {
       // Group events by day
       const eventsByDay = {};
-      
+      const conflicts = [];
+
       events.forEach(event => {
         const startDate = new Date(event.start.dateTime || event.start.date);
         const dayName = startDate.toLocaleDateString('en-US', { weekday: 'long' });
-        
+
         if (!eventsByDay[dayName]) {
           eventsByDay[dayName] = [];
         }
@@ -1232,57 +1311,128 @@ Hata detayı: ${error.message}
       // Update availability based on Google Calendar events
       const updatedAvailability = baseline.map(day => {
         const dayEvents = eventsByDay[day.day] || [];
-        
+
         if (dayEvents.length > 0) {
           // Mark time slots as unavailable if there are events
           const updatedTimeSlots = day.timeSlots.map(slot => {
             const slotStart = new Date(`2000-01-01T${slot.start}`);
             const slotEnd = new Date(`2000-01-01T${slot.end}`);
-            
+
             // Check if any event overlaps with this time slot
-            const hasConflict = dayEvents.some(event => {
+            // Filter out system-created appointments (summary starts with "Randevu:")
+            const conflictingEvents = dayEvents.filter(event => {
+              // Skip system-created appointments
+              if (event.summary && event.summary.startsWith('Randevu:')) {
+                return false;
+              }
+              
               const eventStart = new Date(event.start.dateTime || event.start.date);
               const eventEnd = new Date(event.end.dateTime || event.end.date);
-              
+
               const eventStartTime = new Date(`2000-01-01T${eventStart.toTimeString().slice(0, 5)}`);
               const eventEndTime = new Date(`2000-01-01T${eventEnd.toTimeString().slice(0, 5)}`);
-              
+
               return (slotStart < eventEndTime && slotEnd > eventStartTime);
             });
-            
+
+            // If there's a conflict and slot was previously available, add to conflicts list
+            if (conflictingEvents.length > 0 && slot.isAvailable !== false) {
+              const dayNameTR = {
+                'Monday': 'Pazartesi', 'Tuesday': 'Salı', 'Wednesday': 'Çarşamba',
+                'Thursday': 'Perşembe', 'Friday': 'Cuma', 'Saturday': 'Cumartesi', 'Sunday': 'Pazar'
+              };
+              const acknowledgedConflicts = getAcknowledgedConflicts();
+              
+              conflictingEvents.forEach(event => {
+                const eventStart = new Date(event.start.dateTime || event.start.date);
+                const eventEnd = new Date(event.end.dateTime || event.end.date);
+                
+                // Create a unique conflict identifier
+                const conflictId = `${day.day}_${slot.start}_${slot.end}_${event.summary || event.id || ''}`;
+                
+                // Skip if this conflict was already acknowledged
+                if (acknowledgedConflicts.includes(conflictId)) {
+                  return;
+                }
+                
+                conflicts.push({
+                  id: conflictId,
+                  day: dayNameTR[day.day] || day.day,
+                  slot: `${slot.start} - ${slot.end}`,
+                  eventName: event.summary || 'Google Calendar Etkinliği',
+                  eventTime: `${eventStart.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} - ${eventEnd.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`
+                });
+              });
+            }
+
             return {
               ...slot,
-              isAvailable: !hasConflict
+              isAvailable: conflictingEvents.length === 0 ? slot.isAvailable : false
             };
           });
-          
+
           return {
             ...day,
             timeSlots: updatedTimeSlots
           };
         }
-        
+
         return day;
       });
 
-      setAvailability(updatedAvailability);
-
-      // Save updated availability to backend, but never clear DB on failure
-      try {
-        await apiService.updateFacultyAvailability({
-          availability: updatedAvailability
-        });
-      } catch (e) {
-        console.error('Availability save failed, keeping current state:', e);
+      // If there are conflicts, show warning modal (only if not recently dismissed)
+      if (conflicts.length > 0) {
+        const now = Date.now();
+        const dismissedAt = conflictDismissedAt;
+        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in ms
+        
+        // Show modal if never dismissed or dismissed more than 5 minutes ago
+        if (!dismissedAt || (now - dismissedAt) > fiveMinutes) {
+          setConflictData(conflicts);
+          setShowConflictModal(true);
+        }
       }
-      
-      console.log('Google Calendar events processed and availability updated');
+
+      console.log('Google Calendar events processed, conflicts found:', conflicts.length);
     } catch (error) {
       console.error('Error processing Google Calendar events:', error);
     }
   };
 
+  // Handle conflict modal dismiss (just close, don't update anything)
+  const handleConflictDismiss = () => {
+    setShowConflictModal(false);
+    setConflictDismissedAt(Date.now()); // Remember when dismissed to avoid spam
+  };
+
+  // Handle acknowledging conflicts (mark as acknowledged, don't show again)
+  const handleConflictAcknowledge = () => {
+    if (!conflictData || conflictData.length === 0) return;
+    
+    const acknowledgedConflicts = getAcknowledgedConflicts();
+    const newAcknowledgedConflicts = [...acknowledgedConflicts];
+    
+    // Add all current conflicts to acknowledged list
+    conflictData.forEach(conflict => {
+      if (conflict.id && !newAcknowledgedConflicts.includes(conflict.id)) {
+        newAcknowledgedConflicts.push(conflict.id);
+      }
+    });
+    
+    saveAcknowledgedConflicts(newAcknowledgedConflicts);
+    setShowConflictModal(false);
+    setConflictDismissedAt(Date.now());
+  };
+
+  // Handle going to availability settings to fix conflicts
+  const handleGoToAvailability = () => {
+    setShowConflictModal(false);
+    setActiveTab('availability');
+    openAvailabilityModal();
+  };
+
   // Profile modal fields configuration
+  // Build profile fields dynamically with select options
   const profileFields = [
     {
       name: 'name',
@@ -1299,6 +1449,24 @@ Hata detayı: ${error.message}
       placeholder: 'E-posta adresi'
     },
     {
+      name: 'title',
+      label: 'Ünvan',
+      type: 'text',
+      required: false,
+      placeholder: 'Ünvan (örn: Prof. Dr., Doç. Dr., Dr. Öğr. Üyesi)'
+    },
+    {
+      name: 'department',
+      label: 'Bölüm',
+      type: 'select',
+      required: true,
+      placeholder: 'Bölüm seçiniz',
+      options: departments.map((dept) => ({
+        value: dept.name,
+        label: dept.name
+      }))
+    },
+    {
       name: 'phone',
       label: 'Telefon',
       type: 'tel',
@@ -1311,6 +1479,13 @@ Hata detayı: ${error.message}
       type: 'text',
       required: false,
       placeholder: 'Ofis numarası'
+    },
+    {
+      name: 'website',
+      label: 'Web Sitesi',
+      type: 'url',
+      required: false,
+      placeholder: 'Web sitesi URL'
     }
   ];
 
@@ -1325,7 +1500,7 @@ Hata detayı: ${error.message}
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Modern Header */}
-            <Header
+      <Header
         user={user}
         onProfile={openProfileModal}
         onPassword={openPasswordModal}
@@ -1373,7 +1548,7 @@ Hata detayı: ${error.message}
         </div>
       </Header>
 
-      
+
 
       <div className="dashboard-main max-w-7xl mx-auto py-8">
         {/* Stats Cards */}
@@ -1422,9 +1597,19 @@ Hata detayı: ${error.message}
                 icon: <CalendarIcon className="w-5 h-5" />
               },
               {
+                id: 'history',
+                label: 'Randevu Geçmişi',
+                icon: <ClockIcon className="w-5 h-5" />
+              },
+              {
                 id: 'availability',
                 label: 'Müsaitlik Durumu',
                 icon: <ClockIcon className="w-5 h-5" />
+              },
+              {
+                id: 'stats',
+                label: 'İstatistikler',
+                icon: <ChartBarIcon className="w-5 h-5" />
               }
             ]}
             activeTab={activeTab}
@@ -1432,7 +1617,7 @@ Hata detayı: ${error.message}
           />
 
           <div className="p-6">
-            {activeTab === 'appointments' ? (
+            {activeTab === 'appointments' && (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Randevularım</h3>
@@ -1446,12 +1631,16 @@ Hata detayı: ${error.message}
                   formatTime={formatTime}
                   onApprove={handleApproveAppointment}
                   onReject={handleRejectAppointment}
+                  onCancelApproved={handleCancelApprovedAppointment}
                   onDetails={handleViewDetails}
                   showCancel={false}
                   showActions={true}
+                  showHistoryButton={true}
                 />
               </div>
-            ) : (
+            )}
+
+            {activeTab === 'availability' && (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Haftalık Müsaitlik</h3>
@@ -1472,21 +1661,19 @@ Hata detayı: ${error.message}
                   <div className="flex bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setViewMode('grid')}
-                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                        viewMode === 'grid' 
-                          ? 'bg-white text-blue-600 shadow-sm' 
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${viewMode === 'grid'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
                     >
                       Kart Görünümü
                     </button>
                     <button
                       onClick={() => setViewMode('table')}
-                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                        viewMode === 'table' 
-                          ? 'bg-white text-blue-600 shadow-sm' 
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
+                      className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${viewMode === 'table'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                        }`}
                     >
                       Tablo Görünümü
                     </button>
@@ -1536,20 +1723,20 @@ Hata detayı: ${error.message}
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
+                  <div className="w-full bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+                    <table className="w-full table-fixed divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[15%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                             Gün
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[10%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                             Durum
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[55%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
                             Zaman Aralıkları
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="w-[20%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Müsait Aralık
                           </th>
                         </tr>
@@ -1557,19 +1744,18 @@ Hata detayı: ${error.message}
                       <tbody className="bg-white divide-y divide-gray-200">
                         {availability.map((day, index) => (
                           <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
                               {getDayDisplayName(day.day)}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                day.isActive 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
+                            <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${day.isActive
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                                }`}>
                                 {day.isActive ? 'Aktif' : 'Pasif'}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-900">
+                            <td className="px-6 py-4 text-sm text-gray-900 border-r border-gray-200">
                               {day.isActive && day.timeSlots && day.timeSlots.length > 0 ? (
                                 <div className="space-y-1">
                                   {day.timeSlots.map((slot, slotIndex) => {
@@ -1629,6 +1815,113 @@ Hata detayı: ${error.message}
                 <GoogleCalendarEvents />
               </div>
             )}
+
+            {/* History Tab */}
+            {activeTab === 'history' && (
+              <div>
+                <AppointmentHistory userId={user?._id} embedded={true} />
+              </div>
+            )}
+
+            {/* Statistics Tab */}
+            {activeTab === 'stats' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-medium text-gray-900">Randevu İstatistiklerim</h3>
+                </div>
+                
+                <StatisticsCards
+                  appointments={appointments}
+                  onExportPDF={() => exportAppointmentsToPDF(appointments, `${formatUserName(user) || 'Öğretim Üyesi'} - Randevu Raporu`)}
+                  title="Genel Randevu İstatistikleri"
+                />
+
+                {/* Quick Stats */}
+                <div className="mt-8 bg-white rounded-lg shadow p-6">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Hızlı Özet</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div className="bg-blue-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-blue-600">{appointments.length}</p>
+                      <p className="text-sm text-blue-700">Toplam</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-green-600">
+                        {appointments.filter(a => a.status === 'approved').length}
+                      </p>
+                      <p className="text-sm text-green-700">Onaylanan</p>
+                    </div>
+                    <div className="bg-red-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-red-600">
+                        {appointments.filter(a => a.status === 'rejected').length}
+                      </p>
+                      <p className="text-sm text-red-700">Reddedilen</p>
+                    </div>
+                    <div className="bg-yellow-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-yellow-600">
+                        {appointments.filter(a => a.status === 'pending').length}
+                      </p>
+                      <p className="text-sm text-yellow-700">Bekleyen</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-gray-600">
+                        {appointments.filter(a => a.status === 'no_response').length}
+                      </p>
+                      <p className="text-sm text-gray-700">Cevaplanmadı</p>
+                    </div>
+                    <div className="bg-orange-50 rounded-lg p-4 text-center">
+                      <p className="text-2xl font-bold text-orange-600">
+                        {appointments.filter(a => a.status === 'cancelled').length}
+                      </p>
+                      <p className="text-sm text-orange-700">İptal Edilen</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Response Rate */}
+                <div className="mt-6 bg-white rounded-lg shadow p-6">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Yanıt Oranları</h4>
+                  <div className="space-y-4">
+                    {(() => {
+                      const total = appointments.length;
+                      const approved = appointments.filter(a => a.status === 'approved').length;
+                      const rejected = appointments.filter(a => a.status === 'rejected').length;
+                      const responded = approved + rejected;
+                      const responseRate = total > 0 ? Math.round((responded / total) * 100) : 0;
+                      const approvalRate = responded > 0 ? Math.round((approved / responded) * 100) : 0;
+                      
+                      return (
+                        <>
+                          <div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-600">Yanıt Oranı</span>
+                              <span className="font-medium text-gray-900">{responseRate}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${responseRate}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-600">Onay Oranı (Yanıtlananlar İçinde)</span>
+                              <span className="font-medium text-gray-900">{approvalRate}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${approvalRate}%` }}
+                              />
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1674,7 +1967,7 @@ Hata detayı: ${error.message}
         }}
         availability={availability}
         slotDuration={30}
-        onSlotDurationChange={() => {}}
+        onSlotDurationChange={() => { }}
         onDayAvailabilityChange={updateDayAvailability}
         onSave={handleSaveAvailability}
         loading={availabilityLoading}
@@ -1693,9 +1986,44 @@ Hata detayı: ${error.message}
         onApprove={handleApproveAppointment}
         onReject={handleRejectAppointment}
         onCancel={handleAppointmentAction}
+        onCancelApproved={handleCancelApprovedAppointment}
         getStatusText={getStatusText}
         formatDate={formatDate}
         formatTime={formatTime}
+        currentUserId={null}
+      />
+
+      {/* Reject Modal */}
+      <RejectModal
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setRejectingAppointment(null);
+        }}
+        onConfirm={handleRejectConfirm}
+        loading={rejectLoading}
+        appointmentInfo={rejectingAppointment}
+      />
+
+      {/* Cancel Modal (for approved appointments) */}
+      <CancelModal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancellingAppointment(null);
+        }}
+        onConfirm={handleCancelConfirm}
+        loading={cancelLoading}
+        appointmentInfo={cancellingAppointment}
+      />
+
+      {/* Google Calendar Conflict Warning Modal */}
+      <ConflictWarningModal
+        isOpen={showConflictModal}
+        conflictData={conflictData}
+        onDismiss={handleConflictDismiss}
+        onAcknowledge={handleConflictAcknowledge}
+        onGoToAvailability={handleGoToAvailability}
       />
     </div>
   );

@@ -18,15 +18,15 @@ export default function StudentDetailsModal({ isOpen, onClose, student }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-0 w-full max-w-md">
-        <div className="bg-white rounded-xl shadow-2xl overflow-hidden">
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContainer} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalContent}>
           {/* Header */}
           <div className={styles.modalHeader}>
             <div className={styles.headerContent}>
               <div className={styles.headerLeft}>
                 <div className={styles.iconContainer}>
-                  <UserIcon className="w-5 h-5" />
+                  <UserIcon className={styles.headerIcon} />
                 </div>
                 <div>
                   <h3 className={styles.headerTitle}>Öğrenci Bilgileri</h3>
@@ -37,81 +37,75 @@ export default function StudentDetailsModal({ isOpen, onClose, student }) {
                 onClick={onClose}
                 className={styles.closeButton}
               >
-                <XMarkIcon className="w-6 h-6" />
+                <XMarkIcon className={styles.closeIcon} />
               </button>
             </div>
           </div>
 
           {/* Content */}
-          <div className="px-6 py-6">
-            <div className="space-y-4">
-              {/* Basic Info */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <UserIcon className="w-6 h-6 text-blue-600" />
+          <div className={styles.modalBody}>
+            <div className={styles.contentSection}>
+              {/* Basic Info Card */}
+              <div className={styles.infoCard}>
+                <div className={styles.userInfo}>
+                  <div className={styles.userAvatar}>
+                    <UserIcon className={styles.avatarIcon} />
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900">{student.name}</h4>
-                    <p className="text-sm text-gray-600">Öğrenci</p>
+                    <h4 className={styles.userName}>{student.name}</h4>
+                    <p className={styles.userRole}>Öğrenci</p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-sm">
-                    <EnvelopeIcon className="w-4 h-4 text-gray-500" />
-                    <span className="text-gray-700">{student.email}</span>
+                <div className={styles.detailsList}>
+                  <div className={styles.detailItem}>
+                    <EnvelopeIcon className={styles.detailIcon} />
+                    <span className={styles.detailText}>{student.email}</span>
                   </div>
                   {student.studentNumber && (
-                    <div className="flex items-center space-x-2 text-sm">
-                      <AcademicCapIcon className="w-4 h-4 text-gray-500" />
-                      <span className="text-gray-700">Öğrenci No: {student.studentNumber}</span>
+                    <div className={styles.detailItem}>
+                      <AcademicCapIcon className={styles.detailIcon} />
+                      <span className={styles.detailText}>Öğrenci No: {student.studentNumber}</span>
                     </div>
                   )}
                   {student.department && (
-                    <div className="flex items-center space-x-2 text-sm">
-                      <AcademicCapIcon className="w-4 h-4 text-gray-500" />
-                      <span className="text-gray-700">{student.department}</span>
+                    <div className={styles.detailItem}>
+                      <AcademicCapIcon className={styles.detailIcon} />
+                      <span className={styles.detailText}>{student.department}</span>
                     </div>
                   )}
                   {student.phone && (
-                    <div className="flex items-center space-x-2 text-sm">
-                      <PhoneIcon className="w-4 h-4 text-gray-500" />
-                      <span className="text-gray-700">{student.phone}</span>
+                    <div className={styles.detailItem}>
+                      <PhoneIcon className={styles.detailIcon} />
+                      <span className={styles.detailText}>{student.phone}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Status & Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 rounded-lg p-3 text-center">
-                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    student.isActive
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    <div className={`w-2 h-2 rounded-full mr-1 ${
-                      student.isActive ? 'bg-green-500' : 'bg-gray-500'
-                    }`}></div>
+              {/* Status & Dates Grid */}
+              <div className={styles.statusGrid}>
+                <div className={`${styles.statusCard} ${student.isActive ? styles.statusCardGreen : styles.statusCardGray}`}>
+                  <div className={`${styles.statusBadge} ${student.isActive ? styles.statusBadgeActive : styles.statusBadgeInactive}`}>
+                    <div className={`${styles.statusDot} ${student.isActive ? styles.statusDotActive : styles.statusDotInactive}`}></div>
                     {student.isActive ? 'Aktif' : 'Pasif'}
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">Durum</p>
+                  <p className={styles.statusLabel}>Durum</p>
                 </div>
 
-                <div className="bg-blue-50 rounded-lg p-3 text-center">
-                  <ClockIcon className="w-4 h-4 text-blue-600 mx-auto mb-1" />
-                  <p className="text-xs text-gray-600">Kayıt Tarihi</p>
-                  <p className="text-xs font-medium text-gray-800">{formatDate(student.createdAt)}</p>
+                <div className={`${styles.statusCard} ${styles.statusCardBlue}`}>
+                  <ClockIcon className={styles.dateIcon} />
+                  <p className={styles.dateLabel}>Kayıt Tarihi</p>
+                  <p className={styles.dateValue}>{formatDate(student.createdAt)}</p>
                 </div>
               </div>
 
               {/* Additional Info */}
               {(student.updatedAt && student.updatedAt !== student.createdAt) && (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <ClockIcon className="w-4 h-4" />
-                    <span>Son güncelleme: {formatDate(student.updatedAt)}</span>
+                <div className={styles.updateInfo}>
+                  <div className={styles.updateInfoContent}>
+                    <ClockIcon className={styles.updateIcon} />
+                    <span className={styles.updateText}>Son güncelleme: {formatDate(student.updatedAt)}</span>
                   </div>
                 </div>
               )}

@@ -6,7 +6,7 @@ import Appointment from '../models/Appointment.js';
 import AppointmentSlot from '../models/AppointmentSlot.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { facultyMiddleware, authMiddleware } from '../middleware/auth.js';
-import { sendAppointmentApprovalEmail } from '../services/emailService.js';
+import { sendAppointmentApprovalEmail, sendAppointmentCancellationEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -42,6 +42,10 @@ router.put('/profile', asyncHandler(async (req, res) => {
   if (phone) user.phone = phone;
   if (website) user.website = website;
 
+  // If this is admin's first login and they're setting title and department, mark first login as complete
+  // (but don't set isFirstLogin to false yet - wait for password change)
+  // Actually, we'll keep isFirstLogin true until password is changed
+
   await user.save();
 
   res.json({
@@ -55,20 +59,7 @@ router.put('/profile', asyncHandler(async (req, res) => {
 // @route   GET /api/faculty/availability
 // @access  Private
 router.get('/availability', asyncHandler(async (req, res) => {
-  console.log('=== GET AVAILABILITY DEBUG ===');
-  console.log('User from auth:', req.user);
-  console.log('User ID:', req.user?.id);
-  
   const user = await User.findById(req.user.id).select('availability slotDuration');
-
-  console.log('Faculty availability GET request:', {
-    userId: req.user.id,
-    userFound: !!user,
-    availability: user?.availability,
-    availabilityType: typeof user?.availability,
-    availabilityLength: Array.isArray(user?.availability) ? user?.availability.length : 'Not an array',
-    slotDuration: user?.slotDuration
-  });
 
   res.json({
     success: true,
@@ -79,76 +70,12 @@ router.get('/availability', asyncHandler(async (req, res) => {
   });
 }));
 
-// Test endpoint for debugging
-router.post('/test-availability', asyncHandler(async (req, res) => {
-  console.log('=== TEST AVAILABILITY ENDPOINT ===');
-  console.log('Request body:', req.body);
-  console.log('Request headers:', req.headers);
-  console.log('User from auth:', req.user);
-  
-  const testData = {
-    day: 'Monday',
-    isActive: true,
-    timeSlots: [
-      {
-        start: '09:00',
-        end: '10:00',
-        isAvailable: true
-      }
-    ]
-  };
-  
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-    
-    console.log('User before update:', {
-      id: user._id,
-      availability: user.availability
-    });
-    
-    user.availability = [testData];
-    
-    console.log('User.availability set to:', user.availability);
-    
-    await user.save();
-    
-    console.log('User saved successfully');
-    
-    // Verify by fetching again
-    const savedUser = await User.findById(req.user.id);
-    console.log('User after save verification:', {
-      id: savedUser._id,
-      availability: savedUser.availability
-    });
-    
-    res.json({
-      success: true,
-      message: 'Test availability saved',
-      data: {
-        availability: savedUser.availability
-      }
-    });
-  } catch (error) {
-    console.error('Test endpoint error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-}));
 
 // @desc    Update faculty availability
 // @route   PUT /api/faculty/availability
 // @access  Private
 router.put('/availability', asyncHandler(async (req, res) => {
-  console.log('=== BACKEND AVAILABILITY UPDATE DEBUG ===');
-  console.log('Request body:', req.body);
-  console.log('Request headers:', req.headers);
-  console.log('User from auth middleware:', req.user);
-  
+
   const { availability, slotDuration } = req.body;
 
   console.log('Extracted data:', {
@@ -189,7 +116,7 @@ router.put('/availability', asyncHandler(async (req, res) => {
     console.log('Setting new availability:', availability);
     console.log('New availability type:', typeof availability);
     console.log('New availability length:', Array.isArray(availability) ? availability.length : 'Not an array');
-    
+
     // Validate availability structure
     if (!Array.isArray(availability)) {
       console.error('Availability is not an array:', availability);
@@ -198,38 +125,40 @@ router.put('/availability', asyncHandler(async (req, res) => {
         error: 'Müsaitlik verisi dizi formatında olmalıdır'
       });
     }
-    
+
     user.availability = availability;
     console.log('User.availability set to:', user.availability);
   }
 
   if (slotDuration) {
-    // Validate slot duration before saving
-    if (slotDuration < 10 || slotDuration > 20) {
+    // Validate slot duration before saving - minimum 15 minutes, no maximum
+    if (slotDuration < 15) {
       console.error('Invalid slot duration:', slotDuration);
       return res.status(400).json({
         success: false,
-        error: 'Slot süresi 10-20 dakika arasında olmalıdır'
+        error: 'Slot süresi minimum 15 dakika olmalıdır'
       });
     }
-    console.log('Setting new slot duration:', slotDuration);
     user.slotDuration = slotDuration;
   }
 
-  console.log('About to save user. User.availability before save:', user.availability);
-  
   try {
     await user.save();
-    console.log('User saved successfully!');
+
+    // Delete future available slots (not booked) to regenerate with new availability
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
+    await AppointmentSlot.deleteMany({
+      facultyId: user._id,
+      date: { $gte: today },
+      status: 'available',
+      isBooked: false
+    });
+
     // Verify the save by fetching the user again
     const savedUser = await User.findById(req.user.id);
-    console.log('User after save verification:', {
-      id: savedUser._id,
-      availability: savedUser.availability,
-      availabilityLength: Array.isArray(savedUser.availability) ? savedUser.availability.length : 'Not an array'
-    });
-    
+
     res.json({
       success: true,
       data: {
@@ -245,7 +174,7 @@ router.put('/availability', asyncHandler(async (req, res) => {
       code: saveError.code,
       name: saveError.name
     });
-    
+
     return res.status(500).json({
       success: false,
       error: 'Kullanıcı kaydedilirken hata oluştu: ' + saveError.message
@@ -275,6 +204,8 @@ router.get('/appointments', asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const appointments = await Appointment.find(query)
+    .populate('facultyId', 'name title department')
+    .populate('student', 'name email studentNumber')
     .sort({ date: 1, startTime: 1 })
     .skip(skip)
     .limit(parseInt(limit));
@@ -302,7 +233,9 @@ router.get('/appointments/:id', asyncHandler(async (req, res) => {
   const appointment = await Appointment.findOne({
     _id: req.params.id,
     facultyId: req.user.id
-  });
+  })
+    .populate('facultyId', 'name title department')
+    .populate('student', 'name email studentNumber');
 
   if (!appointment) {
     return res.status(404).json({
@@ -367,16 +300,22 @@ router.put('/appointments/:id/approve', asyncHandler(async (req, res) => {
 
       // Create Google Meet link
       const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-      
+
+      // Format date as YYYY-MM-DD (appointment.date is stored in UTC, we just need the date part)
+      const dateStr = appointment.date.toISOString().split('T')[0];
+      // Create datetime strings in local format (Google Calendar will use timeZone to interpret)
+      const startDateTime = `${dateStr}T${appointment.startTime}:00`;
+      const endDateTime = `${dateStr}T${appointment.endTime}:00`;
+
       const event = {
-        summary: `Randevu: ${appointment.topic}`,
+        summary: `Randevu: ${appointment.topicName}`,
         description: `Öğrenci: ${appointment.studentName} (${appointment.studentId})\nE-posta: ${appointment.studentEmail}\nAçıklama: ${appointment.description || 'Açıklama yok'}`,
         start: {
-          dateTime: new Date(appointment.date.getTime() + appointment.startTime.split(':').reduce((acc, time) => acc * 60 + parseInt(time), 0) * 60000).toISOString(),
+          dateTime: startDateTime,
           timeZone: 'Europe/Istanbul',
         },
         end: {
-          dateTime: new Date(appointment.date.getTime() + appointment.endTime.split(':').reduce((acc, time) => acc * 60 + parseInt(time), 0) * 60000).toISOString(),
+          dateTime: endDateTime,
           timeZone: 'Europe/Istanbul',
         },
         location: req.user.office || 'Ofis belirtilmemiş',
@@ -413,7 +352,7 @@ router.put('/appointments/:id/approve', asyncHandler(async (req, res) => {
       await appointment.save();
 
       console.log('Google Calendar event created:', response.data.id);
-      
+
       // Send approval email with Google Meet link
       try {
         await sendAppointmentApprovalEmail(
@@ -421,7 +360,7 @@ router.put('/appointments/:id/approve', asyncHandler(async (req, res) => {
           appointment.studentName,
           {
             facultyName: req.user.name,
-            topic: appointment.topic,
+            topic: appointment.topicName,
             description: appointment.description,
             date: appointment.date,
             startTime: appointment.startTime,
@@ -446,7 +385,7 @@ router.put('/appointments/:id/approve', asyncHandler(async (req, res) => {
         appointment.studentName,
         {
           facultyName: req.user.name,
-          topic: appointment.topic,
+          topic: appointment.topicName,
           description: appointment.description,
           date: appointment.date,
           startTime: appointment.startTime,
@@ -515,10 +454,22 @@ router.put('/appointments/:id/reject', asyncHandler(async (req, res) => {
   });
 }));
 
-// @desc    Cancel appointment
+// @desc    Cancel appointment (for approved appointments before the date/time)
 // @route   PUT /api/faculty/appointments/:id/cancel
 // @access  Private
-router.put('/appointments/:id/cancel', asyncHandler(async (req, res) => {
+router.put('/appointments/:id/cancel', [
+  body('cancellationReason').optional().trim().isLength({ max: 200 }).withMessage('İptal nedeni 200 karakterden uzun olamaz')
+], asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array()
+    });
+  }
+
+  const { cancellationReason } = req.body;
+
   const appointment = await Appointment.findOne({
     _id: req.params.id,
     facultyId: req.user.id,
@@ -528,12 +479,61 @@ router.put('/appointments/:id/cancel', asyncHandler(async (req, res) => {
   if (!appointment) {
     return res.status(404).json({
       success: false,
-      message: 'Randevu bulunamadı'
+      message: 'Randevu bulunamadı veya zaten iptal edilmiş'
     });
   }
 
+  // Check if appointment date/time has passed
+  const now = new Date();
+  const appointmentDateTime = new Date(appointment.date);
+  const [hours, minutes] = appointment.startTime.split(':').map(Number);
+  appointmentDateTime.setHours(hours, minutes, 0, 0);
+
+  if (appointmentDateTime <= now) {
+    return res.status(400).json({
+      success: false,
+      message: 'Geçmiş randevular iptal edilemez'
+    });
+  }
+
+  const wasApproved = appointment.status === 'approved';
+
+  // Update appointment status
   appointment.status = 'cancelled';
+  appointment.cancelledBy = 'faculty';
+  appointment.cancelledAt = new Date();
+  appointment.cancellationReason = cancellationReason || null;
   appointment.facultyNotified = true;
+
+  // Delete Google Calendar event if exists
+  if (wasApproved && appointment.googleCalendarEventId && req.user.googleAccessToken) {
+    try {
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+      );
+
+      oauth2Client.setCredentials({
+        access_token: req.user.googleAccessToken,
+        refresh_token: req.user.googleRefreshToken
+      });
+
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+      await calendar.events.delete({
+        calendarId: 'primary',
+        eventId: appointment.googleCalendarEventId
+      });
+
+      console.log('Google Calendar event deleted:', appointment.googleCalendarEventId);
+      appointment.googleCalendarEventId = null;
+      appointment.googleMeetLink = null;
+    } catch (calendarError) {
+      console.error('Failed to delete Google Calendar event:', calendarError);
+      // Continue even if calendar deletion fails
+    }
+  }
 
   // Update slot status back to available
   const slot = await AppointmentSlot.findOne({
@@ -552,10 +552,32 @@ router.put('/appointments/:id/cancel', asyncHandler(async (req, res) => {
 
   await appointment.save();
 
+  // Send cancellation email to student if the appointment was approved
+  if (wasApproved) {
+    try {
+      await sendAppointmentCancellationEmail(
+        appointment.studentEmail,
+        appointment.studentName,
+        {
+          facultyName: appointment.facultyName || req.user.name,
+          topicName: appointment.topicName,
+          topic: appointment.topicName,
+          date: appointment.date,
+          startTime: appointment.startTime,
+          endTime: appointment.endTime
+        },
+        cancellationReason
+      );
+    } catch (emailError) {
+      console.error('Failed to send cancellation email:', emailError);
+      // Continue even if email fails
+    }
+  }
+
   res.json({
     success: true,
     data: appointment,
-    message: 'Randevu iptal edildi'
+    message: wasApproved ? 'Onaylanmış randevu iptal edildi ve öğrenciye bildirim gönderildi' : 'Randevu iptal edildi'
   });
 }));
 
@@ -638,8 +660,8 @@ router.get('/stats', asyncHandler(async (req, res) => {
     facultyId: req.user.id,
     date: { $gte: new Date() }
   })
-  .sort({ date: 1, startTime: 1 })
-  .limit(5);
+    .sort({ date: 1, startTime: 1 })
+    .limit(5);
 
   res.json({
     success: true,
@@ -675,7 +697,7 @@ router.get('/slots/:date', asyncHandler(async (req, res) => {
   // If no slots exist for this date, generate them
   if (slots.length === 0) {
     const generatedSlots = await AppointmentSlot.generateSlotsForDate(req.user.id, targetDate, user.availability);
-    
+
     if (generatedSlots.length > 0) {
       await AppointmentSlot.insertMany(generatedSlots);
       slots = await AppointmentSlot.findByFaculty(req.user.id, { date: targetDate });
@@ -728,7 +750,7 @@ router.post('/qr-code', asyncHandler(async (req, res) => {
 
   // Generate QR code URL
   const qrCodeUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/appointment/${user.slug}`;
-  
+
   // Update user's QR code URL
   user.qrCodeUrl = qrCodeUrl;
   await user.save();
@@ -747,7 +769,7 @@ router.post('/qr-code', asyncHandler(async (req, res) => {
 // @access  Private
 router.get('/google/auth-url', asyncHandler(async (req, res) => {
   const { google } = await import('googleapis');
-  
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
@@ -780,7 +802,7 @@ router.get('/google/auth-url', asyncHandler(async (req, res) => {
 // @access  Public
 router.get('/google/callback', asyncHandler(async (req, res) => {
   const { code } = req.query;
-  
+
   if (!code) {
     return res.status(400).json({
       success: false,
@@ -790,7 +812,7 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
 
   try {
     const { google } = await import('googleapis');
-    
+
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -798,7 +820,7 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
     );
 
     const { tokens } = await oauth2Client.getToken(code);
-    
+
     // Store tokens in user's profile
     const user = await User.findById(req.user.id);
     user.googleTokens = tokens;

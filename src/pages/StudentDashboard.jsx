@@ -20,7 +20,9 @@ import AppointmentList from '../components/AppointmentList/AppointmentList';
 import AppointmentDetails from '../components/AppointmentDetails/AppointmentDetails';
 import ProfileModal from '../components/ProfileModal/ProfileModal';
 import PasswordModal from '../components/PasswordModal/PasswordModal';
+import EmailVerificationModal from '../components/EmailVerificationModal/EmailVerificationModal';
 import TabNavigation from '../components/TabNavigation';
+import AppointmentHistory from './AppointmentHistory';
 
 const StudentDashboard = () => {
   const { user, login, logout } = useAuth();
@@ -41,10 +43,19 @@ const StudentDashboard = () => {
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
-    phone: '',
     studentNumber: '',
-    department: ''
+    department: '',
+    advisor: ''
   });
+  const [departments, setDepartments] = useState([]);
+  const [facultyList, setFacultyList] = useState([]);
+  const [showEmailVerificationModal, setShowEmailVerificationModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [emailVerificationLoading, setEmailVerificationLoading] = useState(false);
+  const [emailVerificationError, setEmailVerificationError] = useState('');
+  const [emailVerificationSuccess, setEmailVerificationSuccess] = useState('');
+  const [verificationCodeSent, setVerificationCodeSent] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -161,13 +172,31 @@ const StudentDashboard = () => {
     }
   };
 
-  const openProfileModal = () => {
+  const openProfileModal = async () => {
+    // Fetch departments and faculty list
+    try {
+      const [deptResponse, facultyResponse] = await Promise.all([
+        apiService.getDepartments(),
+        apiService.get('/auth/faculty')
+      ]);
+
+      if (deptResponse.success && deptResponse.data) {
+        setDepartments(deptResponse.data);
+      }
+
+      if (facultyResponse.success && facultyResponse.data) {
+        setFacultyList(facultyResponse.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch departments/faculty:', error);
+    }
+
     setProfileData({
       name: user?.name || '',
       email: user?.email || '',
-      phone: user?.phone || '',
       studentNumber: user?.studentNumber || '',
-      department: user?.department || ''
+      department: user?.department || '',
+      advisor: user?.advisor || ''
     });
     setShowProfileModal(true);
     setProfileError('');
@@ -187,6 +216,14 @@ const StudentDashboard = () => {
 
   const handleProfileInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // If email is being changed, show email verification modal
+    if (name === 'email' && value !== user?.email) {
+      setShowEmailVerificationModal(true);
+      setNewEmail(value);
+      return; // Don't update profileData yet
+    }
+    
     setProfileData(prev => ({
       ...prev,
       [name]: value
@@ -208,13 +245,19 @@ const StudentDashboard = () => {
     setProfileSuccess('');
 
     try {
-      const response = await apiService.updateStudentProfile(profileData);
+      // Don't send email in profile update if it's different (should use verification)
+      const profileDataToSend = { ...profileData };
+      if (profileDataToSend.email !== user?.email) {
+        delete profileDataToSend.email; // Remove email from update
+      }
+      
+      const response = await apiService.updateStudentProfile(profileDataToSend);
       
       if (response.success) {
         setProfileSuccess('Profil başarıyla güncellendi!');
         
         // Update local user data
-        const updatedUser = { ...user, ...profileData };
+        const updatedUser = { ...user, ...profileDataToSend };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
         // Close modal after 2 seconds
@@ -229,6 +272,75 @@ const StudentDashboard = () => {
       setProfileError(error.message || 'Profil güncellenirken hata oluştu');
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  const handleRequestEmailVerificationCode = async () => {
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      setEmailVerificationError('Geçerli bir e-posta adresi giriniz');
+      return;
+    }
+
+    setEmailVerificationLoading(true);
+    setEmailVerificationError('');
+    setEmailVerificationSuccess('');
+
+    try {
+      const response = await apiService.requestEmailChange(newEmail);
+      
+      if (response.success) {
+        setEmailVerificationSuccess('Doğrulama kodu yeni e-posta adresinize gönderildi');
+        setVerificationCodeSent(true);
+      }
+    } catch (error) {
+      console.error('Email verification request error:', error);
+      setEmailVerificationError(error.message || 'Doğrulama kodu gönderilemedi');
+    } finally {
+      setEmailVerificationLoading(false);
+    }
+  };
+
+  const handleVerifyEmailChange = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setEmailVerificationError('6 haneli doğrulama kodunu giriniz');
+      return;
+    }
+
+    setEmailVerificationLoading(true);
+    setEmailVerificationError('');
+    setEmailVerificationSuccess('');
+
+    try {
+      const response = await apiService.verifyEmailChange(verificationCode);
+      
+      if (response.success) {
+        setEmailVerificationSuccess('E-posta adresi başarıyla güncellendi!');
+        
+        // Update profile data with new email
+        setProfileData(prev => ({
+          ...prev,
+          email: newEmail
+        }));
+        
+        // Update local user data
+        const updatedUser = { ...user, email: newEmail };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowEmailVerificationModal(false);
+          setVerificationCodeSent(false);
+          setVerificationCode('');
+          setNewEmail('');
+          setEmailVerificationSuccess('');
+          window.location.reload(); // Refresh to update header
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Email verification error:', error);
+      setEmailVerificationError(error.message || 'Doğrulama kodu geçersiz');
+    } finally {
+      setEmailVerificationLoading(false);
     }
   };
 
@@ -283,9 +395,9 @@ const StudentDashboard = () => {
         setProfileData({
           name: profileData.name || '',
           email: profileData.email || '',
-          phone: profileData.phone || '',
           studentNumber: profileData.studentNumber || '',
-          department: profileData.department || ''
+          department: profileData.department || '',
+          advisor: profileData.advisor || ''
         });
       } catch (error) {
         console.error('Failed to load profile data:', error);
@@ -431,6 +543,7 @@ const StudentDashboard = () => {
   };
 
   // Profile modal fields configuration
+  // Build profile fields dynamically with select options
   const profileFields = [
     {
       name: 'name',
@@ -451,21 +564,42 @@ const StudentDashboard = () => {
       label: 'Öğrenci Numarası',
       type: 'text',
       required: true,
-      placeholder: 'Öğrenci numarası'
+      placeholder: 'Öğrenci numarası',
+      disabled: true,
+      readOnly: true
     },
     {
       name: 'department',
       label: 'Bölüm',
-      type: 'text',
+      type: 'select',
       required: true,
-      placeholder: 'Bölüm'
+      placeholder: 'Bölüm seçiniz',
+      options: departments.map((dept) => ({
+        value: dept.name,
+        label: dept.name
+      }))
     },
     {
-      name: 'phone',
-      label: 'Telefon',
-      type: 'tel',
-      required: false,
-      placeholder: 'Telefon numarası'
+      name: 'advisor',
+      label: 'Danışman',
+      type: 'select',
+      required: true,
+      placeholder: 'Danışman seçiniz',
+      options: Object.entries(
+        facultyList.reduce((acc, faculty) => {
+          const dept = faculty.department || 'Diğer';
+          if (!acc[dept]) acc[dept] = [];
+          acc[dept].push(faculty);
+          return acc;
+        }, {})
+      ).map(([department, members]) => ({
+        optgroup: true,
+        label: department,
+        options: members.map((faculty) => ({
+          value: faculty._id,
+          label: `${faculty.title ? `${faculty.title} ` : ''}${faculty.name}`
+        }))
+      }))
     }
   ];
 
@@ -569,6 +703,11 @@ const StudentDashboard = () => {
                 icon: <CalendarIcon className="w-5 h-5" />
               },
               {
+                id: 'history',
+                label: 'Randevu Geçmişi',
+                icon: <ClockIcon className="w-5 h-5" />
+              },
+              {
                 id: 'new-appointment',
                 label: 'Yeni Randevu',
                 icon: <PlusIcon className="w-5 h-5" />
@@ -605,7 +744,13 @@ const StudentDashboard = () => {
                   onDetails={handleViewDetails}
                   showCancel={true}
                   showActions={true}
+                  currentUserId={user?._id}
+                  showHistoryButton={false}
                 />
+              </div>
+            ) : activeTab === 'history' ? (
+              <div>
+                <AppointmentHistory userId={user?._id} embedded={true} />
               </div>
             ) : (
               <div>
@@ -666,6 +811,32 @@ const StudentDashboard = () => {
         success={passwordSuccess}
       />
 
+      <EmailVerificationModal
+        isOpen={showEmailVerificationModal}
+        onClose={() => {
+          setShowEmailVerificationModal(false);
+          setVerificationCodeSent(false);
+          setVerificationCode('');
+          setNewEmail('');
+          setEmailVerificationError('');
+          setEmailVerificationSuccess('');
+          // Reset email in profileData to original
+          setProfileData(prev => ({
+            ...prev,
+            email: user?.email || ''
+          }));
+        }}
+        newEmail={newEmail}
+        verificationCode={verificationCode}
+        onVerificationCodeChange={setVerificationCode}
+        onRequestCode={handleRequestEmailVerificationCode}
+        onVerify={handleVerifyEmailChange}
+        loading={emailVerificationLoading}
+        error={emailVerificationError}
+        success={emailVerificationSuccess}
+        codeSent={verificationCodeSent}
+      />
+
       {/* Appointment Details Modal */}
       <AppointmentDetails
         isOpen={showAppointmentDetails}
@@ -677,6 +848,7 @@ const StudentDashboard = () => {
         getStatusText={getStatusText}
         formatDate={formatDate}
         formatTime={formatTime}
+        currentUserId={user?._id}
       />
     </div>
   );

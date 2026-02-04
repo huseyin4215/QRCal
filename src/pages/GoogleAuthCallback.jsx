@@ -26,7 +26,7 @@ const GoogleAuthCallback = () => {
       // OAuth 2.0 authorization code received
       setStatus('loading');
       setMessage('Google OAuth işleniyor...');
-      
+
       // Exchange code for token by calling backend
       handleOAuthCallback(code);
     } else if (token) {
@@ -45,33 +45,33 @@ const GoogleAuthCallback = () => {
           'Content-Type': 'application/json'
         }
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data?.success && data?.data) {
-          login(token, data.data);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        // Redirect based on role / first login
-        const stored = localStorage.getItem('user');
-        try {
-          const u = stored ? JSON.parse(stored) : null;
-          if (u?.isFirstLogin) {
-            navigate('/change-password', { replace: true });
-          } else if (u?.role === 'admin') {
-            navigate('/admin-dashboard', { replace: true });
-          } else if (u?.role === 'faculty') {
-            navigate('/faculty-dashboard?googleConnected=true', { replace: true });
-          } else if (u?.role === 'student') {
-            navigate('/student-dashboard', { replace: true });
-          } else {
+        .then(response => response.json())
+        .then(data => {
+          if (data?.success && data?.data) {
+            login(token, data.data);
+          }
+        })
+        .catch(() => { })
+        .finally(() => {
+          // Redirect based on role / first login
+          const stored = localStorage.getItem('user');
+          try {
+            const u = stored ? JSON.parse(stored) : null;
+            if (u?.isFirstLogin && (u?.role === 'faculty' || u?.role === 'admin')) {
+              navigate('/change-password', { replace: true });
+            } else if (u?.role === 'admin') {
+              navigate('/admin-dashboard', { replace: true });
+            } else if (u?.role === 'faculty') {
+              navigate('/faculty-dashboard?googleConnected=true', { replace: true });
+            } else if (u?.role === 'student') {
+              navigate('/student-dashboard', { replace: true });
+            } else {
+              navigate('/dashboard', { replace: true });
+            }
+          } catch {
             navigate('/dashboard', { replace: true });
           }
-        } catch {
-          navigate('/dashboard', { replace: true });
-        }
-      });
+        });
     } else {
       setStatus('error');
       setMessage('Geçersiz callback. Lütfen tekrar deneyin.');
@@ -93,19 +93,19 @@ const GoogleAuthCallback = () => {
       if (data.success && data.token) {
         setStatus('success');
         setMessage('Google Calendar başarıyla bağlandı!');
-        
+
         // Store token and redirect
         localStorage.setItem('token', data.token);
         apiService.setToken(data.token);
-        
+
         // Update user context
         if (data.user) {
           login(data.token, data.user);
         }
-        
+
         // Redirect based on role / first login
         setTimeout(() => {
-          if (data.user?.isFirstLogin) {
+          if (data.user?.isFirstLogin && (data.user?.role === 'faculty' || data.user?.role === 'admin')) {
             navigate('/change-password');
           } else if (data.user?.role === 'admin') {
             navigate('/admin-dashboard');
