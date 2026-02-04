@@ -168,6 +168,7 @@ const AdminDashboard = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [appointmentActionLoading, setAppointmentActionLoading] = useState(null); // Store appointment ID that's being processed
 
   // Department State
   const [departments, setDepartments] = useState([]);
@@ -626,19 +627,26 @@ const AdminDashboard = () => {
           office: ''
         });
 
-        // Kullanıcı listesini yenile
-        loadDashboardData();
+        // Kullanıcı listesini yenile (await ile bekle)
+        try {
+          await loadDashboardData();
+        } catch (reloadError) {
+          console.error('Error reloading dashboard data:', reloadError);
+          // Hata olsa bile devam et
+        }
 
-        // Modal'ı 5 saniye sonra kapat
+        // Loading state'i kapat
+        setFacultyLoading(false);
+
+        // Modal'ı 3 saniye sonra kapat
         setTimeout(() => {
           setShowAddUserModal(false);
           setFacultySuccess('');
-        }, 5000);
+        }, 3000);
       }
     } catch (error) {
       console.error('Faculty creation error:', error);
       setFacultyError(error.message || 'Öğretim üyesi oluşturulurken hata oluştu');
-    } finally {
       setFacultyLoading(false);
     }
   };
@@ -1166,6 +1174,9 @@ const AdminDashboard = () => {
   };
 
   const handleAppointmentAction = async (appointmentId, action, reason = null) => {
+    // Set loading state for the specific appointment
+    setAppointmentActionLoading(appointmentId);
+    
     try {
       let response;
 
@@ -1176,6 +1187,7 @@ const AdminDashboard = () => {
         if (rejectReason) {
           response = await apiService.rejectAppointment(appointmentId, rejectReason);
         } else {
+          setAppointmentActionLoading(null);
           return;
         }
       } else if (action === 'cancelled') {
@@ -1202,10 +1214,18 @@ const AdminDashboard = () => {
         // Show success notification
         const actionText = action === 'approved' ? 'onaylandı' : action === 'rejected' ? 'reddedildi' : 'iptal edildi';
         showActionNotification(`Randevu başarıyla ${actionText}!`);
+        
+        // Close appointment details modal if open
+        if (showAppointmentDetails && selectedAppointment?._id === appointmentId) {
+          setShowAppointmentDetails(false);
+          setSelectedAppointment(null);
+        }
       }
     } catch (error) {
       console.error('Appointment action error:', error);
       alert('İşlem sırasında hata oluştu: ' + error.message);
+    } finally {
+      setAppointmentActionLoading(null);
     }
   };
 

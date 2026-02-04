@@ -74,6 +74,7 @@ const FacultyDashboard = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [appointmentActionLoading, setAppointmentActionLoading] = useState(null); // Store appointment ID that's being processed
 
   // Load notifications from localStorage
   const loadNotificationsFromStorage = () => {
@@ -941,6 +942,9 @@ Hata detayı: ${error.message}
   };
 
   const handleAppointmentAction = async (appointmentId, action, rejectionReason = null) => {
+    // Set loading state for the specific appointment
+    setAppointmentActionLoading(appointmentId);
+    
     try {
       let response;
 
@@ -962,10 +966,18 @@ Hata detayı: ${error.message}
         // Randevuları oluşturulma tarihine göre sırala (en yeni en üstte)
         const sortedUpdatedAppointments = [...updatedAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setAppointments(sortedUpdatedAppointments);
+        
+        // Close appointment details modal if open
+        if (showAppointmentDetails && selectedAppointment?._id === appointmentId) {
+          setShowAppointmentDetails(false);
+          setSelectedAppointment(null);
+        }
       }
     } catch (error) {
       console.error('Appointment action error:', error);
       alert('İşlem sırasında hata oluştu: ' + error.message);
+    } finally {
+      setAppointmentActionLoading(null);
     }
   };
 
