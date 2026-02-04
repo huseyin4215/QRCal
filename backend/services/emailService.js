@@ -3,14 +3,35 @@ import { config } from 'dotenv';
 
 config({ path: './.env' });
 
-// Create transporter
+// Create transporter with timeout and retry settings
 const createTransporter = () => {
+  // Check if email credentials are configured
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+    console.warn('⚠️ Email credentials not configured. Email sending will be skipped.');
+    return null;
+  }
+
   return nodemailer.createTransport({
     service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use TLS
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_APP_PASSWORD
-    }
+    },
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2'
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 10,
+    rateDelta: 1000,
+    rateLimit: 5
   });
 };
 
@@ -18,6 +39,10 @@ const createTransporter = () => {
 export const sendAppointmentRequestEmail = async (facultyEmail, facultyName, appointmentData, emailActionToken) => {
   try {
     const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email not configured - skipping appointment request email');
+      return { success: false, message: 'Email not configured' };
+    }
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
     
     const approveUrl = `${backendUrl}/api/email-actions/approve/${emailActionToken}`;
@@ -86,11 +111,13 @@ export const sendAppointmentRequestEmail = async (facultyEmail, facultyName, app
     };
     
     await transporter.sendMail(mailOptions);
-    console.log(`Appointment request email sent to ${facultyEmail}`);
+    console.log(`✅ Appointment request email sent to ${facultyEmail}`);
+    return { success: true };
     
   } catch (error) {
-    console.error('Failed to send appointment request email:', error);
-    throw error;
+    console.error('❌ Failed to send appointment request email:', error.message);
+    // Don't throw error - just log it and return failure
+    return { success: false, message: error.message };
   }
 };
 
@@ -98,6 +125,10 @@ export const sendAppointmentRequestEmail = async (facultyEmail, facultyName, app
 export const sendAppointmentApprovalEmail = async (studentEmail, studentName, appointmentData, googleMeetLink = null) => {
   try {
     const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email not configured - skipping appointment approval email');
+      return { success: false, message: 'Email not configured' };
+    }
     
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -140,11 +171,12 @@ export const sendAppointmentApprovalEmail = async (studentEmail, studentName, ap
     };
     
     await transporter.sendMail(mailOptions);
-    console.log(`Appointment approval email sent to ${studentEmail}`);
+    console.log(`✅ Appointment approval email sent to ${studentEmail}`);
+    return { success: true };
     
   } catch (error) {
-    console.error('Failed to send appointment approval email:', error);
-    throw error;
+    console.error('❌ Failed to send appointment approval email:', error.message);
+    return { success: false, message: error.message };
   }
 };
 
@@ -152,6 +184,10 @@ export const sendAppointmentApprovalEmail = async (studentEmail, studentName, ap
 export const sendAppointmentRejectionEmail = async (studentEmail, studentName, appointmentData, rejectionReason) => {
   try {
     const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email not configured - skipping appointment rejection email');
+      return { success: false, message: 'Email not configured' };
+    }
     
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -184,11 +220,12 @@ export const sendAppointmentRejectionEmail = async (studentEmail, studentName, a
     };
     
     await transporter.sendMail(mailOptions);
-    console.log(`Appointment rejection email sent to ${studentEmail}`);
+    console.log(`✅ Appointment rejection email sent to ${studentEmail}`);
+    return { success: true };
     
   } catch (error) {
-    console.error('Failed to send appointment rejection email:', error);
-    throw error;
+    console.error('❌ Failed to send appointment rejection email:', error.message);
+    return { success: false, message: error.message };
   }
 };
 
@@ -196,6 +233,10 @@ export const sendAppointmentRejectionEmail = async (studentEmail, studentName, a
 export const sendAppointmentCancellationEmail = async (studentEmail, studentName, appointmentData, cancellationReason) => {
   try {
     const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email not configured - skipping appointment cancellation email');
+      return { success: false, message: 'Email not configured' };
+    }
     
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -234,11 +275,12 @@ export const sendAppointmentCancellationEmail = async (studentEmail, studentName
     };
     
     await transporter.sendMail(mailOptions);
-    console.log(`Appointment cancellation email sent to ${studentEmail}`);
+    console.log(`✅ Appointment cancellation email sent to ${studentEmail}`);
+    return { success: true };
     
   } catch (error) {
-    console.error('Failed to send appointment cancellation email:', error);
-    throw error;
+    console.error('❌ Failed to send appointment cancellation email:', error.message);
+    return { success: false, message: error.message };
   }
 };
 
@@ -246,6 +288,10 @@ export const sendAppointmentCancellationEmail = async (studentEmail, studentName
 export const sendPasswordResetEmail = async (toEmail, toName, resetLink) => {
   try {
     const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email not configured - skipping password reset email');
+      return { success: false, message: 'Email not configured' };
+    }
     const appName = process.env.APP_NAME || 'QRCal';
 
     const mailOptions = {
@@ -268,10 +314,11 @@ export const sendPasswordResetEmail = async (toEmail, toName, resetLink) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Password reset email sent to ${toEmail}`);
+    console.log(`✅ Password reset email sent to ${toEmail}`);
+    return { success: true };
   } catch (error) {
-    console.error('Failed to send password reset email:', error);
-    throw error;
+    console.error('❌ Failed to send password reset email:', error.message);
+    return { success: false, message: error.message };
   }
 };
 
@@ -279,6 +326,10 @@ export const sendPasswordResetEmail = async (toEmail, toName, resetLink) => {
 export const sendTemporaryPasswordEmail = async (toEmail, toName, tempPassword, loginUrl) => {
   try {
     const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email not configured - skipping temporary password email');
+      return { success: false, message: 'Email not configured' };
+    }
     const appName = process.env.APP_NAME || 'QRCal';
     const url = loginUrl || `${process.env.FRONTEND_URL || 'http://localhost:8081'}/login`;
 
@@ -305,10 +356,11 @@ export const sendTemporaryPasswordEmail = async (toEmail, toName, tempPassword, 
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Temporary password email sent to ${toEmail}`);
+    console.log(`✅ Temporary password email sent to ${toEmail}`);
+    return { success: true };
   } catch (error) {
-    console.error('Failed to send temporary password email:', error);
-    throw error;
+    console.error('❌ Failed to send temporary password email:', error.message);
+    return { success: false, message: error.message };
   }
 };
 
@@ -316,6 +368,10 @@ export const sendTemporaryPasswordEmail = async (toEmail, toName, tempPassword, 
 export const sendEmailVerificationCode = async (toEmail, toName, verificationCode) => {
   try {
     const transporter = createTransporter();
+    if (!transporter) {
+      console.log('📧 Email not configured - skipping email verification code');
+      return { success: false, message: 'Email not configured' };
+    }
     const appName = process.env.APP_NAME || 'QRCal';
 
     const mailOptions = {
@@ -349,10 +405,11 @@ export const sendEmailVerificationCode = async (toEmail, toName, verificationCod
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Email verification code sent to ${toEmail}`);
+    console.log(`✅ Email verification code sent to ${toEmail}`);
+    return { success: true };
   } catch (error) {
-    console.error('Failed to send email verification code:', error);
-    throw error;
+    console.error('❌ Failed to send email verification code:', error.message);
+    return { success: false, message: error.message };
   }
 };
 
