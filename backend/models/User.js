@@ -226,7 +226,7 @@ userSchema.virtual('appointmentUrl').get(function () {
 // Only add indexes for fields that don't have unique: true
 userSchema.index({ role: 1 });
 userSchema.index({ department: 1 });
-userSchema.index({ name: 1 }); // For name-based searches
+// Note: name index removed to avoid duplicate index warning
 
 // Pre-save middleware
 userSchema.pre('save', async function (next) {
