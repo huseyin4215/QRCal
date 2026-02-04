@@ -47,7 +47,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Trust proxy - required when behind reverse proxy (nginx)
-app.set('trust proxy', true);
+// Set to 1 to trust the first proxy (nginx) - more secure than 'true'
+app.set('trust proxy', 1);
 
 // Security middleware (configure for cross-origin API usage in dev)
 app.use(helmet({
