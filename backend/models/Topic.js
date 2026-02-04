@@ -35,8 +35,8 @@ const topicSchema = new mongoose.Schema({
 });
 
 // Indexes
+// Note: 'name' already has unique index from schema definition (unique: true)
 topicSchema.index({ isActive: 1, order: 1 });
-topicSchema.index({ name: 1 });
 
 // Static methods
 topicSchema.statics.findActive = function () {
