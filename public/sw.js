@@ -1,7 +1,8 @@
 // PWA Service Worker for Qnnect
-const CACHE_NAME = 'qnnect-v1.0.0';
-const STATIC_CACHE = 'qnnect-static-v1.0.0';
-const DYNAMIC_CACHE = 'qnnect-dynamic-v1.0.0';
+// Update version to force cache refresh
+const CACHE_NAME = 'qnnect-v1.0.1';
+const STATIC_CACHE = 'qnnect-static-v1.0.1';
+const DYNAMIC_CACHE = 'qnnect-dynamic-v1.0.1';
 
 // Static assets to cache (only essential files that definitely exist)
 const STATIC_ASSETS = [

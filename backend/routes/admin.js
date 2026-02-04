@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { sendTemporaryPasswordEmail, sendAppointmentCancellationEmail, sendAppointmentApprovalEmail } from '../services/emailService.js';
 import { google } from 'googleapis';
@@ -357,6 +358,14 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
 // @route   DELETE /api/admin/users/:id
 // @access  Private (Admin)
 router.delete('/users/:id', asyncHandler(async (req, res) => {
+  // Validate MongoDB ObjectId format
+  if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Geçersiz kullanıcı ID formatı'
+    });
+  }
+
   const user = await User.findById(req.params.id);
 
   if (!user) {
