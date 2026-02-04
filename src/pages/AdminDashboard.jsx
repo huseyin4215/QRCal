@@ -640,7 +640,7 @@ const AdminDashboard = () => {
 
       console.log('Faculty creation response:', response);
 
-      if (response.success) {
+      if (response && response.success) {
         console.log('Temp password from response:', response.data.tempPassword);
         setFacultySuccess(`Öğretim üyesi başarıyla oluşturuldu!\n\nGeçici şifre: ${response.data.tempPassword}\n\nÖğretim üyesi ilk girişte bu şifreyi kullanarak giriş yapmalı ve şifresini değiştirmelidir.`);
 
@@ -676,10 +676,15 @@ const AdminDashboard = () => {
           setShowAddUserModal(false);
           setFacultySuccess('');
         }, 3000);
+      } else {
+        // Response başarısız olduğunda
+        const errorMessage = response?.message || 'Öğretim üyesi oluşturulurken hata oluştu';
+        setFacultyError(errorMessage);
+        setFacultyLoading(false);
       }
     } catch (error) {
       console.error('Faculty creation error:', error);
-      setFacultyError(error.message || 'Öğretim üyesi oluşturulurken hata oluştu');
+      setFacultyError(error.message || error.response?.data?.message || 'Öğretim üyesi oluşturulurken hata oluştu');
       setFacultyLoading(false);
     }
   };
@@ -1512,7 +1517,7 @@ const AdminDashboard = () => {
     try {
       const response = await apiService.updateUser(editingUser._id, newFaculty);
 
-      if (response.success) {
+      if (response && response.success) {
         setFacultySuccess('Öğretim üyesi başarıyla güncellendi!');
 
         // Form'u temizle
@@ -1549,10 +1554,15 @@ const AdminDashboard = () => {
           setFacultySuccess('');
           setEditingUser(null);
         }, 2000);
+      } else {
+        // Response başarısız olduğunda
+        const errorMessage = response?.message || 'Öğretim üyesi güncellenirken hata oluştu';
+        setFacultyError(errorMessage);
+        setFacultyLoading(false);
       }
     } catch (error) {
       console.error('Faculty update error:', error);
-      setFacultyError(error.message || 'Öğretim üyesi güncellenirken hata oluştu');
+      setFacultyError(error.message || error.response?.data?.message || 'Öğretim üyesi güncellenirken hata oluştu');
       setFacultyLoading(false);
     }
   };
