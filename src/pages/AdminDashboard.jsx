@@ -1020,12 +1020,7 @@ const AdminDashboard = () => {
         const updatedUser = { ...user, ...profileData };
         localStorage.setItem('user', JSON.stringify(updatedUser));
 
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          setShowProfileModal(false);
-          setProfileSuccess('');
-          window.location.reload(); // Refresh to update header
-        }, 2000);
+        // Modal otomatik kapanmasın - kullanıcı kendisi kapatsın
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -1265,32 +1260,30 @@ const AdminDashboard = () => {
       try {
         const response = await apiService.cancelAppointment(appointment._id);
         if (response.success) {
-          // Reload appointments and stats in parallel
-          const [allAppointmentsResponse, facultyAppointmentsResponse, statsResponse] = await Promise.all([
+          // Show success notification immediately
+          showActionNotification('Randevu başarıyla iptal edildi!');
+
+          // Reload appointments and stats in background
+          Promise.all([
             apiService.getAllAppointments(),
             apiService.getFacultyAppointments(),
             apiService.getSystemStats()
-          ]);
+          ]).then(([allAppointmentsResponse, facultyAppointmentsResponse, statsResponse]) => {
+            const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
+            const adminAppts = facultyAppointmentsResponse.data?.appointments || facultyAppointmentsResponse.data || [];
 
-          const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
-          const adminAppts = facultyAppointmentsResponse.data?.appointments || facultyAppointmentsResponse.data || [];
+            const sortedAllAppointments = allAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const sortedAdminAppointments = adminAppts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-          // Sort appointments by creation date (newest first)
-          const sortedAllAppointments = allAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          const sortedAdminAppointments = adminAppts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            setAppointments(sortedAllAppointments);
+            setSystemAppointments(sortedAllAppointments);
+            setAdminAppointments(sortedAdminAppointments);
 
-          setAppointments(sortedAllAppointments);
-          setSystemAppointments(sortedAllAppointments);
-          setAdminAppointments(sortedAdminAppointments);
-
-          // Update stats
-          if (statsResponse.success) {
-            const allStats = statsResponse.data || {};
-            setStats(allStats);
-          }
-
-          // Show success notification
-          showActionNotification('Randevu başarıyla iptal edildi!');
+            if (statsResponse.success) {
+              const allStats = statsResponse.data || {};
+              setStats(allStats);
+            }
+          }).catch(err => console.error('Error refreshing after cancel:', err));
         }
       } catch (error) {
         console.error('Cancel appointment error:', error);
@@ -1322,7 +1315,8 @@ const AdminDashboard = () => {
     if (!rejectingAppointment) return;
 
     setRejectLoading(true);
-    await handleAppointmentAction(rejectingAppointment._id, 'rejected', reason);
+    // Don't await - let it run in background
+    handleAppointmentAction(rejectingAppointment._id, 'rejected', reason);
     setRejectLoading(false);
     setShowRejectModal(false);
     setRejectingAppointment(null);
@@ -1357,38 +1351,42 @@ const AdminDashboard = () => {
     setCancelLoading(true);
     try {
       const response = await apiService.cancelAdminAppointment(cancellingAppointment._id, reason);
+      
+      // Close modal immediately
+      setCancelLoading(false);
+      setShowCancelModal(false);
+      setCancellingAppointment(null);
+
       if (response.success) {
-        // Refresh appointments and stats in parallel
-        const [allAppointmentsResponse, statsResponse] = await Promise.all([
+        // Show success notification immediately
+        showActionNotification('Onaylanmış randevu başarıyla iptal edildi ve öğrenciye bildirim gönderildi!');
+
+        // Refresh appointments and stats in background
+        Promise.all([
           apiService.getAllAppointments(),
           apiService.getSystemStats()
-        ]);
-        
-        const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
+        ]).then(([allAppointmentsResponse, statsResponse]) => {
+          const allAppointments = allAppointmentsResponse.data?.appointments || allAppointmentsResponse.data || [];
+          const ownAppointments = allAppointments.filter(isOwnAppointment);
+          const otherAppointments = allAppointments.filter(a => !isOwnAppointment(a));
 
-        const ownAppointments = allAppointments.filter(isOwnAppointment);
-        const otherAppointments = allAppointments.filter(a => !isOwnAppointment(a));
+          setAppointments(allAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+          setSystemAppointments(otherAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+          setAdminAppointments(ownAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
 
-        setAppointments(allAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-        setSystemAppointments(otherAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-        setAdminAppointments(ownAppointments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-
-        // Update stats
-        if (statsResponse.success) {
-          const allStats = statsResponse.data || {};
-          setStats(allStats);
-        }
-
-        // Show success notification
-        showActionNotification('Onaylanmış randevu başarıyla iptal edildi ve öğrenciye bildirim gönderildi!');
+          if (statsResponse.success) {
+            const allStats = statsResponse.data || {};
+            setStats(allStats);
+          }
+        }).catch(err => console.error('Error refreshing after cancel:', err));
       }
     } catch (error) {
       console.error('Cancel appointment error:', error);
       alert('Randevu iptal edilirken hata oluştu: ' + error.message);
+      setCancelLoading(false);
+      setShowCancelModal(false);
+      setCancellingAppointment(null);
     }
-    setCancelLoading(false);
-    setShowCancelModal(false);
-    setCancellingAppointment(null);
   };
 
   const handleAppointmentDetails = (appointment) => {

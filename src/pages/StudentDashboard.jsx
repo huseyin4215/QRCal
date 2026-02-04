@@ -261,12 +261,7 @@ const StudentDashboard = () => {
         const updatedUser = { ...user, ...profileDataToSend };
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          setShowProfileModal(false);
-          setProfileSuccess('');
-          window.location.reload(); // Refresh to update header
-        }, 2000);
+        // Modal otomatik kapanmasın - kullanıcı kendisi kapatsın
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -526,13 +521,13 @@ const StudentDashboard = () => {
         
         const response = await apiService.cancelAppointment(appointment._id, user.email, cancellationReason);
         if (response.success) {
-          await loadAppointments();
-          
-          // Always refresh AppointmentHistory (even if not on history tab, it will refresh when tab is opened)
-          setHistoryRefreshTrigger(prev => prev + 1);
-          
+          // Show success message immediately
           setGlobalSuccess('Randevu başarıyla iptal edildi');
           setTimeout(() => setGlobalSuccess(''), 3000);
+          
+          // Refresh appointments in background
+          loadAppointments().catch(err => console.error('Error loading appointments:', err));
+          setHistoryRefreshTrigger(prev => prev + 1);
         } else {
           setGlobalError(response.message || 'Randevu iptal edilirken hata oluştu');
           setTimeout(() => setGlobalError(''), 4000);

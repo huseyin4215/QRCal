@@ -628,12 +628,7 @@ Hata detayı: ${error.message}
         const updatedUser = { ...user, ...profileData };
         localStorage.setItem('user', JSON.stringify(updatedUser));
 
-        // Close modal after 2 seconds
-        setTimeout(() => {
-          setShowProfileModal(false);
-          setProfileSuccess('');
-          window.location.reload(); // Refresh to update header
-        }, 2000);
+        // Modal otomatik kapanmasın - kullanıcı kendisi kapatsın
       }
     } catch (error) {
       console.error('Profile update error:', error);
@@ -1110,7 +1105,8 @@ Hata detayı: ${error.message}
     if (!rejectingAppointment) return;
 
     setRejectLoading(true);
-    await handleAppointmentAction(rejectingAppointment._id, 'rejected', reason);
+    // Don't await - let it run in background
+    handleAppointmentAction(rejectingAppointment._id, 'rejected', reason);
     setRejectLoading(false);
     setShowRejectModal(false);
     setRejectingAppointment(null);
@@ -1145,19 +1141,14 @@ Hata detayı: ${error.message}
     setCancelLoading(true);
     try {
       const response = await apiService.cancelFacultyAppointment(cancellingAppointment._id, reason);
+      
+      // Close modal immediately
+      setCancelLoading(false);
+      setShowCancelModal(false);
+      setCancellingAppointment(null);
+
       if (response.success) {
-        // Refresh appointments
-        const appointmentsResponse = await apiService.getFacultyAppointments();
-        if (appointmentsResponse.success) {
-          const sortedAppointments = (appointmentsResponse.data?.appointments || appointmentsResponse.data || [])
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          setAppointments(sortedAppointments);
-        }
-        
-        // Refresh AppointmentHistory
-        setHistoryRefreshTrigger(prev => prev + 1);
-        
-        // Show success notification
+        // Show success notification immediately
         const newNotification = {
           id: Date.now(),
           title: 'Randevu İptal Edildi',
@@ -1167,14 +1158,24 @@ Hata detayı: ${error.message}
           read: false
         };
         setNotifications(prev => [newNotification, ...prev]);
+
+        // Refresh appointments in background
+        apiService.getFacultyAppointments().then(appointmentsResponse => {
+          if (appointmentsResponse.success) {
+            const sortedAppointments = (appointmentsResponse.data?.appointments || appointmentsResponse.data || [])
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            setAppointments(sortedAppointments);
+            setHistoryRefreshTrigger(prev => prev + 1);
+          }
+        }).catch(err => console.error('Error refreshing appointments:', err));
       }
     } catch (error) {
       console.error('Cancel appointment error:', error);
       alert('Randevu iptal edilirken hata oluştu: ' + error.message);
+      setCancelLoading(false);
+      setShowCancelModal(false);
+      setCancellingAppointment(null);
     }
-    setCancelLoading(false);
-    setShowCancelModal(false);
-    setCancellingAppointment(null);
   };
 
   const handleViewDetails = (appointment) => {
