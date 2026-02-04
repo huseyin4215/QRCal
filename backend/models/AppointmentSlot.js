@@ -170,28 +170,23 @@ appointmentSlotSchema.statics.findByFaculty = function (facultyId, options = {})
     .populate('appointmentId', 'studentName studentId topic status');
 };
 
-appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, date, availability) {
+appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, date, availability, customSlotDuration = null) {
   const slots = [];
   const targetDate = new Date(date);
   const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
 
   const dayAvailability = availability.find(a => a.day === dayName && a.isActive);
 
-  if (!dayAvailability || !dayAvailability.timeSlots) {
+  if (!dayAvailability || !dayAvailability.timeSlots || dayAvailability.timeSlots.length === 0) {
     return slots;
   }
 
-  for (const timeSlot of dayAvailability.timeSlots) {
-    if (!timeSlot.isAvailable) continue;
-
-    const startTime = new Date(`2000-01-01T${timeSlot.start}`);
-    const endTime = new Date(`2000-01-01T${timeSlot.end}`);
-
-    // Get global slot duration setting
-    const SystemSettings = mongoose.model('SystemSettings');
-    let slotDuration = 15; // Default
-
+  // Get slot duration - use custom if provided, otherwise fetch from settings
+  let slotDuration = customSlotDuration || 15;
+  
+  if (!customSlotDuration) {
     try {
+      const SystemSettings = mongoose.model('SystemSettings');
       const setting = await SystemSettings.findOne({ key: 'slotDuration' });
       if (setting && setting.value) {
         slotDuration = parseInt(setting.value);
@@ -199,6 +194,23 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
     } catch (err) {
       console.error('Error fetching slot duration setting:', err);
     }
+  }
+
+  // Get all existing slots for this faculty and date in one query (performance optimization)
+  const existingSlots = await this.find({
+    facultyId,
+    date: targetDate
+  }).select('startTime endTime');
+  
+  const existingSlotKeys = new Set(
+    existingSlots.map(s => `${s.startTime}-${s.endTime}`)
+  );
+
+  for (const timeSlot of dayAvailability.timeSlots) {
+    if (!timeSlot.isAvailable) continue;
+
+    const startTime = new Date(`2000-01-01T${timeSlot.start}`);
+    const endTime = new Date(`2000-01-01T${timeSlot.end}`);
 
     while (startTime < endTime) {
       const slotStart = startTime.toTimeString().slice(0, 5);
@@ -208,7 +220,6 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
       const slotEnd = potentialEndTime.toTimeString().slice(0, 5);
 
       // Check if this slot exceeds the availability window
-      // We convert back to string to compare with timeSlot.end which is "HH:MM"
       if (slotEnd > timeSlot.end && slotEnd !== "00:00") {
         break;
       }
@@ -216,15 +227,9 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
       // Update startTime for next iteration
       startTime.setTime(potentialEndTime.getTime());
 
-      // Check if slot already exists
-      const existingSlot = await this.findOne({
-        facultyId,
-        date: targetDate,
-        startTime: slotStart,
-        endTime: slotEnd
-      });
-
-      if (!existingSlot) {
+      // Check if slot already exists using Set (faster than DB query)
+      const slotKey = `${slotStart}-${slotEnd}`;
+      if (!existingSlotKeys.has(slotKey)) {
         slots.push({
           facultyId,
           date: targetDate,

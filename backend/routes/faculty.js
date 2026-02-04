@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { google } from 'googleapis';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Appointment from '../models/Appointment.js';
 import AppointmentSlot from '../models/AppointmentSlot.js';
@@ -694,14 +695,46 @@ router.get('/slots/:date', asyncHandler(async (req, res) => {
   // Get existing slots from database
   let slots = await AppointmentSlot.findByFaculty(req.user.id, { date: targetDate });
 
-  // If no slots exist for this date, generate them
-  if (slots.length === 0) {
-    const generatedSlots = await AppointmentSlot.generateSlotsForDate(req.user.id, targetDate, user.availability);
-
-    if (generatedSlots.length > 0) {
-      await AppointmentSlot.insertMany(generatedSlots);
-      slots = await AppointmentSlot.findByFaculty(req.user.id, { date: targetDate });
+  // Get slot duration from system settings
+  let slotDuration = 15;
+  try {
+    const SystemSettings = mongoose.model('SystemSettings');
+    const setting = await SystemSettings.findOne({ key: 'slotDuration' });
+    if (setting && setting.value) {
+      slotDuration = parseInt(setting.value);
     }
+  } catch (err) {
+    console.error('Error fetching slot duration:', err);
+  }
+
+  // Always try to generate new slots (in case availability changed)
+  const generatedSlots = await AppointmentSlot.generateSlotsForDate(
+    req.user.id, 
+    targetDate, 
+    user.availability,
+    slotDuration
+  );
+
+  if (generatedSlots.length > 0) {
+    await AppointmentSlot.insertMany(generatedSlots);
+    // Refresh slots list
+    slots = await AppointmentSlot.findByFaculty(req.user.id, { date: targetDate });
+  }
+
+  // Remove slots that are no longer in availability
+  const generatedSlotKeys = new Set(generatedSlots.map(s => `${s.startTime}-${s.endTime}`));
+  const slotsToRemove = slots.filter(s => 
+    s.status === 'available' &&
+    !s.isBooked &&
+    !generatedSlotKeys.has(`${s.startTime}-${s.endTime}`)
+  );
+
+  if (slotsToRemove.length > 0) {
+    await AppointmentSlot.deleteMany({
+      _id: { $in: slotsToRemove.map(s => s._id) }
+    });
+    // Refresh slots list
+    slots = await AppointmentSlot.findByFaculty(req.user.id, { date: targetDate });
   }
 
   // Format slots for response

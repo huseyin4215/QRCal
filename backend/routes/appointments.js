@@ -1,5 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Appointment from '../models/Appointment.js';
 import AppointmentSlot from '../models/AppointmentSlot.js';
@@ -183,28 +184,39 @@ router.get('/faculty/:slug/slots', asyncHandler(async (req, res) => {
   // Get existing slots from database
   let slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
 
+  // Get slot duration from system settings
+  let slotDuration = 15;
+  try {
+    const SystemSettings = mongoose.model('SystemSettings');
+    const setting = await SystemSettings.findOne({ key: 'slotDuration' });
+    if (setting && setting.value) {
+      slotDuration = parseInt(setting.value);
+    }
+  } catch (err) {
+    console.error('Error fetching slot duration:', err);
+  }
+
   // Generate slots based on current availability
-  const generatedSlots = await AppointmentSlot.generateSlotsForDate(faculty._id, targetDate, faculty.availability);
-
-  // Find existing slot times for comparison
-  const existingSlotTimes = new Set(slots.map(s => s.startTime));
-
-  // Filter out slots that already exist
-  const newSlots = generatedSlots.filter(slot => !existingSlotTimes.has(slot.startTime));
+  const generatedSlots = await AppointmentSlot.generateSlotsForDate(
+    faculty._id, 
+    targetDate, 
+    faculty.availability,
+    slotDuration
+  );
 
   // Insert new slots if any
-  if (newSlots.length > 0) {
-    await AppointmentSlot.insertMany(newSlots);
+  if (generatedSlots.length > 0) {
+    await AppointmentSlot.insertMany(generatedSlots);
     // Refresh slots list
     slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
   }
 
-  // Also check if any existing available slots should be removed (no longer in availability)
-  const generatedSlotTimes = new Set(generatedSlots.map(s => s.startTime));
+  // Remove slots that are no longer in availability
+  const generatedSlotKeys = new Set(generatedSlots.map(s => `${s.startTime}-${s.endTime}`));
   const slotsToRemove = slots.filter(s => 
-    s.status === 'available' && 
+    s.status === 'available' &&
     !s.isBooked && 
-    !generatedSlotTimes.has(s.startTime)
+    !generatedSlotKeys.has(`${s.startTime}-${s.endTime}`)
   );
 
   if (slotsToRemove.length > 0) {
