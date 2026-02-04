@@ -99,6 +99,28 @@ function AppContent() {
     return children;
   };
 
+  const StudentOnlyRoute = ({ children }) => {
+    const { user, loading } = useAuth();
+    
+    // Show loading while checking authentication
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Yükleniyor...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Only students can access
+    if (!user || user.role !== 'student') {
+      return <Navigate to="/login" replace />;
+    }
+    return children;
+  };
+
   const PublicRoute = ({ children }) => {
     const { user } = useAuth();
     
@@ -215,7 +237,11 @@ function AppContent() {
           />
           <Route
             path="/appointment/:slug"
-            element={<FacultyAppointment />}
+            element={
+              <StudentOnlyRoute>
+                <FacultyAppointment />
+              </StudentOnlyRoute>
+            }
           />
           <Route
             path="/appointment-history/:userId"
