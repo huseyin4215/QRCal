@@ -967,6 +967,26 @@ Hata detayı: ${error.message}
         const sortedUpdatedAppointments = [...updatedAppointments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setAppointments(sortedUpdatedAppointments);
         
+        // Profil verilerini de yenile (randevu sayısı değişebilir)
+        try {
+          const profileResponse = await apiService.getCurrentUser();
+          const profileData = profileResponse.data;
+          if (profileData) {
+            setProfileData({
+              name: profileData.name || '',
+              email: profileData.email || '',
+              phone: profileData.phone || '',
+              office: profileData.office || '',
+              website: profileData.website || '',
+              title: profileData.title || '',
+              department: profileData.department || '',
+              role: profileData.role || ''
+            });
+          }
+        } catch (profileError) {
+          console.error('Error refreshing profile:', profileError);
+        }
+        
         // Close appointment details modal if open
         if (showAppointmentDetails && selectedAppointment?._id === appointmentId) {
           setShowAppointmentDetails(false);
