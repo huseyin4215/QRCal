@@ -75,6 +75,7 @@ const FacultyDashboard = () => {
   const [cancellingAppointment, setCancellingAppointment] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [appointmentActionLoading, setAppointmentActionLoading] = useState(null); // Store appointment ID that's being processed
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0); // Trigger to refresh AppointmentHistory
 
   // Load notifications from localStorage
   const loadNotificationsFromStorage = () => {
@@ -987,6 +988,11 @@ Hata detayı: ${error.message}
           console.error('Error refreshing profile:', profileError);
         }
         
+        // Refresh AppointmentHistory if history tab is active
+        if (activeTab === 'history') {
+          setHistoryRefreshTrigger(prev => prev + 1);
+        }
+        
         // Close appointment details modal if open
         if (showAppointmentDetails && selectedAppointment?._id === appointmentId) {
           setShowAppointmentDetails(false);
@@ -1846,7 +1852,7 @@ Hata detayı: ${error.message}
             {/* History Tab */}
             {activeTab === 'history' && (
               <div>
-                <AppointmentHistory userId={user?._id} embedded={true} />
+                <AppointmentHistory userId={user?._id} embedded={true} refreshTrigger={historyRefreshTrigger} />
               </div>
             )}
 

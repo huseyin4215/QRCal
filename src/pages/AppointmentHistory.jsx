@@ -9,7 +9,7 @@ import { formatUserName, formatFacultyName, formatStudentName } from '../utils/f
 import headerStyles from '../components/Header/Header.module.css';
 import styles from './AppointmentHistory.module.css';
 
-const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
+const AppointmentHistory = ({ userId: propUserId, embedded = false, refreshTrigger = 0 }) => {
   const { userId: paramUserId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -21,23 +21,67 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
 
   // Use prop userId if provided (embedded mode), otherwise use param from route
   const userId = propUserId || paramUserId;
+  
+  // Refresh appointments when refreshTrigger changes
+  useEffect(() => {
+    if (userInfo || user) {
+      loadAppointments();
+    }
+  }, [refreshTrigger]);
 
   useEffect(() => {
     if (userId) {
       loadUserInfo();
+    } else if (user) {
+      // If no userId but we have user context, use it directly
+      setUserInfo({
+        _id: user._id || user.id,
+        name: formatUserName(user),
+        email: user.email,
+        role: user.role,
+        studentNumber: user.studentNumber,
+        department: user.department,
+        title: user.title
+      });
     }
-  }, [userId]);
+  }, [userId, user]);
 
   useEffect(() => {
+    // Load appointments if we have userInfo OR if we have user context (for embedded mode)
     if (userInfo && userId) {
       loadAppointments();
+    } else if (user && !userId) {
+      // Embedded mode without userId prop - use current user
+      setUserInfo({
+        _id: user._id || user.id,
+        name: formatUserName(user),
+        email: user.email,
+        role: user.role,
+        studentNumber: user.studentNumber,
+        department: user.department,
+        title: user.title
+      });
+    } else if (!userInfo && user) {
+      // Fallback: if userInfo failed to load but we have user context, try loading appointments anyway
+      const currentUserId = user._id || user.id;
+      if (currentUserId) {
+        setUserInfo({
+          _id: currentUserId,
+          name: formatUserName(user),
+          email: user.email,
+          role: user.role,
+          studentNumber: user.studentNumber,
+          department: user.department,
+          title: user.title
+        });
+      }
     }
-  }, [userInfo, userId]);
+  }, [userInfo, userId, user]);
 
   const loadUserInfo = async () => {
     try {
       // If viewing own history, use current user info from context
-      if (user && (user._id === userId || user.id === userId)) {
+      if (user && (user._id === userId || user.id === userId || !userId)) {
         setUserInfo({
           _id: user._id || user.id,
           name: formatUserName(user), // Include title for faculty/admin
@@ -51,18 +95,22 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
       }
       
       // Otherwise, fetch from API (for admin/faculty viewing other users)
-      const response = await apiService.getUserById(userId);
-      if (response.success) {
-        const userData = response.data;
-        setUserInfo({
-          ...userData,
-          name: formatUserName(userData) // Include title for faculty/admin
-        });
+      if (userId) {
+        const response = await apiService.getUserById(userId);
+        if (response.success) {
+          const userData = response.data;
+          setUserInfo({
+            ...userData,
+            name: formatUserName(userData) // Include title for faculty/admin
+          });
+        } else {
+          throw new Error('User not found');
+        }
       }
     } catch (error) {
       console.error('Kullanıcı bilgileri yüklenirken hata:', error);
-      // If API call fails and we're viewing own history, use context user
-      if (user && (user._id === userId || user.id === userId)) {
+      // If API call fails, use context user as fallback
+      if (user) {
         setUserInfo({
           _id: user._id || user.id,
           name: formatUserName(user), // Include title for faculty/admin
@@ -72,6 +120,9 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
           department: user.department,
           title: user.title // Keep original title for reference
         });
+      } else {
+        // If no user context, set loading to false to prevent infinite loading
+        setLoading(false);
       }
     }
   };
@@ -80,8 +131,11 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
     try {
       setLoading(true);
       
+      // Determine the actual userId to use
+      const actualUserId = userId || user?._id || user?.id;
+      
       // For students viewing their own history, use student appointments endpoint
-      if (userInfo?.role === 'student' && user && (user._id === userId || user.id === userId)) {
+      if (userInfo?.role === 'student' && user && (user._id === actualUserId || user.id === actualUserId || !actualUserId)) {
         try {
           const response = await apiService.getStudentAppointments();
           if (response.success) {
@@ -100,7 +154,7 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
       }
       
       // For faculty viewing their own history, use faculty appointments endpoint
-      if (userInfo?.role === 'faculty' && user && (user._id === userId || user.id === userId)) {
+      if (userInfo?.role === 'faculty' && user && (user._id === actualUserId || user.id === actualUserId || !actualUserId)) {
         try {
           const response = await apiService.getFacultyAppointments();
           if (response.success) {
@@ -130,19 +184,20 @@ const AppointmentHistory = ({ userId: propUserId, embedded = false }) => {
             const appointmentsArray = Array.isArray(appointments) ? appointments : [];
             
             // Filter appointments for this user
+            const targetUserId = actualUserId || userInfo?._id;
             let userAppointments = appointmentsArray.filter(apt => {
               if (userInfo?.role === 'student') {
                 // For students, match by email (since appointments store studentEmail)
                 return apt.studentEmail?.toLowerCase() === userInfo.email?.toLowerCase() ||
-                       apt.student?._id === userId || 
-                       apt.student === userId ||
+                       apt.student?._id === targetUserId || 
+                       apt.student === targetUserId ||
                        (userInfo.studentNumber && apt.studentId === userInfo.studentNumber);
               } else {
                 // For faculty/admin, match by facultyId
-                return apt.faculty?._id === userId || 
-                       apt.faculty === userId || 
-                       apt.facultyId?._id === userId || 
-                       apt.facultyId === userId;
+                return apt.faculty?._id === targetUserId || 
+                       apt.faculty === targetUserId || 
+                       apt.facultyId?._id === targetUserId || 
+                       apt.facultyId === targetUserId;
               }
             });
 

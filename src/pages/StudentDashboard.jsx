@@ -74,6 +74,7 @@ const StudentDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [historyRefreshTrigger, setHistoryRefreshTrigger] = useState(0); // Trigger to refresh AppointmentHistory
 
   // Load notifications from localStorage
   const loadNotificationsFromStorage = () => {
@@ -523,6 +524,12 @@ const StudentDashboard = () => {
         const response = await apiService.cancelAppointment(appointment._id, user.email, cancellationReason);
         if (response.success) {
           await loadAppointments();
+          
+          // Refresh AppointmentHistory if history tab is active
+          if (activeTab === 'history') {
+            setHistoryRefreshTrigger(prev => prev + 1);
+          }
+          
           setGlobalSuccess('Randevu başarıyla iptal edildi');
           setTimeout(() => setGlobalSuccess(''), 3000);
         } else {
@@ -750,7 +757,7 @@ const StudentDashboard = () => {
               </div>
             ) : activeTab === 'history' ? (
               <div>
-                <AppointmentHistory userId={user?._id} embedded={true} />
+                <AppointmentHistory userId={user?._id} embedded={true} refreshTrigger={historyRefreshTrigger} />
               </div>
             ) : (
               <div>
