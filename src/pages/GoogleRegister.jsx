@@ -160,10 +160,16 @@ const GoogleRegister = () => {
               <input
                 type="text"
                 value={studentNumber}
-                onChange={(e) => setStudentNumber(e.target.value)}
+                onChange={(e) => {
+                  // Only allow digits and limit to 8 characters
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  setStudentNumber(value);
+                }}
                 required
                 className={styles.input}
-                placeholder="2020123456"
+                placeholder="20000000"
+                maxLength={8}
+                inputMode="numeric"
               />
               <IdentificationIcon className={styles.inputIcon} />
             </div>

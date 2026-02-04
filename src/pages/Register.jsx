@@ -234,11 +234,16 @@ const Register = () => {
                 onChange={(e) => {
                   // Only allow digits and limit to 8 characters
                   const value = e.target.value.replace(/\D/g, '').slice(0, 8);
-                  handleChange({ ...e, target: { ...e.target, value } });
+                  setFormData({
+                    ...formData,
+                    studentNumber: value
+                  });
+                  setError('');
                 }}
                 className={styles.input}
                 placeholder="20000000"
                 maxLength={8}
+                inputMode="numeric"
               />
               <IdentificationIcon className={styles.inputIcon} />
             </div>
