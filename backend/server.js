@@ -64,15 +64,31 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    // Use X-Forwarded-For header if present (behind proxy), otherwise use IP
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : req.ip;
+    console.log(`Rate limit check for IP: ${ip} (X-Forwarded-For: ${forwardedFor})`);
+    return ip;
+  },
   skip: (req) => {
     // Skip rate limiting for health checks, auth endpoints, and Google OAuth endpoints
-    return req.path === '/api/health' ||
-           req.path === '/api/auth/login' ||
-           req.path === '/api/auth/register' ||
-           req.path === '/api/auth/google/url' ||
-           req.path === '/api/google/auth-url' ||
+    const skipPaths = [
+      '/api/health',
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/google/url',
+      '/api/google/auth-url'
+    ];
+    
+    const shouldSkip = skipPaths.includes(req.path) ||
            req.path.startsWith('/api/auth/google/callback') ||
            req.path.startsWith('/api/google/callback');
+    
+    if (shouldSkip) {
+      console.log(`Rate limit SKIPPED for path: ${req.path}`);
+    }
+    return shouldSkip;
   }
 });
 app.use('/api', limiter);
