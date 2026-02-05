@@ -148,15 +148,11 @@ router.put('/availability', asyncHandler(async (req, res) => {
         });
       }
 
-      if (day.isActive && day.timeSlots) {
-        for (const slot of day.timeSlots) {
-          if (!slot.start || !slot.end) {
-            return res.status(400).json({
-              success: false,
-              error: `Time slot must have start and end times for ${day.day}`
-            });
-          }
-
+      if (day.isActive && day.timeSlots && Array.isArray(day.timeSlots)) {
+        // Filter out empty/invalid slots before validation
+        const validSlots = day.timeSlots.filter(slot => slot && slot.start && slot.end);
+        
+        for (const slot of validSlots) {
           // Validate time format (HH:MM)
           const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
           if (!timeRegex.test(slot.start) || !timeRegex.test(slot.end)) {
@@ -172,10 +168,16 @@ router.put('/availability', asyncHandler(async (req, res) => {
           if (startTime >= endTime) {
             return res.status(400).json({
               success: false,
-              error: `Start time must be before end time for ${day.day}`
+              error: `${day.day} için başlangıç saati bitiş saatinden önce olmalıdır`
             });
           }
         }
+        
+        // Update the day's timeSlots with only valid ones
+        day.timeSlots = validSlots;
+      } else if (day.isActive && (!day.timeSlots || day.timeSlots.length === 0)) {
+        // If day is active but no time slots, deactivate it
+        day.isActive = false;
       }
     }
 
