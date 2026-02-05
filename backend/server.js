@@ -60,43 +60,37 @@ app.use(helmet({
 // Rate limiting - enabled in production
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Stricter limit in production
-  message: 'Too many requests from this IP, please try again later.',
+  max: process.env.NODE_ENV === 'production' ? 500 : 1000, // 500 requests per 15 min in production
+  message: { success: false, message: 'Çok fazla istek gönderdiniz. Lütfen biraz bekleyin.' },
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req, res) => {
     // Use X-Forwarded-For header if present (behind proxy), otherwise use IP
     const forwardedFor = req.headers['x-forwarded-for'];
     const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : req.ip;
-    console.log(`Rate limit check for IP: ${ip} (X-Forwarded-For: ${forwardedFor})`);
     return ip;
   },
   skip: (req) => {
-    // Skip rate limiting for health checks, auth endpoints, and Google OAuth endpoints
+    // Skip rate limiting for common endpoints that are called frequently
     // Note: When limiter is applied to /api, req.path doesn't include /api prefix
     const skipPaths = [
       '/health',
       '/auth/login',
       '/auth/register',
+      '/auth/me',
       '/auth/google/url',
       '/google/auth-url',
-      // Also include full paths just in case
-      '/api/health',
-      '/api/auth/login',
-      '/api/auth/register',
-      '/api/auth/google/url',
-      '/api/google/auth-url'
+      '/users/faculty',
+      '/settings/slotDuration',
+      '/topics'
     ];
     
-    const shouldSkip = skipPaths.includes(req.path) ||
-           req.path.startsWith('/auth/google/callback') ||
-           req.path.startsWith('/google/callback') ||
-           req.path.startsWith('/api/auth/google/callback') ||
-           req.path.startsWith('/api/google/callback');
+    const shouldSkip = skipPaths.some(path => req.path === path || req.path === `/api${path}`) ||
+           req.path.startsWith('/auth/google') ||
+           req.path.startsWith('/google/') ||
+           req.path.startsWith('/appointments/faculty/') ||  // Public faculty slots
+           req.path.startsWith('/api/appointments/faculty/');
     
-    if (shouldSkip) {
-      console.log(`Rate limit SKIPPED for path: ${req.path}`);
-    }
     return shouldSkip;
   }
 });
