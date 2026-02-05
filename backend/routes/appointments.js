@@ -223,22 +223,6 @@ router.get('/faculty/:slug/slots', asyncHandler(async (req, res) => {
     }
   }
 
-  // Remove slots that are no longer in availability
-  const generatedSlotKeys = new Set(generatedSlots.map(s => `${s.startTime}-${s.endTime}`));
-  const slotsToRemove = slots.filter(s => 
-    s.status === 'available' &&
-    !s.isBooked && 
-    !generatedSlotKeys.has(`${s.startTime}-${s.endTime}`)
-  );
-
-  if (slotsToRemove.length > 0) {
-    await AppointmentSlot.deleteMany({
-      _id: { $in: slotsToRemove.map(s => s._id) }
-    });
-    // Refresh slots list
-    slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
-  }
-
   // Format slots for response
   const formattedSlots = slots.map(slot => ({
     startTime: slot.startTime,
