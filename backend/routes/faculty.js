@@ -715,11 +715,11 @@ router.get('/slots/:date', asyncHandler(async (req, res) => {
     slotDuration
   );
 
-  if (generatedSlots.length > 0) {
-    await AppointmentSlot.insertMany(generatedSlots);
+    if (generatedSlots.length > 0) {
+      await AppointmentSlot.insertMany(generatedSlots);
     // Refresh slots list
-    slots = await AppointmentSlot.findByFaculty(req.user.id, { date: targetDate });
-  }
+      slots = await AppointmentSlot.findByFaculty(req.user.id, { date: targetDate });
+    }
 
   // Remove slots that are no longer in availability
   const generatedSlotKeys = new Set(generatedSlots.map(s => `${s.startTime}-${s.endTime}`));
