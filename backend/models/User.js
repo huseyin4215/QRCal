@@ -182,12 +182,21 @@ const userSchema = new mongoose.Schema({
         // Only validate if advisor is set
         if (!v) return true;
 
+        // Get the role - check both this.role and this.get('role') for compatibility
+        const userRole = this.role || this.get('role');
+        
         // Only students can have advisors
-        if (this.role !== 'student') return false;
+        if (userRole !== 'student') return true; // Don't validate for non-students
 
         // Advisor must be a faculty member
-        const advisor = await mongoose.model('User').findById(v);
-        return advisor && advisor.role === 'faculty';
+        try {
+          const advisor = await mongoose.model('User').findById(v);
+          if (!advisor) return false;
+          return advisor.role === 'faculty';
+        } catch (error) {
+          console.error('Error validating advisor:', error);
+          return false;
+        }
       },
       message: 'Danışman bir öğretim üyesi olmalıdır'
     }

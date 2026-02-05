@@ -105,10 +105,11 @@ const QrCodePage = () => {
         
         let qrData = response.data.qrCodeUrl;
         
-        // If it's a localhost URL, check if servers are running
+        // If it's a localhost URL, check if servers are running (development only)
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
         if (qrData && qrData.includes('localhost:3000')) {
           try {
-            const backendCheck = await fetch('http://localhost:5000/api/health', { 
+            const backendCheck = await fetch(`${apiBaseUrl}/health`, { 
               method: 'GET',
               signal: AbortSignal.timeout(2000)
             });

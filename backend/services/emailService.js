@@ -5,27 +5,27 @@ config({ path: './.env' });
 
 // Create transporter with timeout and retry settings
 const createTransporter = () => {
-  // Check if email credentials are configured
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-    console.warn('⚠️ Email credentials not configured. Email sending will be skipped.');
+  // Check if email user is configured
+  if (!process.env.EMAIL_USER) {
+    console.warn('⚠️ Email user not configured. Email sending will be skipped.');
     return null;
   }
 
-  // Check if using localhost SMTP (Exim4) or external SMTP (Gmail)
-  const isLocalhost = process.env.EMAIL_USER.includes('@qrnnect.com');
+  // Check if using localhost SMTP (Exim4) via sendmail or external SMTP (Gmail)
+  const useSendmail = process.env.EMAIL_HOST === 'localhost' || 
+                      process.env.EMAIL_HOST === '127.0.0.1' ||
+                      !process.env.EMAIL_APP_PASSWORD ||
+                      process.env.EMAIL_USE_SENDMAIL === 'true';
 
-  if (isLocalhost) {
-    // Use localhost SMTP (Exim4)
+  if (useSendmail) {
+    // Use sendmail transport for local Exim4
+    console.log('📧 Using sendmail transport for local Exim4');
     return nodemailer.createTransport({
-      host: 'localhost',
-      port: 25,
-      secure: false,
-      tls: {
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 5000,
-      greetingTimeout: 5000,
-      socketTimeout: 10000
+      sendmail: true,
+      newline: 'unix',
+      path: '/usr/sbin/sendmail',
+      logger: false,
+      debug: false
     });
   } else {
     // Use external SMTP (Gmail)

@@ -300,7 +300,8 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
     phone,
     website,
     isActive,
-    studentNumber
+    studentNumber,
+    advisor
   } = req.body;
 
   const user = await User.findById(req.params.id);
@@ -331,6 +332,28 @@ router.put('/users/:id', asyncHandler(async (req, res) => {
         success: false,
         message: 'Bu öğrenci numarası zaten kullanılıyor'
       });
+    }
+  }
+
+  // Validate advisor if provided and user is a student
+  if (advisor !== undefined) {
+    const finalRole = role || user.role;
+    if (finalRole === 'student') {
+      if (advisor && advisor.trim() !== '') {
+        const advisorUser = await User.findById(advisor);
+        if (!advisorUser || advisorUser.role !== 'faculty') {
+          return res.status(400).json({
+            success: false,
+            message: 'Geçersiz danışman seçimi. Danışman bir öğretim üyesi olmalıdır.'
+          });
+        }
+        user.advisor = advisor;
+      } else {
+        user.advisor = null;
+      }
+    } else {
+      // Non-students cannot have advisors
+      user.advisor = null;
     }
   }
 

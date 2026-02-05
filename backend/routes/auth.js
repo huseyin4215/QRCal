@@ -14,7 +14,7 @@ const router = express.Router();
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID || 'your-google-client-id',
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_AUTH_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback'
+  process.env.GOOGLE_AUTH_REDIRECT_URI || (process.env.NODE_ENV === 'production' ? 'https://qrnnect.com/api/auth/google/callback' : 'http://localhost:5000/api/auth/google/callback')
 );
 
 // Generate JWT token
@@ -521,7 +521,8 @@ router.post('/google', asyncHandler(async (req, res) => {
 // @access  Public
 router.get('/google/callback', asyncHandler(async (req, res) => {
   // Set CORS headers for Google OAuth callback with FedCM support
-  res.header('Access-Control-Allow-Origin', 'http://localhost:8081');
+  const frontendUrl = process.env.FRONTEND_URL || 'https://qrnnect.com';
+  res.header('Access-Control-Allow-Origin', frontendUrl);
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Client-Data, Sec-Fetch-Mode, Sec-Fetch-Site, Sec-Fetch-Dest');
@@ -578,7 +579,7 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
           { expiresIn: '15m' }
         );
 
-        const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/google-register?token=${encodeURIComponent(regToken)}`;
+        const redirectUrl = `${process.env.FRONTEND_URL || 'https://qrnnect.com'}/google-register?token=${encodeURIComponent(regToken)}`;
         return res.redirect(redirectUrl);
       }
     } else {
@@ -595,12 +596,12 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
     const token = generateToken(user._id);
 
     // Redirect to frontend callback page with token
-    const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:8081'}/google-auth-callback?token=${encodeURIComponent(token)}&success=true`;
+    const redirectUrl = `${process.env.FRONTEND_URL || 'https://qrnnect.com'}/google-auth-callback?token=${encodeURIComponent(token)}&success=true`;
     res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('Google OAuth error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:8081'}/auth/error?message=OAuth hatası`);
+    res.redirect(`${process.env.FRONTEND_URL || 'https://qrnnect.com'}/auth/error?message=OAuth hatası`);
   }
 }));
 

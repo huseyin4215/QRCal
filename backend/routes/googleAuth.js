@@ -59,7 +59,7 @@ function createOAuth2Client() {
   // Always create a new instance to ensure environment variables are current
   const clientId = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id';
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/google/callback';
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || (process.env.NODE_ENV === 'production' ? 'https://qrnnect.com/api/google/callback' : 'http://localhost:5000/api/google/callback');
   
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
@@ -293,7 +293,7 @@ router.get('/callback', asyncHandler(async (req, res) => {
     console.log('User authenticated:', { email: user.email, role: user.role, googleConnected: true });
 
     // Redirect to frontend with JWT token
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://qrnnect.com';
     const redirectUrl = `${frontendUrl}/google-auth-callback?token=${encodeURIComponent(token)}&success=true`;
     
     console.log('Redirecting to frontend:', redirectUrl);
