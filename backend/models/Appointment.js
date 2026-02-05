@@ -279,7 +279,7 @@ appointmentSchema.statics.findByFaculty = function (facultyId, options = {}) {
   }
 
   return this.find(query)
-    .sort({ date: 1, startTime: 1 })
+    .sort({ createdAt: -1 })  // Sort by creation date, newest first
     .populate('facultyId', 'name title department');
 };
 
