@@ -332,13 +332,6 @@ const FacultyAppointment = () => {
 
         // Slotları yeniden yükle
         loadAvailableSlots();
-
-        // Eğer admin ise admin dashboard'a yönlendir
-        if (user?.role === 'admin') {
-          setTimeout(() => {
-            navigate('/admin-dashboard');
-          }, 2000);
-        }
       } else {
         setError(result.message || 'Randevu talebi gönderilirken hata oluştu.');
       }
