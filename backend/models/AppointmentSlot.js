@@ -152,9 +152,11 @@ appointmentSlotSchema.statics.findByFaculty = function (facultyId, options = {})
 
   if (options.date) {
     const startDate = new Date(options.date);
+    startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(options.date);
-    endDate.setDate(endDate.getDate() + 1);
-    query.date = { $gte: startDate, $lt: endDate };
+    endDate.setHours(23, 59, 59, 999);
+    query.date = { $gte: startDate, $lte: endDate };
+    console.log(`[findByFaculty] Query date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
   }
 
   if (options.status) {
@@ -165,6 +167,7 @@ appointmentSlotSchema.statics.findByFaculty = function (facultyId, options = {})
     query.isAvailable = options.isAvailable;
   }
 
+  console.log(`[findByFaculty] Query:`, JSON.stringify(query));
   return this.find(query)
     .sort({ date: 1, startTime: 1 });
 };

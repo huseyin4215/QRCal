@@ -218,6 +218,11 @@ router.get('/faculty/:slug/slots', asyncHandler(async (req, res) => {
 
   // Get all slots for this date
   let slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
+  
+  console.log(`[SLOTS DEBUG] findByFaculty returned ${slots.length} slots for date ${targetDate.toISOString()}`);
+  if (slots.length > 0) {
+    console.log(`[SLOTS DEBUG] First slot date: ${slots[0].date}, startTime: ${slots[0].startTime}`);
+  }
 
   // Format slots for response
   const formattedSlots = slots.map(slot => ({
