@@ -196,14 +196,24 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
   }
 
   // Get all existing slots for this faculty and date in one query (performance optimization)
+  // Use date range to handle timezone issues
+  const startOfDay = new Date(targetDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(targetDate);
+  endOfDay.setHours(23, 59, 59, 999);
+  
   const existingSlots = await this.find({
     facultyId,
-    date: targetDate
+    date: { $gte: startOfDay, $lte: endOfDay }
   }).select('startTime endTime');
+  
+  console.log(`[SLOT GEN] Faculty: ${facultyId}, Date: ${targetDate.toISOString()}, Existing slots: ${existingSlots.length}`);
   
   const existingSlotKeys = new Set(
     existingSlots.map(s => `${s.startTime}-${s.endTime}`)
   );
+  
+  console.log(`[SLOT GEN] Existing slot keys:`, Array.from(existingSlotKeys));
 
   for (const timeSlot of dayAvailability.timeSlots) {
     if (!timeSlot.isAvailable) continue;
@@ -229,9 +239,10 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
       // Check if slot already exists using Set (faster than DB query)
       const slotKey = `${slotStart}-${slotEnd}`;
       if (!existingSlotKeys.has(slotKey)) {
+        console.log(`[SLOT GEN] Creating new slot: ${slotKey}`);
         slots.push({
           facultyId,
-          date: targetDate,
+          date: startOfDay, // Use normalized date
           startTime: slotStart,
           endTime: slotEnd,
           isAvailable: true,
@@ -242,6 +253,7 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
     }
   }
 
+  console.log(`[SLOT GEN] Total new slots to create: ${slots.length}`);
   return slots;
 };
 

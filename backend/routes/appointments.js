@@ -193,35 +193,31 @@ router.get('/faculty/:slug/slots', asyncHandler(async (req, res) => {
     console.error('Error fetching slot duration:', err);
   }
 
-  // Check if slots already exist for this date
-  let slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
+  // Always generate slots to ensure all available times are covered
+  const generatedSlots = await AppointmentSlot.generateSlotsForDate(
+    faculty._id, 
+    targetDate, 
+    faculty.availability,
+    slotDuration
+  );
 
-  // Only generate new slots if none exist
-  if (slots.length === 0) {
-    const generatedSlots = await AppointmentSlot.generateSlotsForDate(
-      faculty._id, 
-      targetDate, 
-      faculty.availability,
-      slotDuration
-    );
+  console.log(`[SLOTS DEBUG] Date: ${date}, Day: ${dayName}, Generated: ${generatedSlots.length} new slots`);
 
-    console.log(`[SLOTS DEBUG] Date: ${date}, Day: ${dayName}, Generated: ${generatedSlots.length} slots`);
-
-    // Insert new slots if any
-    if (generatedSlots.length > 0) {
-      try {
-        await AppointmentSlot.insertMany(generatedSlots, { ordered: false });
-        console.log(`[SLOTS DEBUG] Inserted ${generatedSlots.length} new slots`);
-      } catch (err) {
-        // Ignore duplicate key errors (E11000)
-        if (err.code !== 11000) {
-          console.error('[SLOTS DEBUG] Error inserting slots:', err);
-        }
+  // Insert new slots if any (duplicates will be ignored)
+  if (generatedSlots.length > 0) {
+    try {
+      await AppointmentSlot.insertMany(generatedSlots, { ordered: false });
+      console.log(`[SLOTS DEBUG] Inserted ${generatedSlots.length} new slots`);
+    } catch (err) {
+      // Ignore duplicate key errors (E11000)
+      if (err.code !== 11000 && !err.message?.includes('duplicate key')) {
+        console.error('[SLOTS DEBUG] Error inserting slots:', err);
       }
-      // Refresh slots list
-      slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
     }
   }
+
+  // Get all slots for this date
+  let slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
 
   // Format slots for response
   const formattedSlots = slots.map(slot => ({
