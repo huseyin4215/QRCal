@@ -73,7 +73,14 @@ const limiter = rateLimit({
   },
   skip: (req) => {
     // Skip rate limiting for health checks, auth endpoints, and Google OAuth endpoints
+    // Note: When limiter is applied to /api, req.path doesn't include /api prefix
     const skipPaths = [
+      '/health',
+      '/auth/login',
+      '/auth/register',
+      '/auth/google/url',
+      '/google/auth-url',
+      // Also include full paths just in case
       '/api/health',
       '/api/auth/login',
       '/api/auth/register',
@@ -82,6 +89,8 @@ const limiter = rateLimit({
     ];
     
     const shouldSkip = skipPaths.includes(req.path) ||
+           req.path.startsWith('/auth/google/callback') ||
+           req.path.startsWith('/google/callback') ||
            req.path.startsWith('/api/auth/google/callback') ||
            req.path.startsWith('/api/google/callback');
     
