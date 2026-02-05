@@ -31,10 +31,10 @@ router.post('/register', asyncHandler(async (req, res) => {
   const { name, email, password, studentNumber, department, advisor } = req.body;
 
   // Validation
-  if (!name || !email || !password || !studentNumber || !department) {
+  if (!name || !email || !password || !studentNumber || !department || !advisor) {
     return res.status(400).json({
       success: false,
-      message: 'Tüm alanlar zorunludur'
+      message: 'Tüm alanlar zorunludur (ad, e-posta, şifre, öğrenci numarası, bölüm ve danışman)'
     });
   }
 
@@ -46,13 +46,13 @@ router.post('/register', asyncHandler(async (req, res) => {
     });
   }
 
-  // Validate advisor if provided
+  // Validate advisor if provided (can be faculty or admin)
   if (advisor) {
     const advisorUser = await User.findById(advisor);
-    if (!advisorUser || advisorUser.role !== 'faculty') {
+    if (!advisorUser || (advisorUser.role !== 'faculty' && advisorUser.role !== 'admin')) {
       return res.status(400).json({
         success: false,
-        message: 'Geçersiz danışman seçimi'
+        message: 'Geçersiz danışman seçimi. Danışman bir öğretim üyesi veya admin olmalıdır.'
       });
     }
   }
