@@ -166,8 +166,7 @@ appointmentSlotSchema.statics.findByFaculty = function (facultyId, options = {})
   }
 
   return this.find(query)
-    .sort({ date: 1, startTime: 1 })
-    .populate('appointmentId', 'studentName studentId topic status');
+    .sort({ date: 1, startTime: 1 });
 };
 
 appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, date, availability, customSlotDuration = null) {
