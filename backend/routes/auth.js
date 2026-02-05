@@ -49,7 +49,7 @@ router.post('/register', asyncHandler(async (req, res) => {
   // Validate advisor if provided (can be faculty or admin)
   if (advisor) {
     const advisorUser = await User.findById(advisor);
-    if (!advisorUser || (advisorUser.role !== 'faculty' && advisorUser.role !== 'admin')) {
+    if (!advisorUser || !['faculty', 'admin'].includes(advisorUser.role)) {
       return res.status(400).json({
         success: false,
         message: 'Geçersiz danışman seçimi. Danışman bir öğretim üyesi veya admin olmalıdır.'
@@ -655,7 +655,7 @@ router.post('/google/register', asyncHandler(async (req, res) => {
     // Validate advisor if provided (can be faculty or admin)
     if (advisor) {
       const advisorUser = await User.findById(advisor);
-      if (!advisorUser || (advisorUser.role !== 'faculty' && advisorUser.role !== 'admin')) {
+      if (!advisorUser || !['faculty', 'admin'].includes(advisorUser.role)) {
         return res.status(400).json({ success: false, message: 'Geçersiz danışman seçimi. Danışman bir öğretim üyesi veya admin olmalıdır.' });
       }
     }
