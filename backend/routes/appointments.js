@@ -461,12 +461,22 @@ router.post('/', [
   }
 
   // Check if slot exists and is available
+  // Use date range to handle timezone issues
+  const slotDateStart = new Date(appointmentDate);
+  slotDateStart.setHours(0, 0, 0, 0);
+  const slotDateEnd = new Date(appointmentDate);
+  slotDateEnd.setHours(23, 59, 59, 999);
+  
   const slot = await AppointmentSlot.findOne({
     facultyId,
-    date: appointmentDate,
+    date: { $gte: slotDateStart, $lte: slotDateEnd },
     startTime,
     status: 'available'
   });
+
+  console.log(`[APPOINTMENT] Looking for slot: facultyId=${facultyId}, date=${appointmentDate.toISOString()}, startTime=${startTime}`);
+  console.log(`[APPOINTMENT] Date range: ${slotDateStart.toISOString()} to ${slotDateEnd.toISOString()}`);
+  console.log(`[APPOINTMENT] Found slot:`, slot ? slot._id : 'null');
 
   if (!slot) {
     return res.status(400).json({
