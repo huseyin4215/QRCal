@@ -47,6 +47,7 @@ router.get('/users', asyncHandler(async (req, res) => {
 
   const users = await User.find(query)
     .select('-password')
+    .populate('advisor', 'name title email')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(parseInt(limit));

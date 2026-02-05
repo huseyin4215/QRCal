@@ -1,8 +1,21 @@
-import { XMarkIcon, UserIcon, EnvelopeIcon, PhoneIcon, AcademicCapIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, UserIcon, EnvelopeIcon, PhoneIcon, AcademicCapIcon, ClockIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import styles from './StudentDetailsModal.module.css';
 
 export default function StudentDetailsModal({ isOpen, onClose, student }) {
   if (!isOpen || !student) return null;
+  
+  // Get advisor name - handle both populated object and string ID
+  const getAdvisorName = () => {
+    if (!student.advisor) return null;
+    if (typeof student.advisor === 'object') {
+      return student.advisor.title 
+        ? `${student.advisor.title} ${student.advisor.name}` 
+        : student.advisor.name;
+    }
+    return null; // If it's just an ID, we don't have the name
+  };
+  
+  const advisorName = getAdvisorName();
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Belirtilmemiş';
@@ -78,6 +91,14 @@ export default function StudentDetailsModal({ isOpen, onClose, student }) {
                     <div className={styles.detailItem}>
                       <PhoneIcon className={styles.detailIcon} />
                       <span className={styles.detailText}>{student.phone}</span>
+                    </div>
+                  )}
+                  {advisorName && (
+                    <div className={styles.detailItem}>
+                      <UserGroupIcon className={styles.detailIcon} />
+                      <span className={styles.detailText}>
+                        <strong>Danışman:</strong> {advisorName}
+                      </span>
                     </div>
                   )}
                 </div>

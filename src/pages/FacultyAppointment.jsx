@@ -288,9 +288,25 @@ const FacultyAppointment = () => {
     const selectedTopic = topics.find(t => t.value === formData.topic);
     let advisorOnlyWarning = false;
     
-    if (selectedTopic && selectedTopic.isAdvisorOnly && userProfile) {
+    if (selectedTopic && selectedTopic.isAdvisorOnly && userProfile && !pendingSubmit) {
+      // Get advisor ID - handle both populated object and string ID
+      const userAdvisorId = typeof userProfile.advisor === 'object' 
+        ? userProfile.advisor?._id 
+        : userProfile.advisor;
+      
       // Check if the student's advisor is the same as the faculty
-      if (userProfile.advisorId !== faculty._id && !pendingSubmit) {
+      const isAdvisor = userAdvisorId && (
+        userAdvisorId === faculty._id || 
+        userAdvisorId === faculty.id ||
+        String(userAdvisorId) === String(faculty._id)
+      );
+      
+      console.log('[ADVISOR CHECK] Topic isAdvisorOnly:', selectedTopic.isAdvisorOnly);
+      console.log('[ADVISOR CHECK] User advisor:', userAdvisorId);
+      console.log('[ADVISOR CHECK] Faculty ID:', faculty._id);
+      console.log('[ADVISOR CHECK] Is advisor:', isAdvisor);
+      
+      if (!isAdvisor) {
         advisorOnlyWarning = true;
         // Show warning modal
         setShowAdvisorWarning(true);
