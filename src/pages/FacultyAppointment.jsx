@@ -66,17 +66,20 @@ const FacultyAppointment = () => {
 
   useEffect(() => {
     if (selectedDate) {
+      // Reset selected slot when date changes
+      setSelectedSlot(null);
+      setAvailableSlots([]);  // Clear old slots immediately
       loadAvailableSlots();
     }
   }, [selectedDate, slug]);
 
-  // Auto-refresh slots every 30 seconds to sync across browsers
+  // Auto-refresh slots every 2 minutes to sync across browsers
   useEffect(() => {
     if (!selectedDate) return;
     
     const refreshInterval = setInterval(() => {
       loadAvailableSlots();
-    }, 30000); // 30 seconds
+    }, 120000); // 2 minutes
 
     return () => clearInterval(refreshInterval);
   }, [selectedDate, slug]);
@@ -160,7 +163,9 @@ const FacultyAppointment = () => {
       }
     } catch (error) {
       console.error('Faculty data error:', error);
-      if (error.message.includes('fetch')) {
+      if (error.message.includes('404') || error.message.includes('bulunamadı')) {
+        setError('Aradığınız öğretim elemanı bulunamadı. Lütfen doğru linki kullandığınızdan emin olun.');
+      } else if (error.message.includes('fetch')) {
         setError('Backend sunucusuna bağlanılamıyor. Lütfen sunucunun çalıştığından emin olun.');
       } else {
         setError('Öğretim elemanı bilgileri yüklenirken hata oluştu: ' + error.message);
@@ -174,10 +179,14 @@ const FacultyAppointment = () => {
     try {
       setError('');
       const response = await apiService.getFacultySlots(slug, selectedDate);
-      console.log('Available slots response:', response);
+      console.log('[SLOTS DEBUG] Available slots response:', response);
+      console.log('[SLOTS DEBUG] Slots count:', response.data?.slots?.length || 0);
+      console.log('[SLOTS DEBUG] First 3 slots:', response.data?.slots?.slice(0, 3));
 
       if (response.success) {
-        setAvailableSlots(response.data.slots || []);
+        const slots = response.data.slots || [];
+        setAvailableSlots(slots);
+        console.log('[SLOTS DEBUG] Set availableSlots state with', slots.length, 'slots');
       } else {
         setError(response.message || 'Müsait saatler yüklenirken hata oluştu.');
       }

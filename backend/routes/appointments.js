@@ -181,9 +181,6 @@ router.get('/faculty/:slug/slots', asyncHandler(async (req, res) => {
     });
   }
 
-  // Get existing slots from database
-  let slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
-
   // Get slot duration from system settings
   let slotDuration = 15;
   try {
@@ -196,19 +193,34 @@ router.get('/faculty/:slug/slots', asyncHandler(async (req, res) => {
     console.error('Error fetching slot duration:', err);
   }
 
-  // Generate slots based on current availability
-  const generatedSlots = await AppointmentSlot.generateSlotsForDate(
-    faculty._id, 
-    targetDate, 
-    faculty.availability,
-    slotDuration
-  );
+  // Check if slots already exist for this date
+  let slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
 
-  // Insert new slots if any
-  if (generatedSlots.length > 0) {
-    await AppointmentSlot.insertMany(generatedSlots);
-    // Refresh slots list
-    slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
+  // Only generate new slots if none exist
+  if (slots.length === 0) {
+    const generatedSlots = await AppointmentSlot.generateSlotsForDate(
+      faculty._id, 
+      targetDate, 
+      faculty.availability,
+      slotDuration
+    );
+
+    console.log(`[SLOTS DEBUG] Date: ${date}, Day: ${dayName}, Generated: ${generatedSlots.length} slots`);
+
+    // Insert new slots if any
+    if (generatedSlots.length > 0) {
+      try {
+        await AppointmentSlot.insertMany(generatedSlots, { ordered: false });
+        console.log(`[SLOTS DEBUG] Inserted ${generatedSlots.length} new slots`);
+      } catch (err) {
+        // Ignore duplicate key errors (E11000)
+        if (err.code !== 11000) {
+          console.error('[SLOTS DEBUG] Error inserting slots:', err);
+        }
+      }
+      // Refresh slots list
+      slots = await AppointmentSlot.findByFaculty(faculty._id, { date: targetDate });
+    }
   }
 
   // Remove slots that are no longer in availability
