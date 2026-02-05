@@ -45,9 +45,14 @@ const GoogleRegister = () => {
         }
 
         // Fetch faculty list
-        const facultyResponse = await apiService.get('/auth/faculty');
-        if (facultyResponse.success && facultyResponse.data) {
-          setFacultyList(facultyResponse.data);
+        try {
+          const facultyResponse = await apiService.get('/auth/faculty');
+          if (facultyResponse.success && facultyResponse.data) {
+            setFacultyList(facultyResponse.data);
+          }
+        } catch (facultyError) {
+          console.warn('Faculty listesi yüklenemedi:', facultyError);
+          // Faculty listesi yüklenemese bile kayıt devam edebilir (advisor optional)
         }
       } catch (e) {
         setError(e.message || 'Kayıt bilgileri alınamadı');
@@ -60,8 +65,8 @@ const GoogleRegister = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!studentNumber || !department || !advisor) {
-      setError('Öğrenci numarası, bölüm ve danışman zorunludur');
+    if (!studentNumber || !department) {
+      setError('Öğrenci numarası ve bölüm zorunludur');
       return;
     }
     setLoading(true);
@@ -194,17 +199,16 @@ const GoogleRegister = () => {
             </div>
           </div>
 
-          {/* Advisor Field - Required */}
+          {/* Advisor Field - Optional */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>Danışman *</label>
+            <label className={styles.label}>Danışman (Opsiyonel)</label>
             <div className={styles.inputWrapper}>
               <select
                 value={advisor}
                 onChange={(e) => setAdvisor(e.target.value)}
-                required
                 className={`${styles.input} ${styles.select}`}
               >
-                <option value="">Danışman seçiniz</option>
+                <option value="">Danışman seçiniz (opsiyonel)</option>
                 {Object.entries(
                   facultyList.reduce((acc, faculty) => {
                     const dept = faculty.department || 'Diğer';

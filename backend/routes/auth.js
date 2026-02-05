@@ -652,11 +652,11 @@ router.post('/google/register', asyncHandler(async (req, res) => {
       return res.status(400).json({ success: false, message: 'Geçersiz token türü' });
     }
 
-    // Validate advisor if provided
+    // Validate advisor if provided (can be faculty or admin)
     if (advisor) {
       const advisorUser = await User.findById(advisor);
-      if (!advisorUser || advisorUser.role !== 'faculty') {
-        return res.status(400).json({ success: false, message: 'Geçersiz danışman seçimi' });
+      if (!advisorUser || (advisorUser.role !== 'faculty' && advisorUser.role !== 'admin')) {
+        return res.status(400).json({ success: false, message: 'Geçersiz danışman seçimi. Danışman bir öğretim üyesi veya admin olmalıdır.' });
       }
     }
 
