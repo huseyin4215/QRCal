@@ -291,7 +291,7 @@ const Register = () => {
                 <option value="">Danışman seçiniz</option>
                 {Object.entries(
                   facultyList.reduce((acc, faculty) => {
-                    const dept = faculty.department || 'Diğer';
+                    const dept = faculty.department || (faculty.role === 'admin' ? 'Yönetim' : 'Diğer');
                     if (!acc[dept]) acc[dept] = [];
                     acc[dept].push(faculty);
                     return acc;
@@ -300,7 +300,7 @@ const Register = () => {
                   <optgroup key={department} label={department}>
                     {members.map((faculty) => (
                       <option key={faculty._id} value={faculty._id} style={{ paddingLeft: '0px' }}>
-                        {faculty.title ? `${faculty.title} ` : ''}{faculty.name}
+                        {faculty.title ? `${faculty.title} ` : ''}{faculty.name}{faculty.role === 'admin' ? ' (Admin)' : ''}
                       </option>
                     ))}
                   </optgroup>

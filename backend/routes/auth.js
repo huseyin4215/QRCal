@@ -808,9 +808,10 @@ router.post('/refresh', asyncHandler(async (req, res) => {
 // @access  Public
 router.get('/faculty', asyncHandler(async (req, res) => {
   const faculty = await User.find({
-    $or: [{ role: 'faculty' }, { role: 'admin' }]
+    $or: [{ role: 'faculty' }, { role: 'admin' }],
+    isActive: { $ne: false } // Include active users only (null or true)
   })
-    .select('name email department title')
+    .select('name email department title role')
     .sort({ name: 1 });
 
   res.json({
