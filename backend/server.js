@@ -65,8 +65,10 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting for health checks and Google OAuth endpoints
-    return req.path === '/api/health' || 
+    // Skip rate limiting for health checks, auth endpoints, and Google OAuth endpoints
+    return req.path === '/api/health' ||
+           req.path === '/api/auth/login' ||
+           req.path === '/api/auth/register' ||
            req.path === '/api/auth/google/url' ||
            req.path === '/api/google/auth-url' ||
            req.path.startsWith('/api/auth/google/callback') ||
