@@ -22,9 +22,21 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
+    // Add cache-busting timestamp to GET requests
+    const method = (options.method || 'GET').toUpperCase();
+    let finalEndpoint = endpoint;
+    if (method === 'GET') {
+      const separator = endpoint.includes('?') ? '&' : '?';
+      finalEndpoint = `${endpoint}${separator}_t=${Date.now()}`;
+    }
+    
+    const url = `${this.baseURL}${finalEndpoint}`;
     const config = {
-      headers: this.getHeaders(),
+      headers: {
+        ...this.getHeaders(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      },
       mode: 'cors',
       cache: 'no-store',
       credentials: 'include',
@@ -36,7 +48,6 @@ class ApiService {
     }
 
     // Avoid sending Content-Type on GET/HEAD to prevent unnecessary CORS preflight
-    const method = (config.method || 'GET').toUpperCase();
     if ((method === 'GET' || method === 'HEAD') && config.headers && config.headers['Content-Type']) {
       delete config.headers['Content-Type'];
     }

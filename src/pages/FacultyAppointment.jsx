@@ -70,6 +70,17 @@ const FacultyAppointment = () => {
     }
   }, [selectedDate, slug]);
 
+  // Auto-refresh slots every 30 seconds to sync across browsers
+  useEffect(() => {
+    if (!selectedDate) return;
+    
+    const refreshInterval = setInterval(() => {
+      loadAvailableSlots();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [selectedDate, slug]);
+
   // Load user profile from localStorage or API
   const loadUserProfile = async () => {
     try {

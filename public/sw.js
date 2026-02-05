@@ -1,8 +1,8 @@
 // PWA Service Worker for Qnnect
 // Update version to force cache refresh
-const CACHE_NAME = 'qnnect-v1.0.1';
-const STATIC_CACHE = 'qnnect-static-v1.0.1';
-const DYNAMIC_CACHE = 'qnnect-dynamic-v1.0.1';
+const CACHE_NAME = 'qnnect-v1.0.3';
+const STATIC_CACHE = 'qnnect-static-v1.0.3';
+const DYNAMIC_CACHE = 'qnnect-dynamic-v1.0.3';
 
 // Static assets to cache (only essential files that definitely exist)
 const STATIC_ASSETS = [
@@ -90,6 +90,12 @@ self.addEventListener('fetch', (event) => {
 
   // Skip external requests
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // NEVER cache API requests - always fetch from network
+  if (url.pathname.startsWith('/api')) {
+    event.respondWith(fetch(request));
     return;
   }
 

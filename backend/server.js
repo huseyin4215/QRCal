@@ -141,6 +141,16 @@ app.use(cors({
   ]
 }));
 
+// Disable caching for all API responses
+app.use('/api', (req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+  next();
+});
+
 // Handle preflight OPTIONS requests for Google Sign-In
 app.options('*', (req, res) => {
   const origin = req.headers.origin;
