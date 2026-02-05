@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { CalendarIcon, ClockIcon, UserIcon, AcademicCapIcon, EnvelopeIcon, GlobeAltIcon, MapPinIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 import locationService from '../services/locationService';
@@ -7,6 +8,8 @@ import styles from './FacultyAppointment.module.css';
 
 const FacultyAppointment = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [faculty, setFaculty] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
@@ -329,6 +332,13 @@ const FacultyAppointment = () => {
 
         // Slotları yeniden yükle
         loadAvailableSlots();
+
+        // Eğer admin ise admin dashboard'a yönlendir
+        if (user?.role === 'admin') {
+          setTimeout(() => {
+            navigate('/admin-dashboard');
+          }, 2000);
+        }
       } else {
         setError(result.message || 'Randevu talebi gönderilirken hata oluştu.');
       }

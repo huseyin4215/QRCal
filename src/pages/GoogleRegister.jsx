@@ -65,8 +65,8 @@ const GoogleRegister = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!studentNumber || !department) {
-      setError('Öğrenci numarası ve bölüm zorunludur');
+    if (!studentNumber || !department || !advisor) {
+      setError('Öğrenci numarası, bölüm ve danışman zorunludur');
       return;
     }
     setLoading(true);
@@ -199,16 +199,17 @@ const GoogleRegister = () => {
             </div>
           </div>
 
-          {/* Advisor Field - Optional */}
+          {/* Advisor Field - Required */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>Danışman (Opsiyonel)</label>
+            <label className={styles.label}>Danışman *</label>
             <div className={styles.inputWrapper}>
               <select
                 value={advisor}
                 onChange={(e) => setAdvisor(e.target.value)}
+                required
                 className={`${styles.input} ${styles.select}`}
               >
-                <option value="">Danışman seçiniz (opsiyonel)</option>
+                <option value="">Danışman seçiniz</option>
                 {Object.entries(
                   facultyList.reduce((acc, faculty) => {
                     const dept = faculty.department || 'Diğer';

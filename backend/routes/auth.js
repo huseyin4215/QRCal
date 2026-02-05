@@ -637,8 +637,8 @@ router.get('/google/register-info', asyncHandler(async (req, res) => {
 router.post('/google/register', asyncHandler(async (req, res) => {
   const { token, studentNumber, department, name, advisor } = req.body;
 
-  if (!token || !studentNumber || !department) {
-    return res.status(400).json({ success: false, message: 'Token, öğrenci numarası ve bölüm zorunludur' });
+  if (!token || !studentNumber || !department || !advisor) {
+    return res.status(400).json({ success: false, message: 'Token, öğrenci numarası, bölüm ve danışman zorunludur' });
   }
 
   // Validate student number format (8 digits)

@@ -208,6 +208,7 @@ const AdminDashboard = () => {
   // Refs for real-time updates
   const notificationIntervalRef = useRef(null);
   const appointmentCheckIntervalRef = useRef(null);
+  const userCheckIntervalRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -276,6 +277,13 @@ const AdminDashboard = () => {
 
     // Check for notifications every 30 seconds
     notificationIntervalRef.current = setInterval(checkForNotifications, 30000);
+
+    // Check for new users every 15 seconds (when users tab is active)
+    userCheckIntervalRef.current = setInterval(() => {
+      if (activeTab === 'users') {
+        refreshUsersList();
+      }
+    }, 15000);
   };
 
   const stopRealTimeUpdates = () => {
@@ -284,6 +292,9 @@ const AdminDashboard = () => {
     }
     if (notificationIntervalRef.current) {
       clearInterval(notificationIntervalRef.current);
+    }
+    if (userCheckIntervalRef.current) {
+      clearInterval(userCheckIntervalRef.current);
     }
   };
 

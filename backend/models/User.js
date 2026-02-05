@@ -188,11 +188,11 @@ const userSchema = new mongoose.Schema({
         // Only students can have advisors
         if (userRole !== 'student') return true; // Don't validate for non-students
 
-        // Advisor must be a faculty member
+        // Advisor must be a faculty member or admin
         try {
           const advisor = await mongoose.model('User').findById(v);
           if (!advisor) return false;
-          return advisor.role === 'faculty';
+          return advisor.role === 'faculty' || advisor.role === 'admin';
         } catch (error) {
           console.error('Error validating advisor:', error);
           return false;
