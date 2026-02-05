@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CalendarIcon, ClockIcon, UserIcon, AcademicCapIcon, EnvelopeIcon, GlobeAltIcon, MapPinIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 import locationService from '../services/locationService';
+import AdvisorWarningModal from '../components/AdvisorWarningModal/AdvisorWarningModal';
 import styles from './FacultyAppointment.module.css';
 
 const FacultyAppointment = () => {
@@ -723,46 +724,23 @@ const FacultyAppointment = () => {
       </div>
 
       {/* Danışmana Özel Konu Uyarı Modalı */}
-      {showAdvisorWarning && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-2xl">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-yellow-100 rounded-full">
-              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
-              Danışmana Özel Konu
-            </h3>
-            <p className="text-gray-600 text-center mb-6">
-              Seçtiğiniz görüşme konusu <strong>danışmanınıza özel</strong> bir konudur. 
-              Bu öğretim üyesi sizin danışmanınız değildir. Yine de randevu talebinizi göndermek istiyor musunuz?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAdvisorWarning(false);
-                  setPendingSubmit(false);
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                İptal
-              </button>
-              <button
-                onClick={() => {
-                  setShowAdvisorWarning(false);
-                  setPendingSubmit(true);
-                  // Form'u yeniden submit et
-                  document.querySelector('form').requestSubmit();
-                }}
-                className="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
-              >
-                Yine de Gönder
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AdvisorWarningModal
+        isOpen={showAdvisorWarning}
+        onClose={() => {
+          setShowAdvisorWarning(false);
+          setPendingSubmit(false);
+        }}
+        onConfirm={() => {
+          setShowAdvisorWarning(false);
+          setPendingSubmit(true);
+          // Form'u yeniden submit et
+          setTimeout(() => {
+            const form = document.querySelector('form');
+            if (form) form.requestSubmit();
+          }, 100);
+        }}
+        facultyName={faculty?.title ? `${faculty.title} ${faculty.name}` : faculty?.name}
+      />
     </div>
   );
 };

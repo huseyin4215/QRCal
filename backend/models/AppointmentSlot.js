@@ -221,23 +221,24 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
   for (const timeSlot of dayAvailability.timeSlots) {
     if (!timeSlot.isAvailable) continue;
 
-    const startTime = new Date(`2000-01-01T${timeSlot.start}`);
-    const endTime = new Date(`2000-01-01T${timeSlot.end}`);
+    const availabilityStart = new Date(`2000-01-01T${timeSlot.start}`);
+    const availabilityEnd = new Date(`2000-01-01T${timeSlot.end}`);
+    
+    let currentSlotStart = new Date(availabilityStart);
 
-    while (startTime < endTime) {
-      const slotStart = startTime.toTimeString().slice(0, 5);
+    while (currentSlotStart < availabilityEnd) {
+      const slotStart = currentSlotStart.toTimeString().slice(0, 5);
 
       // Calculate potential end time
-      const potentialEndTime = new Date(startTime.getTime() + slotDuration * 60000);
-      const slotEnd = potentialEndTime.toTimeString().slice(0, 5);
-
-      // Check if this slot exceeds the availability window
-      if (slotEnd > timeSlot.end && slotEnd !== "00:00") {
+      const potentialEndTime = new Date(currentSlotStart.getTime() + slotDuration * 60000);
+      
+      // Check if this slot exceeds the availability window (using Date comparison, not string)
+      if (potentialEndTime > availabilityEnd) {
+        console.log(`[SLOT GEN] Slot ${slotStart} would end at ${potentialEndTime.toTimeString().slice(0, 5)} which exceeds ${timeSlot.end}, skipping`);
         break;
       }
-
-      // Update startTime for next iteration
-      startTime.setTime(potentialEndTime.getTime());
+      
+      const slotEnd = potentialEndTime.toTimeString().slice(0, 5);
 
       // Check if slot already exists using Set (faster than DB query)
       const slotKey = `${slotStart}-${slotEnd}`;
@@ -253,6 +254,9 @@ appointmentSlotSchema.statics.generateSlotsForDate = async function (facultyId, 
           status: 'available'
         });
       }
+      
+      // Move to next slot
+      currentSlotStart = potentialEndTime;
     }
   }
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import SystemSettings from '../models/SystemSettings.js';
+import AppointmentSlot from '../models/AppointmentSlot.js';
 import { authMiddleware, adminMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -59,6 +60,20 @@ router.put('/:key', authMiddleware, adminMiddleware, async (req, res) => {
             req.user._id,
             description || ''
         );
+
+        // If slot duration changed, delete all future available slots to regenerate
+        if (key === 'slotDuration') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const deleteResult = await AppointmentSlot.deleteMany({
+                date: { $gte: today },
+                status: 'available',
+                isBooked: false
+            });
+            
+            console.log(`[SETTINGS] Slot duration changed to ${value}. Deleted ${deleteResult.deletedCount} future available slots.`);
+        }
 
         res.json({
             success: true,

@@ -466,34 +466,38 @@ router.post('/', [
   slotDateStart.setHours(0, 0, 0, 0);
   const slotDateEnd = new Date(appointmentDate);
   slotDateEnd.setHours(23, 59, 59, 999);
-  
-  const slot = await AppointmentSlot.findOne({
-    facultyId,
-    date: { $gte: slotDateStart, $lte: slotDateEnd },
-    startTime,
-    status: 'available'
-  });
 
   console.log(`[APPOINTMENT] Looking for slot: facultyId=${facultyId}, date=${appointmentDate.toISOString()}, startTime=${startTime}`);
   console.log(`[APPOINTMENT] Date range: ${slotDateStart.toISOString()} to ${slotDateEnd.toISOString()}`);
-  console.log(`[APPOINTMENT] Found slot:`, slot ? slot._id : 'null');
+
+  // Use findOneAndUpdate with atomic operation to prevent race conditions
+  // This ensures only ONE request can book the slot
+  const slot = await AppointmentSlot.findOneAndUpdate(
+    {
+      facultyId,
+      date: { $gte: slotDateStart, $lte: slotDateEnd },
+      startTime,
+      status: 'available',
+      isBooked: false
+    },
+    {
+      $set: {
+        status: 'pending',
+        isBooked: true,
+        bookedAt: new Date()
+      }
+    },
+    { new: true }
+  );
+
+  console.log(`[APPOINTMENT] Atomic slot reservation result:`, slot ? slot._id : 'null (slot already taken or not found)');
 
   if (!slot) {
     return res.status(400).json({
       success: false,
-      message: 'Bu saatte müsait slot bulunmamaktadır'
+      message: 'Bu saat dilimi başka bir öğrenci tarafından alındı veya müsait değil. Lütfen başka bir saat seçin.'
     });
   }
-
-  if (!slot.canBeBooked()) {
-    return res.status(400).json({
-      success: false,
-      message: 'Bu slot daha önce rezerve edilmiş'
-    });
-  }
-
-  // User can select any duration they want (10, 15, 20 minutes)
-  // No need to validate against slot duration since user chooses the duration
 
   // Create appointment
   const appointment = new Appointment({
@@ -518,7 +522,20 @@ router.post('/', [
     userAgent: req.get('User-Agent')
   });
 
-  await appointment.save();
+  try {
+    await appointment.save();
+  } catch (saveError) {
+    // If appointment save fails, release the slot
+    await AppointmentSlot.findByIdAndUpdate(slot._id, {
+      $set: {
+        status: 'available',
+        isBooked: false,
+        bookedAt: null,
+        appointmentId: null
+      }
+    });
+    throw saveError;
+  }
 
   // Create notification for faculty
   try {
@@ -538,8 +555,13 @@ router.post('/', [
     // Don't fail the appointment creation if notification fails
   }
 
-  // Update slot status
-  await slot.book(appointment._id);
+  // Update slot status to booked (was pending during atomic reservation)
+  await AppointmentSlot.findByIdAndUpdate(slot._id, {
+    $set: {
+      status: 'booked',
+      appointmentId: appointment._id
+    }
+  });
 
   // Send email notification to faculty
   try {
