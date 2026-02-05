@@ -206,7 +206,6 @@ router.get('/appointments', asyncHandler(async (req, res) => {
 
   const appointments = await Appointment.find(query)
     .populate('facultyId', 'name title department')
-    .populate('student', 'name email studentNumber')
     .sort({ date: 1, startTime: 1 })
     .skip(skip)
     .limit(parseInt(limit));
@@ -235,8 +234,7 @@ router.get('/appointments/:id', asyncHandler(async (req, res) => {
     _id: req.params.id,
     facultyId: req.user.id
   })
-    .populate('facultyId', 'name title department')
-    .populate('student', 'name email studentNumber');
+    .populate('facultyId', 'name title department');
 
   if (!appointment) {
     return res.status(404).json({
