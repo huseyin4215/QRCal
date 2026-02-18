@@ -191,6 +191,8 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     if (format === 'pdf') {
       setIsGeneratingPDF(true);
     }
+
+    // Pre-convert logo images to data URLs for CORS compatibility
     const dataUrls = {};
     const logoImgs = element.querySelectorAll('img[data-logo-overlay]');
     for (const img of logoImgs) {
@@ -208,6 +210,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
         }
       }
     }
+
     html2canvas(element, {
       scale: 3,
       backgroundColor: null,
@@ -216,89 +219,54 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
       logging: false,
       imageTimeout: 15000,
       onclone: (_doc, cloned) => {
+        // Swap logo image src to data URL for CORS
         cloned.querySelectorAll('img[data-logo-overlay]').forEach((img) => {
-          // Convert image src to data URL for CORS
           if (img.src && dataUrls[img.src]) img.src = dataUrls[img.src];
-
-          const overlayDiv = img.parentElement;
-          if (!overlayDiv) return;
-
-          const bgColor = logoConfig.logoBgColor || qrConfig.bgColor;
-          const overlayW = parseFloat(overlayDiv.style.width) || 0;
-          const overlayH = parseFloat(overlayDiv.style.height) || 0;
-
-          // ---- Fix overlay div ----
-          // Remove CSS classes (.logoAreaBg uses background: var() !important → html2canvas can't resolve)
-          overlayDiv.className = '';
-          overlayDiv.style.borderRadius = logoConfig.logoShape === 'round' ? '50%' : '8px';
-          overlayDiv.style.setProperty('background-color', bgColor, 'important');
-          overlayDiv.style.setProperty('background', bgColor, 'important');
-          overlayDiv.style.boxShadow = 'none';
-          overlayDiv.style.overflow = 'hidden';
-          // Expand overlay slightly to cover QR bleed at edges
-          if (overlayW > 0) {
-            overlayDiv.style.width = (overlayW + 8) + 'px';
-            overlayDiv.style.height = (overlayH + 8) + 'px';
-          }
-
-          // ---- Fix logo img ----
-          // html2canvas doesn't support clip-path
-          img.style.clipPath = 'none';
-          img.style.webkitClipPath = 'none';
-          if (logoConfig.logoShape === 'round') {
-            img.style.borderRadius = '50%';
-          }
-          // html2canvas handles absolute px better than % + object-fit
-          // Convert 85% of overlay size to absolute pixels
-          const imgSize = Math.round((overlayW > 0 ? overlayW : effectiveLogoSize) * 0.85);
-          img.style.width = imgSize + 'px';
-          img.style.height = imgSize + 'px';
-          img.style.objectFit = 'contain';
-          img.style.maxWidth = 'none';
-          img.style.maxHeight = 'none';
-          img.style.display = 'block';
-          img.style.margin = 'auto';
         });
       }
     }).then(canvas => {
-      if (format === 'pdf') {
-        let pdfSize = 'a4';
-        let pdfOrientation = 'p';
-        if (exportConfig.size === 'A5') pdfSize = 'a5';
-        if (exportConfig.orientation === 'landscape') pdfOrientation = 'l';
-        const pdf = new jsPDF(pdfOrientation, 'mm', pdfSize);
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 15;
-        const imgWidth = pageWidth - (margin * 2);
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        let finalImgHeight = imgHeight;
-        let finalImgWidth = imgWidth;
-        if (imgHeight > (pageHeight - (margin * 2))) {
-          finalImgHeight = pageHeight - (margin * 2);
-          finalImgWidth = (canvas.width * finalImgHeight) / canvas.height;
-        }
-        const x = (pageWidth - finalImgWidth) / 2;
-        const y = (pageHeight - finalImgHeight) / 2;
-        pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', x, y, finalImgWidth, finalImgHeight);
-        const timestamp = new Date().toLocaleString('tr-TR');
-        pdf.setFontSize(8);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(`Oluşturulma Tarihi: ${timestamp}`, margin, pageHeight - margin);
-        pdf.text('Qnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
-        pdf.save(`qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.pdf`);
-        setIsGeneratingPDF(false);
-      } else {
-        const link = document.createElement('a');
-        link.download = `qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.png`;
-        link.href = canvas.toDataURL('image/png', 1.0);
-        link.click();
-      }
+      finishExport(canvas, format);
     }).catch(err => {
       console.error('Export error:', err);
       if (format === 'pdf') setIsGeneratingPDF(false);
       alert(`${format.toUpperCase()} oluşturulurken hata oluştu. Lütfen tekrar deneyin.`);
     });
+  };
+
+  const finishExport = (canvas, format) => {
+    if (format === 'pdf') {
+      let pdfSize = 'a4';
+      let pdfOrientation = 'p';
+      if (exportConfig.size === 'A5') pdfSize = 'a5';
+      if (exportConfig.orientation === 'landscape') pdfOrientation = 'l';
+      const pdf = new jsPDF(pdfOrientation, 'mm', pdfSize);
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const imgWidth = pageWidth - (margin * 2);
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let finalImgHeight = imgHeight;
+      let finalImgWidth = imgWidth;
+      if (imgHeight > (pageHeight - (margin * 2))) {
+        finalImgHeight = pageHeight - (margin * 2);
+        finalImgWidth = (canvas.width * finalImgHeight) / canvas.height;
+      }
+      const x = (pageWidth - finalImgWidth) / 2;
+      const y = (pageHeight - finalImgHeight) / 2;
+      pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', x, y, finalImgWidth, finalImgHeight);
+      const timestamp = new Date().toLocaleString('tr-TR');
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Oluşturulma Tarihi: ${timestamp}`, margin, pageHeight - margin);
+      pdf.text('Qnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
+      pdf.save(`qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.pdf`);
+      setIsGeneratingPDF(false);
+    } else {
+      const link = document.createElement('a');
+      link.download = `qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.png`;
+      link.href = canvas.toDataURL('image/png', 1.0);
+      link.click();
+    }
   };
 
   const handleDownloadQR = () => {

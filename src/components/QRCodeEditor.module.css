@@ -109,19 +109,20 @@
   border-radius: 8px;
 }
 
-/* Logo alanı arka planı - dış stil/yeşil override'ı engellemek için */
+/* Logo alanı arka planı */
 .logoAreaBg {
-  background-color: var(--logo-area-bg) !important;
-  background: var(--logo-area-bg) !important;
+  position: relative;
+  /* background set via inline styles */
 }
 
 /* Logo şekli: yuvarlak veya kare (overlay içinde) */
 .logoImageRound {
-  clip-path: circle(50%);
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .logoImageSquare {
-  clip-path: none;
+  border-radius: 0;
 }
 
 .downloadButton {
