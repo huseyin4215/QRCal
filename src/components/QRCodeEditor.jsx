@@ -217,7 +217,47 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
       imageTimeout: 15000,
       onclone: (_doc, cloned) => {
         cloned.querySelectorAll('img[data-logo-overlay]').forEach((img) => {
+          // Convert image src to data URL for CORS
           if (img.src && dataUrls[img.src]) img.src = dataUrls[img.src];
+
+          const overlayDiv = img.parentElement;
+          if (!overlayDiv) return;
+
+          const bgColor = logoConfig.logoBgColor || qrConfig.bgColor;
+          const overlayW = parseFloat(overlayDiv.style.width) || 0;
+          const overlayH = parseFloat(overlayDiv.style.height) || 0;
+
+          // ---- Fix overlay div ----
+          // Remove CSS classes (.logoAreaBg uses background: var() !important → html2canvas can't resolve)
+          overlayDiv.className = '';
+          overlayDiv.style.borderRadius = logoConfig.logoShape === 'round' ? '50%' : '8px';
+          overlayDiv.style.setProperty('background-color', bgColor, 'important');
+          overlayDiv.style.setProperty('background', bgColor, 'important');
+          overlayDiv.style.boxShadow = 'none';
+          overlayDiv.style.overflow = 'hidden';
+          // Expand overlay slightly to cover QR bleed at edges
+          if (overlayW > 0) {
+            overlayDiv.style.width = (overlayW + 8) + 'px';
+            overlayDiv.style.height = (overlayH + 8) + 'px';
+          }
+
+          // ---- Fix logo img ----
+          // html2canvas doesn't support clip-path
+          img.style.clipPath = 'none';
+          img.style.webkitClipPath = 'none';
+          if (logoConfig.logoShape === 'round') {
+            img.style.borderRadius = '50%';
+          }
+          // html2canvas handles absolute px better than % + object-fit
+          // Convert 85% of overlay size to absolute pixels
+          const imgSize = Math.round((overlayW > 0 ? overlayW : effectiveLogoSize) * 0.85);
+          img.style.width = imgSize + 'px';
+          img.style.height = imgSize + 'px';
+          img.style.objectFit = 'contain';
+          img.style.maxWidth = 'none';
+          img.style.maxHeight = 'none';
+          img.style.display = 'block';
+          img.style.margin = 'auto';
         });
       }
     }).then(canvas => {
@@ -1347,7 +1387,9 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                           width: '85%',
                           height: '85%',
                           objectFit: 'contain',
-                          opacity: logoConfig.logoOpacity
+                          opacity: logoConfig.logoOpacity,
+                          position: 'relative',
+                          zIndex: 20
                         }}
                         crossOrigin="anonymous"
                       />
