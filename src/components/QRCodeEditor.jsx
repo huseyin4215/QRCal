@@ -514,8 +514,8 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
           const logoBg = logoConfig.logoBgColor || qrConfig.bgColor;
           const scaledLogoSize = effectiveLogoSize * 3; // Scale for high DPI
           const scaledOverlaySize = logoConfig.logoShape === 'round'
-            ? scaledLogoSize * 1.3
-            : scaledLogoSize * 1.15;
+            ? scaledLogoSize * 1.4
+            : scaledLogoSize * 1.25;
           const centerX = qrX + qrSize / 2;
           const centerY = qrY + qrSize / 2;
 
@@ -523,14 +523,14 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
           ctx.save();
           if (logoConfig.logoShape === 'round') {
             ctx.beginPath();
-            ctx.arc(centerX, centerY, scaledOverlaySize / 2 + 4, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, scaledOverlaySize / 2 + 6, 0, Math.PI * 2);
             ctx.fillStyle = logoBg;
             ctx.fill();
           } else {
-            const bgX = centerX - scaledOverlaySize / 2 - 4;
-            const bgY = centerY - scaledOverlaySize / 2 - 4;
-            const bgW = scaledOverlaySize + 8;
-            const bgH = scaledOverlaySize + 8;
+            const bgX = centerX - scaledOverlaySize / 2 - 6;
+            const bgY = centerY - scaledOverlaySize / 2 - 6;
+            const bgW = scaledOverlaySize + 12;
+            const bgH = scaledOverlaySize + 12;
             const radius = 8 * 3; // 8px border-radius scaled
             ctx.beginPath();
             ctx.moveTo(bgX + radius, bgY);
@@ -1420,15 +1420,15 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                         left: '50%',
                         top: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: logoConfig.logoShape === 'round' ? effectiveLogoSize * 1.3 : effectiveLogoSize * 1.15,
-                        height: logoConfig.logoShape === 'round' ? effectiveLogoSize * 1.3 : effectiveLogoSize * 1.15,
+                        width: logoConfig.logoShape === 'round' ? effectiveLogoSize * 1.4 : effectiveLogoSize * 1.25,
+                        height: logoConfig.logoShape === 'round' ? effectiveLogoSize * 1.4 : effectiveLogoSize * 1.25,
                         backgroundColor: logoConfig.logoBgColor || qrConfig.bgColor,
                         zIndex: 10,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         overflow: 'hidden',
-                        boxShadow: `0 0 0 4px ${logoConfig.logoBgColor || qrConfig.bgColor}`
+                        boxShadow: `0 0 0 6px ${logoConfig.logoBgColor || qrConfig.bgColor}`
                       }}
                     >
                       <img
@@ -1437,8 +1437,8 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                         data-logo-overlay
                         className={logoConfig.logoShape === 'round' ? styles.logoImageRound : styles.logoImageSquare}
                         style={{
-                          width: effectiveLogoSize,
-                          height: effectiveLogoSize,
+                          width: '85%',
+                          height: '85%',
                           objectFit: 'contain',
                           opacity: logoConfig.logoOpacity
                         }}
