@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { QrCodeIcon, DocumentArrowDownIcon, ArrowUpTrayIcon, SparklesIcon, HomeIcon, UserIcon } from '@heroicons/react/24/outline';
+import { QrCodeIcon, DocumentArrowDownIcon, ArrowUpTrayIcon, SparklesIcon, HomeIcon } from '@heroicons/react/24/outline';
 import apiService from '../services/apiService';
 import Header from '../components/Header/Header';
 import headerStyles from '../components/Header/Header.module.css';
 import QRCodeEditor from '../components/QRCodeEditor';
+import ProfileModal from '../components/ProfileModal/ProfileModal';
+import PasswordModal from '../components/PasswordModal/PasswordModal';
 import styles from '../styles/QrCodePage.module.css';
 
 const QrCodePage = () => {
@@ -19,18 +21,148 @@ const QrCodePage = () => {
   const navigate = useNavigate();
   const qrImageRef = useRef(null);
 
-  // Profile dropdown handlers
-  const handleProfile = () => {
-    navigate('/profile');
-  };
+  // Profile & password modals (dashboard ile aynı UX)
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [departments, setDepartments] = useState([]);
 
-  const handlePassword = () => {
-    navigate('/change-password');
-  };
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    title: '',
+    department: '',
+    phone: '',
+    office: '',
+    website: ''
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   const handleLogout = () => {
-    // Logout logic will be handled by AuthContext
-    window.location.href = '/login';
+    if (window.confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+  };
+
+  const openProfileModal = async () => {
+    // Faculty profilinde bölüm seçimi var; seçenekleri yükle
+    if (user?.role === 'faculty') {
+      try {
+        const deptResponse = await apiService.getDepartments();
+        if (deptResponse.success && deptResponse.data) {
+          setDepartments(deptResponse.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch departments:', err);
+      }
+    }
+
+    setProfileData({
+      name: user?.name || '',
+      email: user?.email || '',
+      title: user?.title || '',
+      department: user?.department || '',
+      phone: user?.phone || '',
+      office: user?.office || '',
+      website: user?.website || ''
+    });
+    setShowProfileModal(true);
+    setProfileError('');
+    setProfileSuccess('');
+  };
+
+  const openPasswordModal = () => {
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setShowPasswordModal(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const handleProfileInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePasswordInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setProfileLoading(true);
+    setProfileError('');
+    setProfileSuccess('');
+
+    try {
+      // Projede admin dashboard da bu endpoint'i kullanıyor; burada da aynı akışı kullanıyoruz.
+      const response = await apiService.updateFacultyProfile(profileData);
+      if (response.success) {
+        setProfileSuccess('Profil başarıyla güncellendi!');
+        const updatedUser = { ...user, ...profileData };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    } catch (err) {
+      console.error('Profile update error:', err);
+      setProfileError(err.message || 'Profil güncellenirken hata oluştu');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setPasswordLoading(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    const currentPassword = (passwordData.currentPassword || '').trim();
+    const newPassword = (passwordData.newPassword || '').trim();
+    const confirmPassword = (passwordData.confirmPassword || '').trim();
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Yeni şifreler eşleşmiyor');
+      setPasswordLoading(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('Yeni şifre en az 6 karakter olmalıdır');
+      setPasswordLoading(false);
+      return;
+    }
+
+    try {
+      const response = await apiService.changePassword(currentPassword, newPassword);
+      if (response.success) {
+        setPasswordSuccess('Şifre başarıyla değiştirildi!');
+        setTimeout(() => {
+          setShowPasswordModal(false);
+          setPasswordSuccess('');
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Password change error:', err);
+      setPasswordError(err.message || 'Şifre değiştirilirken hata oluştu');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   // Debug: Log user information
@@ -201,7 +333,13 @@ const QrCodePage = () => {
   if (user && user.role !== 'faculty' && user.role !== 'admin') {
     return (
       <div className={styles.pageContainer}>
-        <Header />
+        <Header
+          user={user}
+          onProfile={openProfileModal}
+          onPassword={openPasswordModal}
+          onLogout={handleLogout}
+          theme={user?.role || 'admin'}
+        />
         <div className={styles.contentContainer}>
           <div className={styles.mainCard}>
             <div className={styles.errorMessage}>
@@ -218,8 +356,8 @@ const QrCodePage = () => {
     <div className={styles.pageContainer}>
       <Header 
         user={user}
-        onProfile={handleProfile}
-        onPassword={handlePassword}
+        onProfile={openProfileModal}
+        onPassword={openPasswordModal}
         onLogout={handleLogout}
         theme={user?.role || 'admin'}
       >
@@ -297,7 +435,7 @@ const QrCodePage = () => {
               <div className={styles.actionButtons}>
                 <button
                   onClick={() => setShowEditor(!showEditor)}
-                  className={`${styles.actionButton} ${showEditor ? 'bg-purple-600' : ''}`}
+                  className={`${styles.actionButton} ${showEditor ? 'bg-navy-700' : ''}`}
                 >
                   <QrCodeIcon className={styles.actionIcon} />
                   {showEditor ? 'Düzenlemeyi Kapat' : 'QR Kodu Düzenle'}
@@ -362,6 +500,62 @@ const QrCodePage = () => {
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false);
+          setProfileError('');
+          setProfileSuccess('');
+        }}
+        profileData={profileData}
+        onInputChange={handleProfileInputChange}
+        onSubmit={handleUpdateProfile}
+        loading={profileLoading}
+        error={profileError}
+        success={profileSuccess}
+        fields={
+          user?.role === 'faculty'
+            ? [
+                { name: 'name', label: 'Ad Soyad', type: 'text', required: true, placeholder: 'Ad Soyad' },
+                { name: 'email', label: 'E-posta Adresi', type: 'email', required: true, placeholder: 'E-posta adresi' },
+                { name: 'title', label: 'Ünvan', type: 'text', required: false, placeholder: 'Ünvan (örn: Prof. Dr., Doç. Dr., Dr. Öğr. Üyesi)' },
+                {
+                  name: 'department',
+                  label: 'Bölüm',
+                  type: 'select',
+                  required: true,
+                  placeholder: 'Bölüm seçiniz',
+                  options: departments.map((dept) => ({ value: dept.name, label: dept.name }))
+                },
+                { name: 'phone', label: 'Telefon', type: 'tel', required: false, placeholder: 'Telefon numarası' },
+                { name: 'office', label: 'Ofis', type: 'text', required: false, placeholder: 'Ofis numarası' },
+                { name: 'website', label: 'Web Sitesi', type: 'url', required: false, placeholder: 'Web sitesi URL' }
+              ]
+            : [
+                { name: 'name', label: 'Ad Soyad', type: 'text', required: true, placeholder: 'Ad Soyad' },
+                { name: 'email', label: 'E-posta Adresi', type: 'email', required: true, placeholder: 'E-posta adresi' },
+                { name: 'phone', label: 'Telefon', type: 'tel', required: false, placeholder: 'Telefon numarası' },
+                { name: 'office', label: 'Ofis', type: 'text', required: false, placeholder: 'Ofis numarası' }
+              ]
+        }
+      />
+
+      <PasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setPasswordError('');
+          setPasswordSuccess('');
+        }}
+        passwordData={passwordData}
+        onInputChange={handlePasswordInputChange}
+        onSubmit={handleChangePassword}
+        loading={passwordLoading}
+        error={passwordError}
+        success={passwordSuccess}
+      />
     </div>
   );
 };

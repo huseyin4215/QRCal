@@ -26,7 +26,7 @@
 .title {
   font-size: 1.75rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -57,7 +57,7 @@
   background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 1) 100%);
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  border-color: rgba(102, 126, 234, 0.3);
+  border-color: rgba(29, 63, 135, 0.3);
 }
 
 .grid {
@@ -100,7 +100,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 2.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   color: white;
   border: none;
   border-radius: 1.25rem;
@@ -108,27 +108,27 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 8px 30px rgba(29, 63, 135, 0.3);
   text-transform: uppercase;
   letter-spacing: 0.025em;
 }
 
 .downloadButton:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  box-shadow: 0 12px 40px rgba(29, 63, 135, 0.4);
+  background: linear-gradient(135deg, #163266 0%, #a88a4e 100%);
 }
 
 .downloadButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 15px rgba(29, 63, 135, 0.2);
 }
 
 .downloadButton:disabled:hover {
   transform: none;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 15px rgba(29, 63, 135, 0.2);
 }
 
 .configPanel {
@@ -150,7 +150,7 @@
 }
 
 .configPanel::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   border-radius: 3px;
 }
 
@@ -197,7 +197,7 @@
 }
 
 .colorSchemeButton:hover {
-  border-color: #667eea;
+  border-color: #1D3F87;
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
@@ -254,25 +254,25 @@
   appearance: none;
   width: 1.5rem;
   height: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(29, 63, 135, 0.3);
   transition: all 0.3s ease;
 }
 
 .rangeInput::-webkit-slider-thumb:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(29, 63, 135, 0.4);
 }
 
 .rangeInput::-moz-range-thumb {
   width: 1.5rem;
   height: 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(29, 63, 135, 0.3);
   border: none;
 }
 
@@ -287,7 +287,7 @@
 }
 
 .colorInput:hover {
-  border-color: #667eea;
+  border-color: #1D3F87;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -323,8 +323,8 @@
 
 .selectInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .checkboxGroup {
@@ -347,8 +347,8 @@
 }
 
 .checkbox:checked {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
+  border-color: #1D3F87;
 }
 
 .checkbox:checked::after {
@@ -383,14 +383,14 @@
 }
 
 .fileInput:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #1D3F87;
+  background: rgba(29, 63, 135, 0.05);
 }
 
 .fileInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .textInput {
@@ -407,8 +407,8 @@
 
 .textInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .textInput::placeholder {
@@ -463,8 +463,8 @@
 }
 
 .logoPreview:hover {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  border-color: #1D3F87;
+  background: rgba(29, 63, 135, 0.05);
 }
 
 .logoInfo {
@@ -477,7 +477,7 @@
 
 .logoType {
   font-size: 0.75rem;
-  color: #667eea;
+  color: #1D3F87;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.025em;
@@ -513,15 +513,15 @@
 }
 
 .presetLogoButton:hover {
-  border-color: #667eea;
+  border-color: #1D3F87;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 4px 12px rgba(29, 63, 135, 0.1);
 }
 
 .presetLogoButtonActive {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  border-color: #1D3F87;
+  background: rgba(29, 63, 135, 0.05);
+  box-shadow: 0 4px 12px rgba(29, 63, 135, 0.2);
 }
 
 .presetLogoName {
@@ -564,7 +564,7 @@
 }
 
 .radio:checked {
-  border-color: #667eea;
+  border-color: #1D3F87;
 }
 
 .radio:checked::after {
@@ -575,7 +575,7 @@
   transform: translate(-50%, -50%);
   width: 0.5rem;
   height: 0.5rem;
-  background: #667eea;
+  background: #1D3F87;
   border-radius: 50%;
 }
 
@@ -603,16 +603,16 @@
 }
 
 .toggleButton:hover {
-  border-color: #667eea;
+  border-color: #1D3F87;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 4px 12px rgba(29, 63, 135, 0.1);
 }
 
 .toggleButtonActive {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
-  color: #667eea;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  border-color: #1D3F87;
+  background: rgba(29, 63, 135, 0.05);
+  color: #1D3F87;
+  box-shadow: 0 4px 12px rgba(29, 63, 135, 0.2);
 }
 
 .toggleIcon {
@@ -706,7 +706,7 @@
   }
   
   .title {
-    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    background: linear-gradient(135deg, #C5A25D 0%, #E5D1A2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }

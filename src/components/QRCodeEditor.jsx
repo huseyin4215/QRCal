@@ -27,7 +27,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     size: 256,
     level: 'M',
     bgColor: '#FFFFFF',
-    fgColor: '#667eea',
+    fgColor: '#1D3F87',
     includeMargin: true,
     marginSize: 4
   });
@@ -98,7 +98,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     customTextPosition: 'above', // 'above', 'below', 'left', 'right'
     customTextStyle: 'pill', // 'pill', 'box', 'underline', 'none'
     customTextSize: 'medium', // 'small', 'medium', 'large'
-    customTextColor: '#667eea', // New field for custom text color
+    customTextColor: '#1D3F87', // New field for custom text color
     showAppName: true, // New field to control app name visibility
     appName: 'Qnnect' // New field for app name
   });
@@ -125,9 +125,9 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
 
   // Predefined color schemes
   const colorSchemes = [
-    { name: 'Mavi', bg: '#FFFFFF', fg: '#667eea' },
+    { name: 'Navy', bg: '#FFFFFF', fg: '#1D3F87' },
     { name: 'Yeşil', bg: '#FFFFFF', fg: '#10B981' },
-    { name: 'Mor', bg: '#FFFFFF', fg: '#8B5CF6' },
+    { name: 'Altın', bg: '#FFFFFF', fg: '#C5A25D' },
     { name: 'Turuncu', bg: '#FFFFFF', fg: '#F59E0B' },
     { name: 'Kırmızı', bg: '#FFFFFF', fg: '#EF4444' },
     { name: 'Siyah', bg: '#FFFFFF', fg: '#000000' },

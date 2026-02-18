@@ -87,15 +87,15 @@ const CookiePolicy = () => {
               </div>
 
               {/* Analytics Cookies */}
-              <div className="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500">
-                <h3 className="text-xl font-semibold text-purple-900 mb-3">Analitik Çerezler</h3>
-                <p className="text-purple-800 mb-3">
+              <div className="bg-navy-50 p-6 rounded-lg border-l-4 border-navy-500">
+                <h3 className="text-xl font-semibold text-navy-900 mb-3">Analitik Çerezler</h3>
+                <p className="text-navy-800 mb-3">
                   Bu çerezler, web sitesinin nasıl kullanıldığını anlamamıza yardımcı olur. 
                   Kullanıcı davranışlarını analiz eder ve site performansını iyileştirmemizi sağlar.
                 </p>
                 <div className="bg-white p-4 rounded border">
-                  <h4 className="font-semibold text-purple-900 mb-2">Örnekler:</h4>
-                  <ul className="list-disc list-inside text-purple-700 space-y-1 text-sm">
+                  <h4 className="font-semibold text-navy-900 mb-2">Örnekler:</h4>
+                  <ul className="list-disc list-inside text-navy-700 space-y-1 text-sm">
                     <li>Sayfa görüntüleme sayıları</li>
                     <li>Kullanıcı etkileşim verileri</li>
                     <li>Site performans metrikleri</li>
@@ -229,7 +229,7 @@ const CookiePolicy = () => {
                       2 yıl
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-navy-100 text-navy-800">
                         Analitik
                       </span>
                     </td>

@@ -130,8 +130,8 @@
 
 /* Color variants */
 .blue {
-  --accent-color: #2563eb;
-  --accent-color-light: #3b82f6;
+  --accent-color: #1D3F87;
+  --accent-color-light: #2a5298;
 }
 
 .green {
@@ -150,13 +150,13 @@
 }
 
 .purple {
-  --accent-color: #7c3aed;
-  --accent-color-light: #8b5cf6;
+  --accent-color: #1D3F87;
+  --accent-color-light: #2a5298;
 }
 
 .indigo {
-  --accent-color: #4f46e5;
-  --accent-color-light: #6366f1;
+  --accent-color: #1D3F87;
+  --accent-color-light: #2a5298;
 }
 
 .pink {
@@ -167,6 +167,16 @@
 .teal {
   --accent-color: #0d9488;
   --accent-color-light: #14b8a6;
+}
+
+.gold {
+  --accent-color: #C5A25D;
+  --accent-color-light: #E5D1A2;
+}
+
+.navy {
+  --accent-color: #1D3F87;
+  --accent-color-light: #2a5298;
 }
 
 /* Dark mode support */

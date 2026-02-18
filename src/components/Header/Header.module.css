@@ -7,32 +7,44 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  /* Footer-compatible accent variables */
-  --accent: #667eea;
-  --accent-dark: #764ba2;
-  --accent-soft-bg: #f0f4ff;
-  --accent-text: #5b21b6;
+  /* University Theme - Navy & Gold */
+  --accent: #1D3F87;
+  --accent-dark: #163266;
+  --accent-light: #2a5298;
+  --accent-soft-bg: #e8edf5;
+  --accent-text: #1D3F87;
+  --gold: #C5A25D;
+  --gold-light: #E5D1A2;
 }
 
 .themeAdmin {
-  --accent: #667eea;
-  --accent-dark: #764ba2;
-  --accent-soft-bg: #f0f4ff;
-  --accent-text: #5b21b6;
+  --accent: #1D3F87;
+  --accent-dark: #163266;
+  --accent-light: #2a5298;
+  --accent-soft-bg: #e8edf5;
+  --accent-text: #1D3F87;
+  --gold: #C5A25D;
+  --gold-light: #E5D1A2;
 }
 
 .themeFaculty {
-  --accent: #667eea;
-  --accent-dark: #764ba2;
-  --accent-soft-bg: #f0f4ff;
-  --accent-text: #5b21b6;
+  --accent: #1D3F87;
+  --accent-dark: #163266;
+  --accent-light: #2a5298;
+  --accent-soft-bg: #e8edf5;
+  --accent-text: #1D3F87;
+  --gold: #C5A25D;
+  --gold-light: #E5D1A2;
 }
 
 .themeStudent {
-  --accent: #667eea;
-  --accent-dark: #764ba2;
-  --accent-soft-bg: #f0f4ff;
-  --accent-text: #5b21b6;
+  --accent: #1D3F87;
+  --accent-dark: #163266;
+  --accent-light: #2a5298;
+  --accent-soft-bg: #e8edf5;
+  --accent-text: #1D3F87;
+  --gold: #C5A25D;
+  --gold-light: #E5D1A2;
 }
 
 .headerContainer {
@@ -137,8 +149,8 @@
   align-items: center;
   justify-content: center;
   color: white;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
+  box-shadow: 0 4px 10px rgba(29, 63, 135, 0.3);
 }
 
 .userDetails {
@@ -164,7 +176,7 @@
 .userDepartment {
   margin: 0;
   font-size: 0.75rem;
-  color: #667eea;
+  color: #C5A25D;
   font-weight: 600;
 }
 
@@ -443,7 +455,7 @@
 .markAllReadButton {
   background: none;
   border: none;
-  color: #3b82f6;
+  color: #1D3F87;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -453,7 +465,7 @@
 }
 
 .markAllReadButton:hover {
-  background: #eff6ff;
+  background: #e8edf5;
 }
 
 .notificationsList {
@@ -473,12 +485,12 @@
 }
 
 .notificationItem.unread {
-  background: #eff6ff;
-  border-left: 3px solid #3b82f6;
+  background: #e8edf5;
+  border-left: 3px solid #1D3F87;
 }
 
 .notificationItem.unread:hover {
-  background: #dbeafe;
+  background: #c5d1e8;
 }
 
 .notificationContent {

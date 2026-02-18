@@ -1,0 +1,249 @@
+/* Overlay - blocks entire screen */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(29, 63, 135, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal */
+.modal {
+  background: linear-gradient(145deg, #ffffff 0%, #fefefe 100%);
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 480px;
+  width: 90%;
+  margin: 16px;
+  box-shadow: 
+    0 25px 60px -12px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(197, 162, 93, 0.3);
+  position: relative;
+  animation: slideUp 0.4s ease-out;
+  border: 2px solid rgba(197, 162, 93, 0.2);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Icon Container */
+.iconContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.iconBackground {
+  width: 88px;
+  height: 88px;
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 8px 25px rgba(29, 63, 135, 0.4),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.1),
+    0 0 0 4px rgba(197, 162, 93, 0.3);
+  animation: pulse 2.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 
+      0 8px 25px rgba(29, 63, 135, 0.4),
+      inset 0 -3px 8px rgba(0, 0, 0, 0.1),
+      0 0 0 4px rgba(197, 162, 93, 0.3);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 
+      0 12px 35px rgba(29, 63, 135, 0.5),
+      inset 0 -3px 8px rgba(0, 0, 0, 0.1),
+      0 0 0 8px rgba(197, 162, 93, 0.2);
+    transform: scale(1.02);
+  }
+}
+
+.calendarIcon {
+  width: 44px;
+  height: 44px;
+  color: #C5A25D;
+}
+
+/* Title */
+.title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1D3F87;
+  text-align: center;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.025em;
+}
+
+/* Messages */
+.message {
+  font-size: 1rem;
+  color: #4b5563;
+  text-align: center;
+  margin: 0 0 12px 0;
+  line-height: 1.7;
+}
+
+.message strong {
+  color: #1D3F87;
+  font-weight: 600;
+}
+
+.subMessage {
+  font-size: 0.95rem;
+  color: #6b7280;
+  text-align: center;
+  margin: 0 0 24px 0;
+  line-height: 1.6;
+}
+
+/* Feature List */
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.featureIcon {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #C5A25D 0%, #d4b36a 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.featureItem span {
+  font-size: 0.9rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* Button Group */
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.connectButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 24px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
+  color: white;
+  box-shadow: 
+    0 6px 20px rgba(29, 63, 135, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.connectButton:hover {
+  background: linear-gradient(135deg, #163266 0%, #1D3F87 100%);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 10px 30px rgba(29, 63, 135, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.connectButton:active {
+  transform: translateY(0);
+}
+
+.buttonIcon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Note */
+.note {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-align: center;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .modal {
+    padding: 28px 24px;
+    border-radius: 20px;
+  }
+
+  .iconBackground {
+    width: 72px;
+    height: 72px;
+  }
+
+  .calendarIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .title {
+    font-size: 1.35rem;
+  }
+
+  .message,
+  .subMessage {
+    font-size: 0.9rem;
+  }
+
+  .connectButton {
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
+}

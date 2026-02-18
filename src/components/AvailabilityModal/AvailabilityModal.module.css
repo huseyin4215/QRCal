@@ -41,7 +41,7 @@
   font-weight: 700;
   color: #1f2937;
   margin: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -92,7 +92,7 @@
 .sectionIcon {
   width: 1.25rem;
   height: 1.25rem;
-  color: #667eea;
+  color: #1D3F87;
 }
 
 .availabilityGrid {
@@ -167,7 +167,7 @@
 }
 
 input:checked + .slider {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
 }
 
 input:checked + .slider:before {
@@ -192,8 +192,8 @@ input:checked + .slider:before {
 
 .timeInput:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
   background: rgba(255, 255, 255, 1);
 }
 
@@ -278,14 +278,14 @@ input:checked + .slider:before {
 }
 
 .primaryButton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
-  box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 14px 0 rgba(29, 63, 135, 0.4);
 }
 
 .primaryButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px 0 rgba(102, 126, 234, 0.5);
+  box-shadow: 0 8px 25px 0 rgba(29, 63, 135, 0.5);
 }
 
 .secondaryButton {
@@ -350,19 +350,19 @@ input:checked + .slider:before {
   padding: 0.625rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
   border-radius: 0.5rem;
-  border: 1px solid #8b5cf6;
+  border: 1px solid #1D3F87;
   transition: all 0.2s ease;
   cursor: pointer;
 }
 
 .saveButton:hover {
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  border-color: #7c3aed;
+  background: linear-gradient(135deg, #163266 0%, #1D3F87 100%);
+  border-color: #163266;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(29, 63, 135, 0.3);
 }
 
 .saveButton:disabled {

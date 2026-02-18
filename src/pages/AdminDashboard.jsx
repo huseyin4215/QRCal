@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   UserGroupIcon,
   CalendarIcon,
@@ -50,6 +50,7 @@ import RejectModal from '../components/RejectModal/RejectModal';
 import CancelModal from '../components/CancelModal/CancelModal';
 import StatisticsCards from '../components/StatisticsCards/StatisticsCards';
 import ConflictWarningModal from '../components/ConflictWarningModal/ConflictWarningModal';
+import CalendarRequiredModal from '../components/CalendarRequiredModal/CalendarRequiredModal';
 import ConfirmModal from '../components/ConfirmModal/ConfirmModal';
 import { exportAppointmentsToPDF } from '../utils/pdfExport';
 import { formatUserName } from '../utils/formatUserName';
@@ -58,6 +59,7 @@ import sectionThemes from '../styles/sectionThemes.module.css';
 const AdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [systemAppointments, setSystemAppointments] = useState([]); // Tüm sistem randevuları
@@ -269,6 +271,14 @@ const AdminDashboard = () => {
       loadFacultyData();
     }
   }, [activeTab, user]);
+
+  // URL'deki ?tab=appointments ile Randevular sekmesine yönlendirme (footer linki vb.)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'users' || tab === 'appointments' || tab === 'availability' || tab === 'geofence' || tab === 'stats' || tab === 'settings') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Real-time updates setup
   const startRealTimeUpdates = () => {
@@ -1857,7 +1867,7 @@ const AdminDashboard = () => {
               title="Öğrenci"
               value={stats.studentCount || users.filter(u => u.role === 'student').length}
               icon={<UserGroupIcon className="h-6 w-6" />}
-              color="purple"
+              color="navy"
             />
           </div>
           <div>
@@ -3059,6 +3069,13 @@ const AdminDashboard = () => {
         confirmText="Evet, Sil"
         cancelText="İptal"
         type="danger"
+      />
+
+      {/* Google Calendar Required Modal - Shows when not connected */}
+      <CalendarRequiredModal
+        isOpen={!loading && !googleConnected}
+        onConnect={handleGoogleConnect}
+        userName={user?.name}
       />
     </div >
   );

@@ -146,7 +146,7 @@ const GoogleCalendarEvents = ({ compact = false }) => {
     const colors = {
       'before_first': 'bg-blue-100 text-blue-800',
       'between_events': 'bg-yellow-100 text-yellow-800',
-      'after_last': 'bg-purple-100 text-purple-800',
+      'after_last': 'bg-navy-100 text-navy-800',
       'no_events': 'bg-red-100 text-red-800'
     };
     return colors[type] || 'bg-gray-100 text-gray-800';

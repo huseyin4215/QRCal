@@ -2,13 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom CSS Variables */
+/* Custom CSS Variables - University Theme */
 :root {
-  --primary-color: #3b82f6;
-  --primary-hover: #2563eb;
+  /* Primary Colors - Navy Blue */
+  --primary-color: #1D3F87;
+  --primary-hover: #163266;
+  --primary-light: #2a5298;
+  --primary-dark: #0f2445;
+  
+  /* Secondary Colors - Gold */
+  --secondary-color: #C5A25D;
+  --secondary-hover: #a88a4e;
+  --secondary-light: #E5D1A2;
+  --secondary-dark: #8b723f;
+  
+  /* Accent Colors */
+  --gold-color: #C5A25D;
+  --gold-light: #E5D1A2;
+  --navy-color: #1D3F87;
+  
+  /* Status Colors */
   --success-color: #10b981;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
+  
+  /* Gray Scale */
   --gray-50: #f9fafb;
   --gray-100: #f3f4f6;
   --gray-200: #e5e7eb;
@@ -58,11 +76,44 @@ body {
 /* Custom Component Classes */
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--primary-color);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+  }
+  
+  .btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.3);
   }
 
   .btn-secondary {
-    @apply inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+    @apply inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium bg-white;
+    border-color: var(--secondary-color);
+    color: var(--primary-color);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--secondary-light);
+  }
+  
+  .btn-secondary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(197, 162, 93, 0.3);
+  }
+  
+  .btn-gold {
+    @apply inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed;
+    background-color: var(--gold-color);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-gold:hover:not(:disabled) {
+    background-color: var(--secondary-hover);
   }
 
   .btn-danger {
@@ -70,7 +121,13 @@ body {
   }
 
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-transparent;
+    transition: all 0.2s ease;
+  }
+  
+  .input-field:focus {
+    box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.2);
+    border-color: var(--primary-color);
   }
 
   .card {
@@ -78,7 +135,8 @@ body {
   }
 
   .modal-overlay {
-    @apply fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full;
+    @apply fixed inset-0 overflow-y-auto h-full w-full;
+    background-color: rgba(29, 63, 135, 0.5);
     z-index: var(--z-modal-overlay);
   }
 
@@ -109,11 +167,17 @@ body {
   }
 
   .badge-info {
-    @apply bg-blue-100 text-blue-800;
+    background-color: rgba(29, 63, 135, 0.1);
+    color: var(--primary-color);
   }
 
   .badge-gray {
     @apply bg-gray-100 text-gray-800;
+  }
+  
+  .badge-gold {
+    background-color: rgba(197, 162, 93, 0.15);
+    color: var(--secondary-dark);
   }
 }
 
@@ -198,7 +262,8 @@ body {
 
 /* Focus Styles */
 .focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  --tw-ring-color: var(--primary-color);
 }
 
 /* Responsive Utilities */

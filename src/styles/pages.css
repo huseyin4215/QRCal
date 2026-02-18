@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   padding: 2rem 1rem;
 }
 
@@ -26,13 +26,13 @@
 .login-icon {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 2rem;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 30px rgba(29, 63, 135, 0.3);
 }
 
 .login-icon svg {
@@ -46,7 +46,7 @@
   font-weight: 700;
   color: #111827;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -86,7 +86,7 @@
 
 .footer-brand {
   font-weight: 600;
-  color: #667eea;
+  color: #1D3F87;
 }
 
 /* Dashboard Page Styles */
@@ -221,8 +221,8 @@
   height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid #667eea;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  border: 3px solid #1D3F87;
+  box-shadow: 0 10px 30px rgba(29, 63, 135, 0.3);
 }
 
 .faculty-info h1 {
@@ -300,12 +300,12 @@
 }
 
 .slot-item:hover {
-  border-color: #667eea;
+  border-color: #1D3F87;
   background: #f8fafc;
 }
 
 .slot-item.selected {
-  border-color: #667eea;
+  border-color: #1D3F87;
   background: #eff6ff;
 }
 
@@ -380,8 +380,8 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .form-select {

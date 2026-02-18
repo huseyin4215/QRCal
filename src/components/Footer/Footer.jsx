@@ -1,9 +1,27 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { HeartIcon, AcademicCapIcon, QrCodeIcon, EnvelopeIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../../contexts/AuthContext';
 import styles from './Footer.module.css';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const { user } = useAuth();
+
+  // Randevular linki: kullanıcı rolüne göre ilgili dashboard'daki Randevular sekmesine gider
+  const getAppointmentsLink = () => {
+    if (!user) return '/login';
+    switch (user.role) {
+      case 'admin':
+        return '/admin-dashboard?tab=appointments';
+      case 'faculty':
+        return '/faculty-dashboard?tab=appointments';
+      case 'student':
+        return '/student-dashboard?tab=appointments';
+      default:
+        return '/dashboard';
+    }
+  };
 
   return (
     <footer className={styles.footer}>
@@ -45,7 +63,7 @@ const Footer = () => {
             <ul className={styles.footerLinks}>
               <li><a href="/" className={styles.footerLink}>Anasayfa</a></li>
               <li><a href="/qr-code" className={styles.footerLink}>QR Kod Oluştur</a></li>
-              <li><a href="/appointments" className={styles.footerLink}>Randevular</a></li>
+              <li><Link to={getAppointmentsLink()} className={styles.footerLink}>Randevular</Link></li>
               {/* Profil bağlantısı kaldırıldı */}
               <li><a href="/help" className={styles.footerLink}>Yardım</a></li>
             </ul>

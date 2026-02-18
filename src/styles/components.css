@@ -36,13 +36,13 @@
 
 /* Primary Button */
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   color: white;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(29, 63, 135, 0.4);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 8px 25px rgba(29, 63, 135, 0.6);
 }
 
 /* Secondary Button */
@@ -113,12 +113,12 @@
 }
 
 .btn-outline.btn-primary {
-  color: #667eea;
-  border-color: #667eea;
+  color: #1D3F87;
+  border-color: #1D3F87;
 }
 
 .btn-outline.btn-primary:hover {
-  background: #667eea;
+  background: #1D3F87;
   color: white;
 }
 
@@ -199,8 +199,8 @@
 
 .form-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .form-input:invalid {
@@ -244,8 +244,8 @@
 }
 
 .form-checkbox input[type="checkbox"]:checked {
-  background-color: #667eea;
-  border-color: #667eea;
+  background-color: #1D3F87;
+  border-color: #1D3F87;
 }
 
 .form-radio {
@@ -265,8 +265,8 @@
 }
 
 .form-radio input[type="radio"]:checked {
-  background-color: #667eea;
-  border-color: #667eea;
+  background-color: #1D3F87;
+  border-color: #1D3F87;
 }
 
 .form-error {
@@ -356,7 +356,7 @@
   width: 1.5rem;
   height: 1.5rem;
   border: 2px solid #f3f3f3;
-  border-top: 2px solid #667eea;
+  border-top: 2px solid #1D3F87;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

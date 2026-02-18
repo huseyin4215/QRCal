@@ -346,8 +346,8 @@ function AppContent() {
           />
         </Routes>
       </div>
-      {/* Show Footer only for authenticated users */}
-      {user && <Footer />}
+      {/* Show Footer on all pages */}
+      <Footer />
     </div>
   );
 }

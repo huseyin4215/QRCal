@@ -92,7 +92,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  background: linear-gradient(90deg, #1D3F87 0%, #2a5298 50%, #C5A25D 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -269,15 +269,15 @@
 }
 
 .cardActionButton.history {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
-  border-color: #7c3aed;
+  border-color: #2a5298;
 }
 
 .cardActionButton.history:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  border-color: #6d28d9;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+  background: linear-gradient(135deg, #163266 0%, #1D3F87 100%);
+  border-color: #1D3F87;
+  box-shadow: 0 4px 16px rgba(29, 63, 135, 0.4);
 }
 
 /* Mobile Responsive - Show Cards */
@@ -843,9 +843,9 @@
 }
 
 .historyButton:hover {
-  color: #8b5cf6;
-  border-color: #a78bfa;
-  background: #faf5ff;
+  color: #1D3F87;
+  border-color: #2a5298;
+  background: #e8edf5;
 }
 
 .historyButton {
@@ -853,9 +853,9 @@
 }
 
 .historyButton:hover {
-  color: #8b5cf6;
-  border-color: #a78bfa;
-  background: #faf5ff;
+  color: #1D3F87;
+  border-color: #2a5298;
+  background: #e8edf5;
 }
 
 .actionIcon {

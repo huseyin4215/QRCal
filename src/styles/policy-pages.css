@@ -1,7 +1,7 @@
 /* Policy Pages - Modern Design System */
 .policy-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1D3F87;
   padding: 2rem 0;
 }
 
@@ -25,7 +25,7 @@
   transform: translateX(-50%);
   width: 80px;
   height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #2a5298;
   border-radius: 2px;
 }
 
@@ -112,14 +112,14 @@
   left: 0;
   width: 60px;
   height: 3px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #1D3F87;
   border-radius: 2px;
 }
 
 .policy-section-title svg {
   width: 28px;
   height: 28px;
-  color: #667eea;
+  color: #1D3F87;
 }
 
 .policy-text {
@@ -131,7 +131,7 @@
 
 .policy-highlight-box {
   background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #1D3F87;
   padding: 1.5rem;
   border-radius: 12px;
   margin: 1.5rem 0;
@@ -146,7 +146,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #1D3F87;
 }
 
 .policy-highlight-text {
@@ -166,7 +166,7 @@
   background: linear-gradient(135deg, #f8fafc, #e2e8f0);
   border-radius: 16px;
   padding: 1.5rem;
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(29, 63, 135, 0.1);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -179,12 +179,12 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #1D3F87;
 }
 
 .policy-feature-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 20px 40px rgba(29, 63, 135, 0.1);
 }
 
 .policy-feature-title {
@@ -200,7 +200,7 @@
 .policy-feature-title svg {
   width: 20px;
   height: 20px;
-  color: #667eea;
+  color: #1D3F87;
 }
 
 .policy-feature-text {
@@ -240,7 +240,7 @@
 }
 
 .policy-table thead {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #1D3F87;
 }
 
 .policy-table th {
@@ -286,7 +286,7 @@
 
 .policy-badge.analytics {
   background: #f3e8ff;
-  color: #7c3aed;
+  color: #1D3F87;
 }
 
 .policy-badge.third-party {
@@ -326,12 +326,12 @@
 }
 
 .policy-tab-button:hover {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.05);
+  color: #1D3F87;
+  background: rgba(29, 63, 135, 0.05);
 }
 
 .policy-tab-button.active {
-  color: #667eea;
+  color: #1D3F87;
   background: white;
 }
 
@@ -342,7 +342,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  background: #1D3F87;
 }
 
 .policy-tab-button svg {
@@ -376,7 +376,7 @@
 }
 
 .policy-faq-question:hover {
-  color: #667eea;
+  color: #1D3F87;
 }
 
 .policy-faq-answer {
@@ -391,7 +391,7 @@
   border-radius: 20px;
   padding: 2rem;
   text-align: center;
-  border: 1px solid rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(29, 63, 135, 0.1);
 }
 
 .policy-contact-title {
@@ -417,7 +417,7 @@
 
 .policy-contact-label {
   font-weight: 600;
-  color: #667eea;
+  color: #1D3F87;
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;

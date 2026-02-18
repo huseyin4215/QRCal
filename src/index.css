@@ -22,7 +22,7 @@
 
 /* Modern Button Styles */
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
   font-weight: 600;
   padding: 0.75rem 1.5rem;
@@ -34,13 +34,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(29, 63, 135, 0.4);
   font-size: 0.9rem;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 8px 25px rgba(29, 63, 135, 0.6);
 }
 
 .btn-primary:disabled {
@@ -395,7 +395,7 @@
 }
 
 .text-blue-600 {
-  color: #667eea;
+  color: #1D3F87;
 }
 
 .text-gray-400 {
@@ -586,18 +586,18 @@
 
 /* Modern Event Cards */
 .event-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
   padding: 0.75rem;
   border-radius: 12px;
   margin-bottom: 0.5rem;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(29, 63, 135, 0.3);
 }
 
 .event-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 25px rgba(29, 63, 135, 0.4);
 }
 
 .event-card .event-title {
@@ -613,14 +613,14 @@
 
 /* Day Header */
 .day-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
   padding: 0.75rem;
   border-radius: 12px;
   margin-bottom: 0.5rem;
   text-align: center;
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(29, 63, 135, 0.3);
 }
 
 .day-header .day-name {
@@ -653,7 +653,7 @@
   width: 40px;
   height: 40px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  border-top: 4px solid #1D3F87;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto;
@@ -668,7 +668,7 @@
 
 /* Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -718,8 +718,8 @@ input[type="tel"]:focus,
 input[type="url"]:focus,
 select:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 /* Range Input Styles */
@@ -740,7 +740,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #667eea;
+  background: #1D3F87;
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -749,7 +749,7 @@ input[type="range"]::-moz-range-thumb {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #667eea;
+  background: #1D3F87;
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -787,8 +787,8 @@ input[type="checkbox"] {
 }
 
 input[type="checkbox"]:checked {
-  background-color: #667eea;
-  border-color: #667eea;
+  background-color: #1D3F87;
+  border-color: #1D3F87;
 }
 
 /* File Input Styles */
@@ -803,7 +803,7 @@ input[type="file"] {
 
 /* Focus Ring */
 .focus-ring-2:focus {
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .focus-ring-blue-500:focus {
@@ -1059,11 +1059,11 @@ input[type="file"] {
 }
 
 .border-primary-600 {
-  border-color: #667eea;
+  border-color: #1D3F87;
 }
 
 .text-primary-600 {
-  color: #667eea;
+  color: #1D3F87;
 }
 
 .hover\\:bg-blue-700:hover {
@@ -1079,7 +1079,7 @@ input[type="file"] {
 }
 
 .focus\\:ring-offset-2:focus {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(29, 63, 135, 0.1);
 }
 
 .rows-3 {

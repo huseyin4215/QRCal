@@ -42,7 +42,7 @@
 .cardIcon {
     width: 24px;
     height: 24px;
-    color: #6366f1;
+    color: #1D3F87;
 }
 
 .settingRow {
@@ -85,13 +85,13 @@
 
 .select:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: #1D3F87;
+    box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .saveButton {
     padding: 10px 24px;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    background: linear-gradient(135deg, #1D3F87 0%, #163266 100%);
     color: white;
     border: none;
     border-radius: 10px;
@@ -99,14 +99,14 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 2px 4px rgba(29, 63, 135, 0.2);
     white-space: nowrap;
 }
 
 .saveButton:hover {
-    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    background: linear-gradient(135deg, #163266 0%, #0f2445 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 8px rgba(29, 63, 135, 0.3);
 }
 
 .saveButton:active {
@@ -137,8 +137,8 @@
 
 .departmentInput:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: #1D3F87;
+    box-shadow: 0 0 0 3px rgba(29, 63, 135, 0.1);
 }
 
 .addButton {

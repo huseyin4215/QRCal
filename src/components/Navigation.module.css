@@ -47,7 +47,7 @@
 .logoText {
   font-size: 1.25rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #1D3F87, #C5A25D);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -91,7 +91,7 @@
   left: 0;
   width: 0;
   height: 2px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #1D3F87, #C5A25D);
   transition: width 0.3s ease;
 }
 

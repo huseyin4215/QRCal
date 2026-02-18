@@ -150,7 +150,9 @@ app.use(cors({
     'X-Client-Data',
     'Sec-Fetch-Mode',
     'Sec-Fetch-Site',
-    'Sec-Fetch-Dest'
+    'Sec-Fetch-Dest',
+    'Cache-Control',
+    'Pragma'
   ],
   exposedHeaders: [
     'Access-Control-Allow-Origin',

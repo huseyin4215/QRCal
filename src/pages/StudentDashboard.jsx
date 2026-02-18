@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiService from '../services/apiService';
 import { 
@@ -26,9 +27,18 @@ import AppointmentHistory from './AppointmentHistory';
 
 const StudentDashboard = () => {
   const { user, login, logout } = useAuth();
+  const [searchParams] = useSearchParams();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('appointments');
+
+  // URL'deki ?tab=appointments ile Randevular sekmesine yönlendirme (footer linki vb.)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'appointments' || tab === 'history' || tab === 'new') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -691,7 +701,7 @@ const StudentDashboard = () => {
               title="İptal Edilen"
               value={stats.cancelled}
               icon={<ExclamationTriangleIcon className="h-6 w-6" />}
-              color="purple"
+              color="navy"
             />
           </div>
         </div>

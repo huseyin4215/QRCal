@@ -43,6 +43,7 @@ import RejectModal from '../components/RejectModal/RejectModal';
 import CancelModal from '../components/CancelModal/CancelModal';
 import StatisticsCards from '../components/StatisticsCards/StatisticsCards';
 import ConflictWarningModal from '../components/ConflictWarningModal/ConflictWarningModal';
+import CalendarRequiredModal from '../components/CalendarRequiredModal/CalendarRequiredModal';
 import AppointmentHistory from './AppointmentHistory';
 import { exportAppointmentsToPDF } from '../utils/pdfExport';
 import { formatUserName } from '../utils/formatUserName';
@@ -378,6 +379,14 @@ const FacultyDashboard = () => {
       loadAvailabilityData();
     }
   }, [activeTab, user]);
+
+  // URL'deki ?tab=appointments ile Randevular sekmesine yönlendirme (footer linki vb.)
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'appointments' || tab === 'availability' || tab === 'history' || tab === 'stats') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Handle Google OAuth callback (ensure fast redirect)
   useEffect(() => {
@@ -2044,6 +2053,13 @@ Hata detayı: ${error.message}
         onDismiss={handleConflictDismiss}
         onAcknowledge={handleConflictAcknowledge}
         onGoToAvailability={handleGoToAvailability}
+      />
+
+      {/* Google Calendar Required Modal - Shows when not connected */}
+      <CalendarRequiredModal
+        isOpen={!loading && !googleConnected}
+        onConnect={handleGoogleConnect}
+        userName={user?.name}
       />
     </div>
   );

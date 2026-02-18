@@ -52,13 +52,13 @@
 .logoIcon {
   width: 2rem;
   height: 2rem;
-  color: #667eea;
+  color: #C5A25D;
 }
 
 .logoText {
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #C5A25D 0%, #E5D1A2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -91,7 +91,7 @@
 }
 
 .socialLink:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
   transform: translateY(-2px);
 }
@@ -116,7 +116,7 @@
   left: 0;
   width: 2rem;
   height: 2px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #C5A25D 0%, #E5D1A2 100%);
   border-radius: 1px;
 }
 
@@ -140,7 +140,7 @@
 }
 
 .footerLink:hover {
-  color: #667eea;
+  color: #C5A25D;
   padding-left: 0.5rem;
 }
 
@@ -150,7 +150,7 @@
   left: -1rem;
   opacity: 0;
   transition: all 0.3s ease;
-  color: #667eea;
+  color: #C5A25D;
 }
 
 .footerLink:hover::before {
@@ -175,7 +175,7 @@
 .contactIcon {
   width: 1.25rem;
   height: 1.25rem;
-  color: #667eea;
+  color: #C5A25D;
   flex-shrink: 0;
 }
 
@@ -215,7 +215,7 @@
 }
 
 .bottomLink:hover {
-  color: #667eea;
+  color: #C5A25D;
 }
 
 .madeWithLove {

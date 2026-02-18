@@ -48,7 +48,7 @@
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,7 +209,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid transparent;
-  border-top-color: #667eea;
+  border-top-color: #1D3F87;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

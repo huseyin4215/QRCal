@@ -2,12 +2,12 @@
 
 /* Container */
 .container {
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #1D3F87 0%, #163266 100%);
   position: relative;
   overflow: hidden;
 }
@@ -61,12 +61,12 @@
   width: 5rem;
   height: 5rem;
   margin: 0 auto 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   border-radius: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 30px rgba(29, 63, 135, 0.3);
   animation: pulse 2s infinite;
 }
 
@@ -88,7 +88,7 @@
 .title {
   font-size: 2.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #C5A25D 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -148,8 +148,8 @@
 
 .input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  border-color: #1D3F87;
+  box-shadow: 0 0 0 4px rgba(29, 63, 135, 0.1);
   background: rgba(255, 255, 255, 0.95);
 }
 
@@ -171,7 +171,7 @@
 }
 
 .input:focus ~ .inputIcon {
-  color: #667eea;
+  color: #1D3F87;
 }
 
 /* Password Input */
@@ -200,13 +200,13 @@
 }
 
 .passwordToggle:hover {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  color: #1D3F87;
+  background: rgba(29, 63, 135, 0.1);
 }
 
 .passwordToggle:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 0 0 2px rgba(29, 63, 135, 0.2);
 }
 
 .passwordToggle svg {
@@ -258,14 +258,14 @@
 }
 
 .primaryButton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #2a5298 100%);
   color: white;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 10px 30px rgba(29, 63, 135, 0.3);
 }
 
 .primaryButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 15px 40px rgba(29, 63, 135, 0.4);
 }
 
 .primaryButton:active {
@@ -339,14 +339,14 @@
 
 /* Links */
 .link {
-  color: #667eea;
+  color: #1D3F87;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .link:hover {
-  color: #5a67d8;
+  color: #C5A25D;
   text-decoration: underline;
 }
 
@@ -422,7 +422,7 @@
   
   .input:focus {
     background: rgba(55, 65, 81, 0.95);
-    border-color: #667eea;
+    border-color: #1D3F87;
   }
   
   .label {

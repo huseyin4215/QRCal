@@ -17,7 +17,7 @@ html {
 }
 
 body {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1D3F87 0%, #163266 100%);
   color: #111827;
   line-height: 1.6;
   min-height: 100vh;
@@ -52,7 +52,7 @@ a {
 }
 
 a:hover {
-  color: #667eea;
+  color: #C5A25D;
 }
 
 /* Lists */
@@ -80,13 +80,13 @@ input, textarea, select, button {
 
 /* Focus Styles */
 *:focus {
-  outline: 2px solid #667eea;
+  outline: 2px solid #1D3F87;
   outline-offset: 2px;
 }
 
 /* Selection */
 ::selection {
-  background-color: #667eea;
+  background-color: #1D3F87;
   color: white;
 }
 
@@ -100,12 +100,12 @@ input, textarea, select, button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #667eea;
+  background: #1D3F87;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5a67d8;
+  background: #163266;
 }
 
 /* Utility Classes */
