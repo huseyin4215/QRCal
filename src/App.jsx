@@ -19,9 +19,9 @@ import GoogleAuthCallback from './pages/GoogleAuthCallback';
 import GoogleConnect from './pages/GoogleConnect';
 import GoogleRegister from './pages/GoogleRegister';
 import Help from './pages/Help';
-import PrivacyPolicy from './pages/PrivacyPolicy';
+import GizlilikPolitikasi from './pages/GizlilikPolitikasi';
 import TermsOfUse from './pages/TermsOfUse';
-import CookiePolicy from './pages/CookiePolicy';
+import CerezPolitikasi from './pages/CerezPolitikasi';
 import Footer from './components/Footer/Footer';
 import './styles/globals.css';
 
@@ -37,7 +37,7 @@ function AppContent() {
 
   const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
-    
+
     // Show loading while checking authentication
     if (loading) {
       return (
@@ -49,7 +49,7 @@ function AppContent() {
         </div>
       );
     }
-    
+
     if (!user) {
       return <Navigate to="/login" replace />;
     }
@@ -58,7 +58,7 @@ function AppContent() {
 
   const AdminRoute = ({ children }) => {
     const { user, loading } = useAuth();
-    
+
     // Show loading while checking authentication
     if (loading) {
       return (
@@ -70,16 +70,16 @@ function AppContent() {
         </div>
       );
     }
-    
+
     // Check if user exists and has admin role
     if (!user) {
       return <Navigate to="/login" replace />;
     }
-    
+
     if (user.role !== 'admin') {
       return <Navigate to="/login" replace />;
     }
-    
+
     return children;
   };
 
@@ -115,7 +115,7 @@ function AppContent() {
 
   const StudentOnlyRoute = ({ children }) => {
     const { user, loading } = useAuth();
-    
+
     // Show loading while checking authentication
     if (loading) {
       return (
@@ -127,7 +127,7 @@ function AppContent() {
         </div>
       );
     }
-    
+
     // Only students can access
     if (!user || user.role !== 'student') {
       return <Navigate to="/login" replace />;
@@ -137,7 +137,7 @@ function AppContent() {
 
   const PublicRoute = ({ children }) => {
     const { user } = useAuth();
-    
+
     if (user) {
       // Redirect based on user role
       if (user.role === 'admin') {
@@ -309,7 +309,7 @@ function AppContent() {
           />
           <Route
             path="/privacy"
-            element={<PrivacyPolicy />}
+            element={<GizlilikPolitikasi />}
           />
           <Route
             path="/terms"
@@ -317,7 +317,7 @@ function AppContent() {
           />
           <Route
             path="/cookies"
-            element={<CookiePolicy />}
+            element={<CerezPolitikasi />}
           />
           <Route
             path="/"

@@ -219,9 +219,9 @@
 }
 
 .successMessage {
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  color: #059669;
+  background: rgba(29, 63, 135, 0.1);
+  border: 1px solid rgba(29, 63, 135, 0.2);
+  color: #1D3F87;
   padding: 1rem;
   border-radius: 1rem;
   font-size: 0.875rem;
