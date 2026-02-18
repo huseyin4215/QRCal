@@ -508,18 +508,116 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
 
         // Draw QR code
         ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+        // Helper: draw contact info and trigger download
+        // MUST be defined before logo code since logo uses async onload callback
+        const drawContactAndDownload = () => {
+          if (user && (contactConfig.showName || contactConfig.showTitle || contactConfig.showEmail || contactConfig.showPhone || contactConfig.showDepartment || contactConfig.showOffice || contactConfig.showCustomText)) {
+            const lineHeight = (contactConfig.fontSize + 16) * 3;
+            let textX, textY;
+
+            if (isPortrait) {
+              if (contactConfig.position === 'top') {
+                textX = canvas.width / 2;
+                textY = padding + 120;
+              } else {
+                textX = canvas.width / 2;
+                textY = qrY + qrSize + 80;
+              }
+            } else {
+              if (contactConfig.position === 'top') {
+                textX = padding + 120;
+                textY = canvas.height / 2;
+              } else {
+                textX = qrX + qrSize + 80;
+                textY = canvas.height / 2;
+              }
+              if (contactConfig.position === 'top') {
+                ctx.textAlign = 'left';
+                textX = padding + 150;
+              } else {
+                ctx.textAlign = 'right';
+                textX = qrX + qrSize + 120;
+              }
+            }
+
+            ctx.fillStyle = contactConfig.textColor;
+            ctx.textAlign = 'center';
+
+            if (contactConfig.showCustomText && contactConfig.customText) {
+              const sizeMap = { small: contactConfig.fontSize + 2, medium: contactConfig.fontSize + 10, large: contactConfig.fontSize + 18 };
+              const customTextSize = sizeMap[contactConfig.customTextSize] || sizeMap.medium;
+              const textMetrics = ctx.measureText(contactConfig.customText);
+              const textWidth = textMetrics.width;
+              const textHeight = customTextSize * 3;
+
+              if (exportConfig.orientation !== 'landscape' && contactConfig.customTextPosition === 'center') {
+                if (contactConfig.position === 'top') {
+                  textX = canvas.width / 2;
+                  textY = qrY - 40;
+                } else {
+                  textX = canvas.width / 2;
+                  textY = qrY + qrSize + 40;
+                }
+              }
+
+              if (contactConfig.customTextStyle === 'pill' || contactConfig.customTextStyle === 'box') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                let bgX, bgY;
+                if (exportConfig.orientation === 'landscape') {
+                  if (contactConfig.position === 'top') { bgX = textX - 20; bgY = textY - textHeight / 2 - 10; }
+                  else { bgX = textX - textWidth - 20; bgY = textY - textHeight / 2 - 10; }
+                } else { bgX = textX - textWidth / 2 - 20; bgY = textY - textHeight - 10; }
+                ctx.fillRect(bgX, bgY, textWidth + 40, textHeight + 20);
+                ctx.strokeStyle = contactConfig.customTextColor;
+                ctx.lineWidth = 6;
+                ctx.strokeRect(bgX, bgY, textWidth + 40, textHeight + 20);
+              } else if (contactConfig.customTextStyle === 'underline') {
+                ctx.strokeStyle = contactConfig.customTextColor;
+                ctx.lineWidth = 9;
+                ctx.beginPath();
+                let lineStartX, lineEndX;
+                if (exportConfig.orientation === 'landscape') {
+                  if (contactConfig.position === 'top') { lineStartX = textX; lineEndX = textX + textWidth; }
+                  else { lineStartX = textX - textWidth; lineEndX = textX; }
+                } else { lineStartX = textX - textWidth / 2; lineEndX = textX + textWidth / 2; }
+                ctx.moveTo(lineStartX, textY + 15);
+                ctx.lineTo(lineEndX, textY + 15);
+                ctx.stroke();
+              }
+
+              ctx.fillStyle = contactConfig.customTextColor;
+              ctx.font = `bold ${customTextSize * 3}px Arial`;
+              ctx.fillText(contactConfig.customText, textX, textY);
+              if (!(exportConfig.orientation !== 'landscape' && contactConfig.customTextPosition === 'center')) {
+                textY += lineHeight + 40;
+              }
+              ctx.fillStyle = contactConfig.textColor;
+            }
+
+            ctx.font = `bold ${(contactConfig.fontSize + 6) * 3}px Arial`;
+            if (contactConfig.showName && user.name) { ctx.fillText(user.name, textX, textY); textY += lineHeight + 20; }
+            if (contactConfig.showTitle && user.title) { ctx.font = `${(contactConfig.fontSize + 2) * 3}px Arial`; ctx.fillText(user.title, textX, textY); textY += lineHeight + 15; }
+            if (contactConfig.showDepartment && user.department) { ctx.font = `${contactConfig.fontSize * 3}px Arial`; ctx.fillText(user.department, textX, textY); textY += lineHeight + 15; }
+            if (contactConfig.showEmail && user.email) { ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`; ctx.fillText(user.email, textX, textY); textY += lineHeight + 15; }
+            if (contactConfig.showPhone && user.phone) { ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`; ctx.fillText(user.phone, textX, textY); textY += lineHeight + 15; }
+            if (contactConfig.showOffice && user.office) { ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`; ctx.fillText(`Ofis: ${user.office}`, textX, textY); textY += lineHeight + 15; }
+            if (contactConfig.showAppName && contactConfig.appName) { ctx.font = `bold ${(contactConfig.fontSize + 10) * 3}px Arial`; ctx.fillStyle = qrConfig.fgColor; ctx.fillText(contactConfig.appName, textX, textY); }
+          }
+
+          const link = document.createElement('a');
+          link.download = `qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.png`;
+          link.href = canvas.toDataURL();
+          link.click();
+        };
 
         // Draw logo overlay on canvas (HTML overlay div is not part of SVG)
         if (isLogolu && logoConfig.logoUrl) {
           const logoBg = logoConfig.logoBgColor || qrConfig.bgColor;
-          const scaledLogoSize = effectiveLogoSize * 3; // Scale for high DPI
-          const scaledOverlaySize = logoConfig.logoShape === 'round'
-            ? scaledLogoSize * 1.4
-            : scaledLogoSize * 1.25;
+          const scaledLogoSize = effectiveLogoSize * 3;
+          const scaledOverlaySize = scaledLogoSize * 1.35; // Same size for both round and square
           const centerX = qrX + qrSize / 2;
           const centerY = qrY + qrSize / 2;
 
-          // Draw logo background area
           ctx.save();
           if (logoConfig.logoShape === 'round') {
             ctx.beginPath();
@@ -531,7 +629,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
             const bgY = centerY - scaledOverlaySize / 2 - 6;
             const bgW = scaledOverlaySize + 12;
             const bgH = scaledOverlaySize + 12;
-            const radius = 8 * 3; // 8px border-radius scaled
+            const radius = 8 * 3;
             ctx.beginPath();
             ctx.moveTo(bgX + radius, bgY);
             ctx.lineTo(bgX + bgW - radius, bgY);
@@ -548,7 +646,6 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
           }
           ctx.restore();
 
-          // Draw logo image on top
           const logoImg = new Image();
           logoImg.crossOrigin = 'anonymous';
           logoImg.onload = () => {
@@ -563,207 +660,17 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
             const logoDrawY = centerY - scaledLogoSize / 2;
             ctx.drawImage(logoImg, logoDrawX, logoDrawY, scaledLogoSize, scaledLogoSize);
             ctx.restore();
-
-            // Continue with contact info and download after logo is drawn
-            drawContactAndDownload(ctx, canvas, qrX, qrY, qrSize, padding);
+            drawContactAndDownload();
           };
           logoImg.onerror = () => {
-            console.warn('Logo image failed to load for export, proceeding without logo');
-            drawContactAndDownload(ctx, canvas, qrX, qrY, qrSize, padding);
+            console.warn('Logo image failed to load for export');
+            drawContactAndDownload();
           };
           logoImg.src = logoConfig.logoUrl;
-          return; // Wait for logo image to load
+          return;
         }
 
-        // Helper: draw contact info and trigger download
-        const drawContactAndDownload = (ctx, canvas, qrX, qrY, qrSize, padding) => {
-          // Add contact information if enabled (without gray background)
-          if (user && (contactConfig.showName || contactConfig.showTitle || contactConfig.showEmail || contactConfig.showPhone || contactConfig.showDepartment || contactConfig.showOffice || contactConfig.showCustomText)) {
-            const lineHeight = (contactConfig.fontSize + 16) * 3; // Increased line height for better spacing
-            let textX, textY;
-
-            if (isPortrait) {
-              // Vertical layout
-              if (contactConfig.position === 'top') {
-                textX = canvas.width / 2;
-                textY = padding + 120; // Increased spacing
-              } else {
-                textX = canvas.width / 2;
-                textY = qrY + qrSize + 80; // Increased spacing
-              }
-            } else {
-              // Horizontal layout
-              if (contactConfig.position === 'top') {
-                textX = padding + 120;
-                textY = canvas.height / 2;
-              } else {
-                textX = qrX + qrSize + 80;
-                textY = canvas.height / 2;
-              }
-
-              // For horizontal layout, adjust text alignment and positioning
-              if (contactConfig.position === 'top') {
-                ctx.textAlign = 'left';
-                textX = padding + 150; // More space from left edge
-              } else {
-                ctx.textAlign = 'right';
-                textX = qrX + qrSize + 120; // More space from QR code
-              }
-            }
-
-            ctx.fillStyle = contactConfig.textColor;
-            ctx.textAlign = 'center';
-
-            // Custom text if enabled
-            if (contactConfig.showCustomText && contactConfig.customText) {
-              // Calculate custom text size based on customTextSize
-              const sizeMap = {
-                small: contactConfig.fontSize + 2,
-                medium: contactConfig.fontSize + 10,
-                large: contactConfig.fontSize + 18
-              };
-              const customTextSize = sizeMap[contactConfig.customTextSize] || sizeMap.medium;
-
-              // Draw custom text based on style
-              const textMetrics = ctx.measureText(contactConfig.customText);
-              const textWidth = textMetrics.width;
-              const textHeight = customTextSize * 3;
-
-              // For portrait center, position custom text between contact block and QR
-              if (exportConfig.orientation !== 'landscape' && contactConfig.customTextPosition === 'center') {
-                // If contact is on top, draw after contact and before QR; else draw after QR and before contact
-                if (contactConfig.position === 'top') {
-                  // already at top area; draw custom text near middle-top of QR area
-                  textX = canvas.width / 2;
-                  textY = qrY - 40; // above QR
-                } else {
-                  textX = canvas.width / 2;
-                  textY = qrY + qrSize + 40; // below QR
-                }
-              }
-
-              if (contactConfig.customTextStyle === 'pill' || contactConfig.customTextStyle === 'box') {
-                // Draw background
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                const borderRadius = contactConfig.customTextStyle === 'pill' ? 25 : 8;
-
-                // Adjust background positioning for horizontal layout
-                let bgX, bgY;
-                if (exportConfig.orientation === 'landscape') {
-                  if (contactConfig.position === 'top') {
-                    bgX = textX - 20;
-                    bgY = textY - textHeight / 2 - 10;
-                  } else {
-                    bgX = textX - textWidth - 20;
-                    bgY = textY - textHeight / 2 - 10;
-                  }
-                } else {
-                  bgX = textX - textWidth / 2 - 20;
-                  bgY = textY - textHeight - 10;
-                }
-
-                ctx.fillRect(bgX, bgY, textWidth + 40, textHeight + 20);
-
-                // Draw border
-                ctx.strokeStyle = contactConfig.customTextColor;
-                ctx.lineWidth = 6;
-                ctx.strokeRect(bgX, bgY, textWidth + 40, textHeight + 20);
-              } else if (contactConfig.customTextStyle === 'underline') {
-                // Draw underline
-                ctx.strokeStyle = contactConfig.customTextColor;
-                ctx.lineWidth = 9;
-                ctx.beginPath();
-
-                let lineStartX, lineEndX;
-                if (exportConfig.orientation === 'landscape') {
-                  if (contactConfig.position === 'top') {
-                    lineStartX = textX;
-                    lineEndX = textX + textWidth;
-                  } else {
-                    lineStartX = textX - textWidth;
-                    lineEndX = textX;
-                  }
-                } else {
-                  lineStartX = textX - textWidth / 2;
-                  lineEndX = textX + textWidth / 2;
-                }
-
-                ctx.moveTo(lineStartX, textY + 15);
-                ctx.lineTo(lineEndX, textY + 15);
-                ctx.stroke();
-              }
-
-              // Draw custom text
-              ctx.fillStyle = contactConfig.customTextColor;
-              ctx.font = `bold ${customTextSize * 3}px Arial`;
-              ctx.fillText(contactConfig.customText, textX, textY);
-              if (!(exportConfig.orientation !== 'landscape' && contactConfig.customTextPosition === 'center')) {
-                textY += lineHeight + 40;
-              }
-              ctx.fillStyle = contactConfig.textColor;
-            }
-
-            // Set initial font for name
-            ctx.font = `bold ${(contactConfig.fontSize + 6) * 3}px Arial`;
-
-            // Name
-            if (contactConfig.showName && user.name) {
-              ctx.fillText(user.name, textX, textY);
-              textY += lineHeight + 20; // Extra spacing after name
-            }
-
-            // Title
-            if (contactConfig.showTitle && user.title) {
-              ctx.font = `${(contactConfig.fontSize + 2) * 3}px Arial`;
-              ctx.fillText(user.title, textX, textY);
-              textY += lineHeight + 15; // Extra spacing after title
-            }
-
-            // Department
-            if (contactConfig.showDepartment && user.department) {
-              ctx.font = `${contactConfig.fontSize * 3}px Arial`;
-              ctx.fillText(user.department, textX, textY);
-              textY += lineHeight + 15; // Extra spacing after department
-            }
-
-            // Email
-            if (contactConfig.showEmail && user.email) {
-              ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`;
-              ctx.fillText(user.email, textX, textY);
-              textY += lineHeight + 15; // Extra spacing after email
-            }
-
-            // Phone
-            if (contactConfig.showPhone && user.phone) {
-              ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`;
-              ctx.fillText(user.phone, textX, textY);
-              textY += lineHeight + 15; // Extra spacing after phone
-            }
-
-            // Office
-            if (contactConfig.showOffice && user.office) {
-              ctx.font = `${(contactConfig.fontSize - 2) * 3}px Arial`;
-              ctx.fillText(`Ofis: ${user.office}`, textX, textY);
-              textY += lineHeight + 15; // Extra spacing after office
-            }
-
-            // App Name
-            if (contactConfig.showAppName && contactConfig.appName) {
-              ctx.font = `bold ${(contactConfig.fontSize + 10) * 3}px Arial`;
-              ctx.fillStyle = qrConfig.fgColor;
-              ctx.fillText(contactConfig.appName, textX, textY);
-            }
-          }
-
-          // Download the canvas as PNG
-          const link = document.createElement('a');
-          link.download = `qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.png`;
-          link.href = canvas.toDataURL();
-          link.click();
-        }; // end drawContactAndDownload
-
-        // If no logo, draw contact info and download immediately
-        drawContactAndDownload(ctx, canvas, qrX, qrY, qrSize, padding);
+        drawContactAndDownload();
       };
 
       img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
@@ -1420,8 +1327,8 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                         left: '50%',
                         top: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: logoConfig.logoShape === 'round' ? effectiveLogoSize * 1.4 : effectiveLogoSize * 1.25,
-                        height: logoConfig.logoShape === 'round' ? effectiveLogoSize * 1.4 : effectiveLogoSize * 1.25,
+                        width: effectiveLogoSize * 1.35,
+                        height: effectiveLogoSize * 1.35,
                         backgroundColor: logoConfig.logoBgColor || qrConfig.bgColor,
                         zIndex: 10,
                         display: 'flex',
