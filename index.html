@@ -21,38 +21,16 @@
 
   <!-- Auto-update: detect new deployments and reload -->
   <script>
-    (function () {
-      var currentVersion = null;
-      function checkVersion() {
-        fetch('/version.json?_=' + Date.now(), { cache: 'no-store' })
-          .then(function (r) { return r.json() })
-          .then(function (d) {
-            if (!currentVersion) { currentVersion = d.v; return; }
-            if (d.v !== currentVersion) {
-              // Unregister SW and reload
-              if (navigator.serviceWorker) {
-                navigator.serviceWorker.getRegistrations().then(function (registrations) {
-                  for (let registration of registrations) { registration.unregister() }
-                });
-              }
-              location.reload();
-            }
-          }).catch(function () { });
-      }
-      checkVersion();
-      setInterval(checkVersion, 30000);
-
-      // Register Service Worker
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function () {
-          navigator.serviceWorker.register('/sw.js').then(function (registration) {
-            console.log('SW registered: ', registration.scope);
-          }, function (err) {
-            console.log('SW registration failed: ', err);
-          });
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').then(function (registration) {
+          console.log('SW registered: ', registration.scope);
+        }, function (err) {
+          console.log('SW registration failed: ', err);
         });
-      }
-    })();
+      });
+    }
   </script>
 </head>
 
