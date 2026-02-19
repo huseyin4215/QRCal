@@ -817,26 +817,20 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
           }
         }
 
-        if (contactConfig.showName && user.name) {
-          const nameDiv = document.createElement('div');
-          nameDiv.style.fontSize = '28px';
-          nameDiv.style.fontWeight = 'bold';
-          nameDiv.style.marginBottom = '16px';
-          nameDiv.style.marginTop = '0';
-          nameDiv.style.lineHeight = '1.3';
-          nameDiv.textContent = user.name;
-          contactDiv.appendChild(nameDiv);
-        }
+        if ((contactConfig.showName && user.name) || (contactConfig.showTitle && user.title)) {
+          const combinedDiv = document.createElement('div');
+          combinedDiv.style.fontSize = '28px';
+          combinedDiv.style.fontWeight = 'bold';
+          combinedDiv.style.marginBottom = '16px';
+          combinedDiv.style.marginTop = '0';
+          combinedDiv.style.lineHeight = '1.3';
 
-        if (contactConfig.showTitle && user.title) {
-          const titleDiv = document.createElement('div');
-          titleDiv.style.fontSize = '22px';
-          titleDiv.style.marginBottom = '16px';
-          titleDiv.style.marginTop = '0';
-          titleDiv.style.lineHeight = '1.3';
-          titleDiv.style.fontWeight = '500';
-          titleDiv.textContent = user.title;
-          contactDiv.appendChild(titleDiv);
+          let text = '';
+          if (contactConfig.showTitle && user.title) text += `${user.title} `;
+          if (contactConfig.showName && user.name) text += user.name;
+
+          combinedDiv.textContent = text;
+          contactDiv.appendChild(combinedDiv);
         }
 
         if (contactConfig.showDepartment && user.department) {
@@ -1389,15 +1383,9 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                         {contactConfig.customText}
                       </div>
                     )}
-                    {contactConfig.showName && user.name && (
+                    {(contactConfig.showName && user.name || contactConfig.showTitle && user.title) && (
                       <div style={{ fontSize: `${contactConfig.fontSize + 4}px`, fontWeight: 'bold' }}>
-                        {user.name}
-                      </div>
-                    )}
-
-                    {contactConfig.showTitle && user.title && (
-                      <div style={{ fontSize: `${contactConfig.fontSize}px` }}>
-                        {user.title}
+                        {contactConfig.showTitle && user.title ? `${user.title} ` : ''}{contactConfig.showName && user.name ? user.name : ''}
                       </div>
                     )}
 
