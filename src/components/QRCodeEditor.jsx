@@ -16,14 +16,14 @@ import styles from './QRCodeEditor.module.css';
 
 // Import logo assets
 import ankaraUniLogo from '../assets/logolar/ankara_uni.png';
-import muhendislikLogo from '../assets/logolar/muhendislik_logo.png';
+import muhendislikLogo from '../assets/logolar/muhendislik-logo.png';
 import googleCalendarLogo from '../assets/logolar/google_calendar.png';
 import linkedinLogo from '../assets/logolar/linkedin.png';
 import instagramLogo from '../assets/logolar/instagram.png';
 import twitterLogo from '../assets/logolar/twitter.jpg';
-import yilBeyazLogo from '../assets/logolar/80-yil-beyaz.png';
-import yilLacivertLogo from '../assets/logolar/80-yil-lacivert.png';
-import ankaraUniIngLogo from '../assets/logolar/Ankara_University_Logo_ing.png';
+import seksenYilBeyazLogo from '../assets/logolar/80-yil-beyaz.png';
+import seksenYilLacivertLogo from '../assets/logolar/80-yil-lacivert.png';
+import ankaraUniIngLogo from '../assets/logolar/ankara-university-logo-ing.png';
 import osbMyoLogo from '../assets/logolar/OSB-MYO.png';
 import qnnectLogo from '../assets/logolar/Qrnnect.png';
 
@@ -88,13 +88,13 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     {
       id: '80_yil_beyaz',
       name: '80. Yıl (Beyaz)',
-      url: yilBeyazLogo,
+      url: seksenYilBeyazLogo,
       previewBg: '#1D3F87'
     },
     {
       id: '80_yil_lacivert',
       name: '80. Yıl (Lacivert)',
-      url: yilLacivertLogo
+      url: seksenYilLacivertLogo
     },
     {
       id: 'qnnect',
