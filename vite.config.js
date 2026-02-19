@@ -1,13 +1,27 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
+import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Build version plugin - generates version.json for cache busting
+const versionPlugin = () => ({
+  name: 'version-plugin',
+  closeBundle() {
+    const version = Date.now().toString(36)
+    fs.writeFileSync(
+      path.resolve(__dirname, 'dist/version.json'),
+      JSON.stringify({ v: version, t: Date.now() })
+    )
+    console.log(`✅ version.json created (v: ${version})`)
+  }
+})
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), versionPlugin()],
   build: {
     // Use esbuild for faster minification (terser is slower)
     minify: 'esbuild',
