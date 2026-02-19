@@ -7,15 +7,26 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Build version plugin - generates version.json for cache busting
+// Build version plugin - generates version.json and updates sw.js
 const versionPlugin = () => ({
   name: 'version-plugin',
   closeBundle() {
     const version = Date.now().toString(36)
+    // 1. Generate version.json
     fs.writeFileSync(
       path.resolve(__dirname, 'dist/version.json'),
       JSON.stringify({ v: version, t: Date.now() })
     )
-    console.log(`✅ version.json created (v: ${version})`)
+
+    // 2. Update sw.js with version
+    const swPath = path.resolve(__dirname, 'dist/sw.js')
+    if (fs.existsSync(swPath)) {
+      let swContent = fs.readFileSync(swPath, 'utf-8')
+      swContent = swContent.replace('__SW_VERSION__', version)
+      fs.writeFileSync(swPath, swContent)
+    }
+
+    console.log(`✅ Cache busting complete (v: ${version})`)
   }
 })
 
