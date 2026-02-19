@@ -150,7 +150,7 @@ const Register = () => {
           <div className={styles.logo}>
             <AcademicCapIcon />
           </div>
-          <h1 className={styles.title}>Qnnect</h1>
+          <h1 className={styles.title}>Qrnnect</h1>
           <p className={styles.subtitle}>Akıllı Akademik Randevu Sistemi</p>
           <p className={styles.description}>Öğrenci hesabı oluşturun</p>
         </div>

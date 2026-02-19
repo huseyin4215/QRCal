@@ -12,8 +12,8 @@ const Help = () => {
 
   const faqs = [
     {
-      question: "Qnnect nedir ve nasıl çalışır?",
-      answer: "Qnnect, öğretim elemanları ve öğrenciler için tasarlanmış modern bir randevu yönetim sistemidir. QR kod teknolojisi kullanarak hızlı ve kolay randevu alma deneyimi sunar. Öğretim elemanları müsaitlik takvimlerini oluşturur, öğrenciler ise bu takvimlerden uygun zamanları seçerek randevu alabilir."
+      question: "Qrnnect nedir ve nasıl çalışır?",
+      answer: "Qrnnect, öğretim elemanları ve öğrenciler için tasarlanmış modern bir randevu yönetim sistemidir. QR kod teknolojisi kullanarak hızlı ve kolay randevu alma deneyimi sunar. Öğretim elemanları müsaitlik takvimlerini oluşturur, öğrenciler ise bu takvimlerden uygun zamanları seçerek randevu alabilir."
     },
     {
       question: "Hesap oluşturmak için ne yapmam gerekiyor?",
@@ -33,7 +33,7 @@ const Help = () => {
     },
     {
       question: "Google Calendar entegrasyonu nasıl çalışır?",
-      answer: "Google Calendar entegrasyonu için önce Google hesabınızla giriş yapmanız gerekiyor. 'Takvim Entegrasyonu' sayfasından Google Calendar'a bağlanın. Bu sayede Qnnect'teki randevularınız otomatik olarak Google Calendar'ınıza da eklenir."
+      answer: "Google Calendar entegrasyonu için önce Google hesabınızla giriş yapmanız gerekiyor. 'Takvim Entegrasyonu' sayfasından Google Calendar'a bağlanın. Bu sayede Qrnnect'teki randevularınız otomatik olarak Google Calendar'ınıza da eklenir."
     },
     {
       question: "Randevu iptal edilebilir mi?",
@@ -128,7 +128,7 @@ const Help = () => {
             <QuestionMarkCircleIcon />
           </div>
           <h1 className="policy-title">Yardım Merkezi</h1>
-          <p className="policy-subtitle">Qnnect kullanımı hakkında tüm bilgilere buradan ulaşabilirsiniz</p>
+          <p className="policy-subtitle">Qrnnect kullanımı hakkında tüm bilgilere buradan ulaşabilirsiniz</p>
         </div>
 
         {/* Tab Navigation */}
@@ -159,9 +159,9 @@ const Help = () => {
                 <div>
                   <h2 className="text-2xl font-semibold text-gray-900 mb-6">Başlangıç Rehberi</h2>
                   <p className="text-gray-700 mb-6">
-                    Qnnect'i kullanmaya başlamak için aşağıdaki adımları takip edin:
+                    Qrnnect'i kullanmaya başlamak için aşağıdaki adımları takip edin:
                   </p>
-                  
+
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {gettingStartedSteps.map((step) => (
                       <div key={step.step} className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500">
@@ -181,7 +181,7 @@ const Help = () => {
                 <div className="bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-500">
                   <h3 className="font-semibold text-yellow-900 mb-3">💡 İpucu</h3>
                   <p className="text-yellow-800">
-                    İlk kez kullanıyorsanız, demo hesabı ile sistemi deneyebilirsiniz. 
+                    İlk kez kullanıyorsanız, demo hesabı ile sistemi deneyebilirsiniz.
                     Bu sayede tüm özellikleri güvenli bir şekilde keşfedebilirsiniz.
                   </p>
                 </div>
@@ -239,7 +239,7 @@ const Help = () => {
                   <p className="text-gray-700 mb-6">
                     Size yardımcı olmak için buradayız. Aşağıdaki kanallardan birini kullanarak bizimle iletişime geçebilirsiniz:
                   </p>
-                  
+
                   <div className="grid md:grid-cols-1 gap-6">
                     <div className="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500">
                       <div className="flex items-center mb-3">
@@ -274,15 +274,15 @@ const Help = () => {
                   <h3 className="font-semibold text-yellow-900 mb-3">📚 Ek Kaynaklar</h3>
                   <div className="space-y-2">
                     <p className="text-yellow-800">
-                      <a href="/privacy" className="text-yellow-900 hover:underline font-medium">Gizlilik Politikası</a> - 
+                      <a href="/privacy" className="text-yellow-900 hover:underline font-medium">Gizlilik Politikası</a> -
                       Veri kullanımı hakkında detaylı bilgi
                     </p>
                     <p className="text-yellow-800">
-                      <a href="/terms" className="text-yellow-900 hover:underline font-medium">Kullanım Şartları</a> - 
+                      <a href="/terms" className="text-yellow-900 hover:underline font-medium">Kullanım Şartları</a> -
                       Hizmet kullanım koşulları
                     </p>
                     <p className="text-yellow-800">
-                      <a href="/cookies" className="text-yellow-900 hover:underline font-medium">Çerez Politikası</a> - 
+                      <a href="/cookies" className="text-yellow-900 hover:underline font-medium">Çerez Politikası</a> -
                       Çerez kullanımı hakkında bilgi
                     </p>
                   </div>

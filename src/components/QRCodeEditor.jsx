@@ -25,7 +25,7 @@ import yilBeyazLogo from '../assets/logolar/80-yil-beyaz.png';
 import yilLacivertLogo from '../assets/logolar/80-yil-lacivert.png';
 import ankaraUniIngLogo from '../assets/logolar/Ankara_University_Logo_ing.png';
 import osbMyoLogo from '../assets/logolar/OSB-MYO.png';
-import qnnectLogo from '../assets/logolar/Qnnect.png';
+import qnnectLogo from '../assets/logolar/Qrnnect.png';
 
 const QRCodeEditor = ({ value, onDownload, user }) => {
   const [qrConfig, setQrConfig] = useState({
@@ -98,7 +98,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     },
     {
       id: 'qnnect',
-      name: 'Qnnect',
+      name: 'Qrnnect',
       url: qnnectLogo
     },
     {
@@ -140,7 +140,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
     customTextSize: 'medium', // 'small', 'medium', 'large'
     customTextColor: '#1D3F87', // New field for custom text color
     showAppName: true, // New field to control app name visibility
-    appName: 'Qnnect' // New field for app name
+    appName: 'Qrnnect' // New field for app name
   });
 
   const [exportConfig, setExportConfig] = useState({
@@ -250,7 +250,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
       pdf.setFontSize(8);
       pdf.setTextColor(100, 100, 100);
       pdf.text(`Oluşturulma Tarihi: ${timestamp}`, margin, pageHeight - margin);
-      pdf.text('Qnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
+      pdf.text('Qrnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
       pdf.save(`qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.pdf`);
       setIsGeneratingPDF(false);
     } else {
@@ -1040,7 +1040,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
         pdf.setFontSize(8);
         pdf.setTextColor(100, 100, 100);
         pdf.text(`Oluşturulma Tarihi: ${timestamp}`, margin, pageHeight - margin);
-        pdf.text('Qnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
+        pdf.text('Qrnnect - Randevu Sistemi', pageWidth - margin, pageHeight - margin, { align: 'right' });
 
         pdf.save(`qr-code-${user?.name || 'faculty'}-${exportConfig.size.toLowerCase()}.pdf`);
         setIsGeneratingPDF(false);
@@ -1728,7 +1728,7 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
                       type="text"
                       value={contactConfig.appName}
                       onChange={(e) => setContactConfig(prev => ({ ...prev, appName: e.target.value }))}
-                      placeholder="Örn: Qnnect"
+                      placeholder="Örn: Qrnnect"
                       className={styles.textInput}
                     />
                   </div>

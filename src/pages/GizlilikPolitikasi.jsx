@@ -22,7 +22,7 @@ const GizlilikPolitikasi = () => {
                         {isTr ? 'Son güncelleme: 19.02.2026' : 'Last updated: 19.02.2026'}
                     </p>
                     <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.5rem' }}>
-                        Qnnect — {isTr ? 'Ankara Üniversitesi Randevu Yönetim Sistemi' : 'Ankara University Appointment Management System'}
+                        Qrnnect — {isTr ? 'Ankara Üniversitesi Randevu Yönetim Sistemi' : 'Ankara University Appointment Management System'}
                     </p>
                     <LanguageToggle lang={lang} toggleLang={toggleLang} />
                 </div>
@@ -38,8 +38,8 @@ const GizlilikPolitikasi = () => {
                         </h2>
                         <p className="policy-text">
                             {isTr
-                                ? 'Qnnect olarak gizliliğinize önem veriyoruz. Bu Gizlilik Politikası, hizmetimizi kullandığınızda hangi bilgilerin toplandığını, nasıl kullanıldığını ve nasıl korunduğunu açıklar.'
-                                : 'At Qnnect, we value your privacy. This Privacy Policy explains what information is collected when you use our Service, how it is used, and how it is protected.'}
+                                ? 'Qrnnect olarak gizliliğinize önem veriyoruz. Bu Gizlilik Politikası, hizmetimizi kullandığınızda hangi bilgilerin toplandığını, nasıl kullanıldığını ve nasıl korunduğunu açıklar.'
+                                : 'At Qrnnect, we value your privacy. This Privacy Policy explains what information is collected when you use our Service, how it is used, and how it is protected.'}
                         </p>
                     </section>
 

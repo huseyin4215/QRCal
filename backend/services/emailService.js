@@ -9,7 +9,7 @@ config({ path: './.env' });
 const sendViaBrevoDB = async (to, subject, htmlContent) => {
   const apiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.EMAIL_USER || 'infoqrcal@gmail.com';
-  const senderName = process.env.APP_NAME || 'Qnnect';
+  const senderName = process.env.APP_NAME || 'Qrnnect';
 
   if (!apiKey) {
     console.warn('⚠️ BREVO_API_KEY not configured. Email sending will be skipped.');
@@ -247,7 +247,7 @@ export const sendAppointmentCancellationEmail = async (studentEmail, studentName
 // Send password reset email
 export const sendPasswordResetEmail = async (toEmail, toName, resetLink) => {
   try {
-    const appName = process.env.APP_NAME || 'Qnnect';
+    const appName = process.env.APP_NAME || 'Qrnnect';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Şifre Sıfırlama</h2>
@@ -274,7 +274,7 @@ export const sendPasswordResetEmail = async (toEmail, toName, resetLink) => {
 // Send temporary password to newly created faculty
 export const sendTemporaryPasswordEmail = async (toEmail, toName, tempPassword, loginUrl) => {
   try {
-    const appName = process.env.APP_NAME || 'Qnnect';
+    const appName = process.env.APP_NAME || 'Qrnnect';
     const url = loginUrl || `${process.env.FRONTEND_URL || 'http://localhost:8081'}/login`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -305,7 +305,7 @@ export const sendTemporaryPasswordEmail = async (toEmail, toName, tempPassword, 
 // Send email verification code
 export const sendEmailVerificationCode = async (toEmail, toName, verificationCode) => {
   try {
-    const appName = process.env.APP_NAME || 'Qnnect';
+    const appName = process.env.APP_NAME || 'Qrnnect';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">E-posta Doğrulama Kodu</h2>

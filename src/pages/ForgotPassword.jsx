@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiService from '../services/apiService';
-import { 
+import {
   AcademicCapIcon,
   ArrowLeftIcon,
   EnvelopeIcon
@@ -23,7 +23,7 @@ const ForgotPassword = () => {
 
     try {
       const response = await apiService.forgotPassword(email);
-      
+
       if (response.success) {
         setSuccess('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.');
       }
@@ -42,7 +42,7 @@ const ForgotPassword = () => {
           <div className={styles.logo}>
             <AcademicCapIcon />
           </div>
-          <h1 className={styles.title}>Qnnect</h1>
+          <h1 className={styles.title}>Qrnnect</h1>
           <p className={styles.subtitle}>Akıllı Akademik Randevu Sistemi</p>
           <p className={styles.description}>Şifrenizi sıfırlayın</p>
         </div>

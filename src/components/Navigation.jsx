@@ -1,8 +1,8 @@
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  HomeIcon, 
-  CalendarIcon, 
-  UserGroupIcon, 
+import {
+  HomeIcon,
+  CalendarIcon,
+  UserGroupIcon,
   CogIcon,
   AcademicCapIcon,
   ChartBarIcon,
@@ -121,7 +121,7 @@ const Navigation = () => {
           <div className={styles.navLeft}>
             {/* Logo */}
             <div className={styles.logo}>
-              <h1 className={styles.logoText}>Qnnect</h1>
+              <h1 className={styles.logoText}>Qrnnect</h1>
             </div>
 
             {/* Navigation Links */}

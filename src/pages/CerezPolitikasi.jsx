@@ -35,8 +35,8 @@ const CerezPolitikasi = () => {
                         </h2>
                         <p className="policy-text">
                             {isTr
-                                ? 'Qnnect web sitesi, kullanıcı deneyimini geliştirmek ve hizmet kalitesini artırmak için çerezler kullanmaktadır. Bu politika, hangi çerezlerin kullanıldığını ve nasıl yönetileceğini açıklar.'
-                                : 'The Qnnect website uses cookies to enhance user experience and improve service quality. This policy explains which cookies are used and how to manage them.'}
+                                ? 'Qrnnect web sitesi, kullanıcı deneyimini geliştirmek ve hizmet kalitesini artırmak için çerezler kullanmaktadır. Bu politika, hangi çerezlerin kullanıldığını ve nasıl yönetileceğini açıklar.'
+                                : 'The Qrnnect website uses cookies to enhance user experience and improve service quality. This policy explains which cookies are used and how to manage them.'}
                         </p>
                     </section>
 

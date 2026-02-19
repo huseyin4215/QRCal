@@ -22,7 +22,7 @@ const TermsOfUse = () => {
             {isTr ? 'Son güncelleme: 19.02.2026' : 'Last updated: 19.02.2026'}
           </p>
           <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)', marginTop: '0.5rem' }}>
-            Qnnect — {isTr ? 'Ankara Üniversitesi Randevu Yönetim Sistemi' : 'Ankara University Appointment Management System'}
+            Qrnnect — {isTr ? 'Ankara Üniversitesi Randevu Yönetim Sistemi' : 'Ankara University Appointment Management System'}
           </p>
           <LanguageToggle lang={lang} toggleLang={toggleLang} />
         </div>
@@ -37,8 +37,8 @@ const TermsOfUse = () => {
             </h2>
             <p className="policy-text">
               {isTr
-                ? 'Bu Kullanım Şartları ("Şartlar"), Ankara Üniversitesi Mühendislik Fakültesi bünyesinde geliştirilen Qnnect ("Hizmet") randevu yönetim sisteminin kullanımını düzenler. Hizmeti kullanarak bu şartları kabul etmiş olursunuz. Kabul etmiyorsanız, lütfen hizmeti kullanmayınız.'
-                : 'These Terms of Service ("Terms") govern your use of Qnnect ("Service"), an appointment management system developed at Ankara University, Faculty of Engineering. By using the Service, you agree to these Terms. If you do not agree, please do not use the Service.'}
+                ? 'Bu Kullanım Şartları ("Şartlar"), Ankara Üniversitesi Mühendislik Fakültesi bünyesinde geliştirilen Qrnnect ("Hizmet") randevu yönetim sisteminin kullanımını düzenler. Hizmeti kullanarak bu şartları kabul etmiş olursunuz. Kabul etmiyorsanız, lütfen hizmeti kullanmayınız.'
+                : 'These Terms of Service ("Terms") govern your use of Qrnnect ("Service"), an appointment management system developed at Ankara University, Faculty of Engineering. By using the Service, you agree to these Terms. If you do not agree, please do not use the Service.'}
             </p>
           </section>
 
@@ -50,8 +50,8 @@ const TermsOfUse = () => {
             <div className="policy-highlight-box">
               <p className="policy-highlight-text">
                 {isTr
-                  ? 'Qnnect, Ankara Üniversitesi öğretim üyeleri ve öğrencilerinin randevu planlamasını, yönetimini ve takibini sağlayan web tabanlı bir randevu yönetim platformudur. Temel özellikler:'
-                  : 'Qnnect is a web-based appointment management platform that enables faculty members and students at Ankara University to schedule, manage, and track appointments. Key features include:'}
+                  ? 'Qrnnect, Ankara Üniversitesi öğretim üyeleri ve öğrencilerinin randevu planlamasını, yönetimini ve takibini sağlayan web tabanlı bir randevu yönetim platformudur. Temel özellikler:'
+                  : 'Qrnnect is a web-based appointment management platform that enables faculty members and students at Ankara University to schedule, manage, and track appointments. Key features include:'}
               </p>
               <ul className="policy-feature-list" style={{ marginTop: '1rem' }}>
                 <li>{isTr ? 'QR kod tabanlı randevu oluşturma ve yönetimi' : 'QR code-based appointment booking and management'}</li>
@@ -73,8 +73,8 @@ const TermsOfUse = () => {
             <div className="policy-highlight-box">
               <p className="policy-highlight-text">
                 {isTr
-                  ? 'Qnnect, randevuları otomatik olarak senkronize etmek için Google Takvim API\'sini kullanır. Google Takvim\'i bağladığınızda:'
-                  : 'Qnnect uses the Google Calendar API to automatically synchronize appointments. When you connect your Google Calendar:'}
+                  ? 'Qrnnect, randevuları otomatik olarak senkronize etmek için Google Takvim API\'sini kullanır. Google Takvim\'i bağladığınızda:'
+                  : 'Qrnnect uses the Google Calendar API to automatically synchronize appointments. When you connect your Google Calendar:'}
               </p>
               <ul className="policy-feature-list" style={{ marginTop: '1rem' }}>
                 <li>{isTr ? 'Randevular otomatik olarak Google Takviminize eklenir' : 'Appointments are automatically added to your Google Calendar'}</li>
@@ -156,8 +156,8 @@ const TermsOfUse = () => {
             <div className="policy-highlight-box" style={{ borderLeftColor: '#f59e0b' }}>
               <p className="policy-highlight-text">
                 {isTr
-                  ? 'Hizmet "olduğu gibi" ve "mevcut olduğu şekliyle" sunulmaktadır. Qnnect, uygunluk, güvenilirlik veya mevcut olma konusunda hiçbir garanti vermez. Hizmeti kendi riskinizle kullanırsınız.'
-                  : 'The Service is provided "as is" and "as available" without warranties of any kind. Qnnect does not warrant that the Service will be uninterrupted, secure, or error-free. Use at your own risk.'}
+                  ? 'Hizmet "olduğu gibi" ve "mevcut olduğu şekliyle" sunulmaktadır. Qrnnect, uygunluk, güvenilirlik veya mevcut olma konusunda hiçbir garanti vermez. Hizmeti kendi riskinizle kullanırsınız.'
+                  : 'The Service is provided "as is" and "as available" without warranties of any kind. Qrnnect does not warrant that the Service will be uninterrupted, secure, or error-free. Use at your own risk.'}
               </p>
             </div>
           </section>

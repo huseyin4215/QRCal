@@ -1,6 +1,6 @@
 {
-  "name": "Qnnect - Akademik Randevu Sistemi",
-  "short_name": "Qnnect",
+  "name": "Qrnnect - Akademik Randevu Sistemi",
+  "short_name": "Qrnnect",
   "description": "Konum tabanlı akademik randevu sistemi",
   "start_url": "/",
   "display": "standalone",
@@ -9,7 +9,10 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "tr",
-  "categories": ["education", "productivity"],
+  "categories": [
+    "education",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",

@@ -6,7 +6,7 @@ import styles from './Header.module.css';
 export default function Header({ user, onProfile, onPassword, onLogout, children, notifications = [], unreadCount = 0, onToggleNotifications, onMarkAllRead, onNotificationClick, showNotifications, theme = 'admin' }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const themeClass = theme === 'faculty' ? styles.themeFaculty : theme === 'student' ? styles.themeStudent : styles.themeAdmin;
-  
+
   const getInitials = (name) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -19,7 +19,7 @@ export default function Header({ user, onProfile, onPassword, onLogout, children
         <div className={styles.brandSection}>
           <div className={styles.logo}>
             <QrCodeIcon className={styles.logoIcon} />
-            <span className={styles.logoText}>Qnnect</span>
+            <span className={styles.logoText}>Qrnnect</span>
           </div>
         </div>
 
@@ -144,9 +144,9 @@ export default function Header({ user, onProfile, onPassword, onLogout, children
               <div className={styles.mobileNavHeader}>
                 <div className={styles.mobileNavBrand}>
                   <QrCodeIcon className={styles.logoIcon} />
-                  <span className={styles.logoText}>Qnnect</span>
+                  <span className={styles.logoText}>Qrnnect</span>
                 </div>
-                                <div className={styles.mobileNavActions}>
+                <div className={styles.mobileNavActions}>
                   {/* Notification Bell */}
                   {notifications && (
                     <div className={styles.notificationContainer}>
