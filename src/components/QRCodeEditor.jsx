@@ -11,7 +11,7 @@ import {
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import styles from './QRCodeEditor.module.css';
 
 // Import logo assets
@@ -192,45 +192,37 @@ const QRCodeEditor = ({ value, onDownload, user }) => {
       setIsGeneratingPDF(true);
     }
 
-    // Pre-convert logo images to data URLs for CORS compatibility
-    const dataUrls = {};
-    const logoImgs = element.querySelectorAll('img[data-logo-overlay]');
-    for (const img of logoImgs) {
-      if (img.src && !img.src.startsWith('data:')) {
-        try {
-          const resp = await fetch(img.src, { mode: 'cors' }).catch(() => fetch(img.src));
-          const blob = await resp.blob();
-          dataUrls[img.src] = await new Promise((res) => {
-            const r = new FileReader();
-            r.onloadend = () => res(r.result);
-            r.readAsDataURL(blob);
-          });
-        } catch (e) {
-          console.warn('Logo data URL conversion failed:', e);
-        }
-      }
-    }
+    try {
+      // html-to-image uses SVG foreignObject — browser renders natively
+      // No onclone hacks needed, output matches screen exactly
+      const dataUrl = await toPng(element, {
+        pixelRatio: 4, // High resolution (4x)
+        cacheBust: true, // Bypass CORS cache issues
+        includeQueryParams: true,
+        skipAutoScale: true,
+      });
 
-    html2canvas(element, {
-      scale: 3,
-      backgroundColor: null,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      imageTimeout: 15000,
-      onclone: (_doc, cloned) => {
-        // Swap logo image src to data URL for CORS
-        cloned.querySelectorAll('img[data-logo-overlay]').forEach((img) => {
-          if (img.src && dataUrls[img.src]) img.src = dataUrls[img.src];
-        });
-      }
-    }).then(canvas => {
-      finishExport(canvas, format);
-    }).catch(err => {
+      // Convert data URL to canvas for finishExport compatibility
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        finishExport(canvas, format);
+      };
+      img.onerror = () => {
+        console.error('Failed to load exported image');
+        if (format === 'pdf') setIsGeneratingPDF(false);
+        alert(`${format.toUpperCase()} oluşturulurken hata oluştu.`);
+      };
+      img.src = dataUrl;
+    } catch (err) {
       console.error('Export error:', err);
       if (format === 'pdf') setIsGeneratingPDF(false);
-      alert(`${format.toUpperCase()} oluşturulurken hata oluştu. Lütfen tekrar deneyin.`);
-    });
+      alert(`${format.toUpperCase()} oluşturulurken hata oluştu.`);
+    }
   };
 
   const finishExport = (canvas, format) => {
